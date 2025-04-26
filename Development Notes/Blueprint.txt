@@ -1,0 +1,171 @@
+**Plantry UI & UX Blueprint**
+
+This document outlines the full vision for Plantry from scratch, covering UI/UX, architecture principles, componentization, extensibility patterns, and future‑proofing guidelines. Use this blueprint to align frontend and backend teams for seamless development and evolution.
+
+---
+
+## 1. High‑Level Architecture
+
+### 1.1 Tech Stack Recommendations
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript for type safety
+- **Styling**: Tailwind CSS + CSS Modules for scalable utility + isolated styles
+- **State Management**: Zustand for local UI state; React Query for server data
+- **Animations**: Framer Motion for key transitions; CSS for simple fades/swaps
+- **Forms & Validation**: React Hook Form + Zod
+- **Icons & UI**: Heroicons, Lucide; Headless UI for accessible base components
+- **i18n**: next‑intl or react‑i18next for future localization
+
+### 1.2 Layered Design
+- **UI Layer**: Presentational components (stateless, themeable)
+- **Logic Layer**: Hooks & services (custom hooks, data‑fetching hooks)
+- **API Layer**: `api/` folder with typed adapters (REST or GraphQL)
+- **Domain Models**: Shared `types/` folder for Recipe, GroceryItem, MealPlan
+- **Pages**: Clean App Router routes under `/app`
+
+---
+
+## 2. Global UI/UX Patterns
+
+### 2.1 Theming & Brand
+- **Base Theme**: Light, warm accent (orange/gold) + subtle neutrals
+- **Dark Mode**: Soft charcoal background + high‑contrast whites
+- **Mascot Mood Mode**: Animated accent overlays on holidays or special events
+
+### 2.2 Navigation
+- **Desktop**: Top NavBar with routes + Premium pill + Profile menu
+- **Mobile**: Sticky bottom tab bar (icons + labels)
+- **Breadcrumbs**: On deeper nested views (Recipe Detail, Plan Detail)
+
+### 2.3 Layout System
+- **Grid**: 12‑column Tailwind grid for responsive breakpoints
+- **Panels & Cards**: Consistent card shadows, rounded corners (2xl)
+- **Spacing**: 8px base, multiples for padding/margin
+
+### 2.4 Accessibility & Internationalization
+- **Focus States**: Visible outlines
+- **ARIA Labels**: All interactive elements
+- **Keyboard Nav**: Ensure modals and menus trap focus
+- **Text Scaling**: Fluid type sizes using Tailwind clamp
+
+---
+
+## 3. Feature Pages & Components
+
+### 3.1 Home (Landing)
+- **Hero Section**: Tagline + Primary CTA (Start Planning)
+- **Feature Highlights**: Icon‑based cards (Meal Planner, Grocery Lists, AI Recipes)
+- **How It Works**: 4‑step horizontal scroller with micro‑animations
+- **Testimonials**: Carousel of user quotes + ratings
+
+### 3.2 Authentication (Public)
+- **Pages**: `/login`, `/signup`
+- **Components**: AuthForm (email, password, validation), SocialLogin buttons
+- **State**: Loading, error display, success redirect
+
+### 3.3 Recipes (Public)
+- **Browse**: Category filters, search bar, paginated grid
+- **Detail**: Modal or dedicated page: image, ingredients list, instructions, "Add to List"
+- **Import**: URL scraper input dialog + parsing feedback
+
+### 3.4 Discover AI (Public & Premium)
+- **Whip Something Up**: Textarea + Suggestions chips + Generate button
+- **Filters**: Diet, Cuisine, Time selectors
+- **Results**: AI‑generated cards with badges "Missing 2 Ingredients"
+- **EmptyState**: Prompt examples + Premium CTA if locked
+
+### 3.5 Grocery Lists (Protected)
+- **EmptyState**: Quick Add chips, Fill Essentials, Create from Plan
+- **List View**: Collapsible category groups, drag‑and‑drop reordering
+- **Item Card**: Checkbox, name, qty/unit, category tag, edit on click, delete icon
+- **Actions**: Save, Share (modal with link + preview), Export CSV (Premium)
+- **Sync**: Local offline → backend sync indicator
+
+### 3.6 Meal Planner (Protected)
+- **Tabs**: AI Generator, Curated, Favorites
+- **Calendar UI**: Drag recipes into date slots
+- **RecipeBrowser**: Filter + grid; click to add
+- **EmptyState**: On first use, guide with tooltip walk‑through
+
+### 3.7 Plans Archive (Protected)
+- **Views**: Meal Plans list, Grocery Lists list
+- **Card**: Title, date, tags, actions (Use, Duplicate, Download, Delete)
+- **Detail**: View plan breakdown + regenerate list
+
+### 3.8 Profile & Settings (Protected)
+- **Tabs**: Profile Info, Preferences, Notifications, Subscription, Data
+- **Forms**: Inline edit + Save buttons
+- **Data**: Export personal data, account deletion flow
+
+### 3.9 Premium Page (Public)
+- **Features Grid**: Highlight PremiumOnly items with badges
+- **Pricing**: Monthly/year toggles + clearly marked savings
+- **CTA**: Free trial start
+
+---
+
+## 4. Component Library & Conventions
+
+### 4.1 Component Tagging (in JSDoc or file suffix)
+- `*.EmptyState.tsx`
+- `*.Editable.tsx`
+- `*.PremiumOnly.tsx`
+- `*.ActionButton.tsx`
+
+### 4.2 File & Folder Structure
+```
+/components
+  /ui         # Buttons, Inputs, Cards, Modals
+  /layout     # Header, Footer, Navigation
+  /features
+    /recipes  # RecipeCard, RecipeModal
+    /grocery  # GroceryList, GroceryItemCard
+    /planner  # Calendar, PlanSlot
+```
+
+### 4.3 Extension Hooks
+- `useFetchRecipes(params)`
+- `useSyncGroceryList(listId)`
+- `useGenerateRecipe(prompt, options)`
+- **Goal**: each feature has a `hooks.ts` and `service.ts`
+
+---
+
+## 5. Integrating Backend Seamlessly
+
+### 5.1 API Layer
+- Central `api/` with typed endpoints:
+  - `GET /recipes`, `POST /recipes/import`
+  - `GET /grocery`, `POST /grocery/:id/items`
+  - `GET /planner/:userId`, `PUT /planner`
+  - `POST /auth/login`, `GET /auth/profile`
+
+### 5.2 Data Caching & Sync
+- **React Query**: Cache API calls, background refetching
+- **Zustand**: UI‑only state (modal open, form state)
+- **Sync Strategy**: optimistic updates + error rollback
+
+### 5.3 Feature Flags & A/B
+- Built‑in `features/flags.ts` for live toggling (e.g. new AI UI)
+
+---
+
+## 6. Future‑Proofing & Extensibility
+
+- **Plugin‑Style Modules**: Allow `features/x` to register routes + nav items
+- **Design Tokens**: Centralized theme definitions (colors, spacing)
+- **Analytics Hooks**: `useAnalyticsTrack('AddToList')`
+- **Automated Tests**: Cypress for e2e, Jest/RTL for unit/UI
+- **CI/CD**: GitHub Actions with lint, build, test
+
+---
+
+### Next Steps
+1. **Finalize component library**: scaffold basic UI kit pages
+2. **Define sample API contracts** with backend team
+3. **Prototype key flows**: Onboard + GroceryList + Recipe import
+4. **Iterate visually**: refine animations, spacing, onboarding microcopy
+
+Use this blueprint as the single source of truth; adapt as new features arise and keep each layer decoupled for minimal friction.
+
+**Let’s launch a seamless, heartwarming Plantry experience!**

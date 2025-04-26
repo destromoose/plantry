@@ -1,0 +1,154 @@
+🚀 Phase 0: Repo & Foundation
+Repo Setup
+
+Initialize Git repo, push to GitHub (or GitLab).
+
+Add branch protection rules (main ← pull requests).
+
+CI/CD
+
+Configure GitHub Actions (or equivalent) with:
+
+lint (Prettier, ESLint)
+
+type-check (tsc)
+
+build (Next.js)
+
+test (Jest/RTL)
+
+Environment & Secrets
+
+.env.example with placeholders for NEXT_PUBLIC_, API_URL, AI_KEYS, JWT_SECRET, etc.
+
+Install Core Dependencies
+
+bash
+Copy
+Edit
+pnpm add next@15 react@18 react-dom@18 typescript tailwindcss postcss autoprefixer
+pnpm add zustand @tanstack/react-query framer-motion react-hook-form zod axios
+# Dev:
+pnpm add -D eslint prettier jest @testing-library/react @testing-library/jest-dom cypress
+Tailwind & TS Config
+
+scaffold tailwind.config.js with theme extensions.
+
+setup tsconfig.json with baseUrl: '.', paths: {'@/*': ['./src/*']}.
+
+🎨 Phase 1: Design System & Component Library
+Storybook (optional but highly recommended)
+
+pnpm add -D @storybook/react @storybook/addon-essentials
+
+Scaffold stories for: Button, Input, Card, Modal, Badge, Toast.
+
+Design Tokens
+
+Create src/styles/tokens.ts for colors, spacing, typography.
+
+Reference these in Tailwind config via CSS variables.
+
+Base UI Components
+Build and storybook–document:
+
+<Button> variants (primary, secondary, disabled)
+
+<Input> (text, number, textarea)
+
+<Select> / <Dropdown>
+
+<Card> / <Modal> / <Tooltip>
+
+<Checkbox> / <Switch>
+
+<Toast> wrapper around react-hot-toast
+
+Theming & Global Layout
+
+Create AppShell with <TopNavBar> and <BottomNavBar>
+
+Add <ThemeProvider> for light/dark mode
+
+📄 Phase 2: Prototype Core Flows
+Auth Pages
+
+/login and /signup with mocks (no real API yet)
+
+Use react-hook-form + Zod for validation
+
+Storybook stories for form
+
+Grocery List Page (EmptyState)
+
+Static prototype of the notepad UI
+
+Quick-add chips, “Fill Essentials” button, Premium block
+
+Confirm spacing, animations (Framer Motion)
+
+Meal Planner Page (Static)
+
+Two-column calendar + recipe browser with static data
+
+Drag/drop (react-beautiful-dnd) stubbed
+
+Discover AI Page (Static)
+
+Prompt box + sample cards
+
+Premium CTA overlay
+
+Public Recipes Page Prototype
+
+/recipes grid + /recipes/[id] detail page with dummy data
+
+Settings & Premium Pages (Static)
+
+Tab structure, form fields, pricing cards
+
+🔌 Phase 3: API Contracts & Mocking
+Define OpenAPI/Swagger or JSON Schema for each endpoint in /api
+
+Install MSW (Mock Service Worker) for frontend dev:
+
+Create mocks for /api/auth, /api/grocery, /api/meal-plans, /api/recipes, /api/ai
+
+Wire React Query Hooks to those mocks:
+
+useAuth(), useGroceryList(), useMealPlans(), useRecipes()
+
+💻 Phase 4: Real Backend Integration
+Point MSW off and switch API_URL to your real backend
+
+Build Auth Flow: login/signup → store token in Zustand → protect routes
+
+Grocery Sync: integrate SyncedGroceryList with real API
+
+Meal Planner Sync: integrate MealPlannerPage with MealPlanAPI
+
+AI Generation: hook Discover generate button up to /api/ai/generate
+
+Public Recipes SSR/SSG: use getStaticProps / generateStaticParams for SEO
+
+🧪 Phase 5: Polish & QA
+Add Loading Skeletons & error states to all data-driven components
+
+Implement Mascot popups per our trigger map (Framer Motion variants)
+
+SEO & Social Meta: dynamic <Head> tags + JSON-LD recipe schema
+
+End-to-End Tests with Cypress for critical flows
+
+Accessibility Audit: Lighthouse + aXe
+
+Performance Audit: Lighthouse for bundle sizes, TTFB, CLS
+
+🚀 Ongoing & Future
+Feature Flags: wrap new experiments behind flags
+
+A/B Testing: variant stability for premium messaging
+
+Localization: extract all copy into translation files
+
+Mobile App: reuse same API layer in React Native or PWA
