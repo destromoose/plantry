@@ -37,6 +37,12 @@ const UNITS = [
   'whole',
   'oz',
   'lb',
+  'quart',
+  'pint',
+  'gallon',
+  'pinch',
+  'handful',
+  'sprig',
 ]
 const UNIT_SET = new Set(UNITS)
 /** Long and plural unit names that web recipes use, mapped to Plantry's short ones. */
@@ -67,6 +73,15 @@ const UNIT_ALIASES: Record<string, string> = {
   pound: 'lb',
   pounds: 'lb',
   lbs: 'lb',
+  quarts: 'quart',
+  qt: 'quart',
+  pints: 'pint',
+  pt: 'pint',
+  gallons: 'gallon',
+  gal: 'gallon',
+  pinches: 'pinch',
+  handfuls: 'handful',
+  sprigs: 'sprig',
 }
 function unitOf(word: string | undefined): string | undefined {
   if (!word) return undefined

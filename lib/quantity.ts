@@ -25,6 +25,8 @@ const units: Record<string, { dim: Dim; factor: number }> = {
   cups: { dim: 'volume', factor: 240 },
   quart: { dim: 'volume', factor: 960 },
   quarts: { dim: 'volume', factor: 960 },
+  pint: { dim: 'volume', factor: 480 },
+  gallon: { dim: 'volume', factor: 3840 },
   'fl oz': { dim: 'volume', factor: 29.57 },
   pound: { dim: 'mass', factor: 453.6 },
   pounds: { dim: 'mass', factor: 453.6 },
@@ -196,6 +198,8 @@ const plural: Record<string, string> = {
   handful: 'handfuls',
   cup: 'cups',
   quart: 'quarts',
+  pint: 'pints',
+  gallon: 'gallons',
   pinch: 'pinches',
 }
 

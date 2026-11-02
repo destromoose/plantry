@@ -71,7 +71,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Lemony chickpea skillet',
       description:
         'Chickpeas simmered with cumin and garlic, wilted spinach, and a salty crumble of feta on top.',
-      photo: '1612700722193-f0410adb8949',
+      photo: '1697155836261-f7afd5353e64',
       active: 20,
       total: 30,
       servings: 4,
@@ -301,7 +301,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Egg fried rice with peas',
       description:
         'Day-old rice, soft egg and sweet peas fried hot with soy and a drop of sesame oil.',
-      photo: '1512621776951-a57141f2eefd',
+      photo: '1603133872878-684f208fb84b',
       active: 12,
       total: 15,
       servings: 2,

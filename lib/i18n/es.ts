@@ -841,6 +841,7 @@ export const es: Record<string, string> = {
   '{v0}: {v1}. {v2}. Change who cooks.': '{v0}: {v1}. {v2}. Cambiar quién cocina.',
   'For this step': 'Para este paso',
   'Saved from': 'Guardada de',
+  'More like this': 'Parecidas',
   'That doesn’t look like a web link. It should start with https://':
     'Eso no parece un enlace web. Debe empezar por https://',
   'That page couldn’t be found. Check the link and try again.':

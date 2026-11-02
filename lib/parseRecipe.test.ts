@@ -35,6 +35,18 @@ describe('parseRecipe', () => {
     expect(byName['lemon']).toMatchObject({ quantity: 1, unit: '' })
   })
 
+  it('reads quarts, pints and pinches as units', () => {
+    expect(
+      parseIngredientLine('1 quart homemade or store-bought low-sodium chicken stock')
+    ).toMatchObject({ quantity: 1, unit: 'quart' })
+    expect(parseIngredientLine('2 pints cherry tomatoes')).toMatchObject({
+      quantity: 2,
+      unit: 'pint',
+    })
+    expect(parseIngredientLine('1 pinch salt')).toMatchObject({ unit: 'pinch', name: 'salt' })
+    expect(parseIngredientLine('3 sprigs thyme')).toMatchObject({ unit: 'sprig', name: 'thyme' })
+  })
+
   it('strips trailing prep notes from names', () => {
     expect(parseIngredientLine('2 cloves garlic, minced')).toEqual({
       name: 'garlic',

@@ -150,6 +150,14 @@ export function nextColor(members: Member[]): Member['color'] {
   return memberColors[counts.indexOf(Math.min(...counts))]
 }
 
+/** Who cooked a night nobody claimed: this phone's person, or the only cook. */
+function whoCooks(members: Member[]): string | undefined {
+  const me = members.find((m) => m.isMe && m.cooks !== false)
+  if (me) return me.id
+  const cooks = members.filter((m) => m.cooks !== false)
+  return cooks.length === 1 ? cooks[0].id : undefined
+}
+
 function makePantryItem(name: string, now: string, patch: Partial<PantryItem> = {}): PantryItem {
   const key = keyOf(name)
   const staple = staples.find((s) => s.key === key)
@@ -429,7 +437,7 @@ export const useStore = create<PlantryState>()(
             {
               recipeId: entry.recipeId ?? entry.leftoversOf ?? '',
               date,
-              cookId: entry.cookId,
+              cookId: entry.cookId ?? whoCooks(s.members),
               ...(opts.rating ? { rating: opts.rating } : {}),
               ...(opts.note?.trim() ? { note: opts.note.trim().slice(0, 500) } : {}),
             },
