@@ -39,6 +39,41 @@ const UNITS = [
   'lb',
 ]
 const UNIT_SET = new Set(UNITS)
+/** Long and plural unit names that web recipes use, mapped to Plantry's short ones. */
+const UNIT_ALIASES: Record<string, string> = {
+  tablespoon: 'tbsp',
+  tablespoons: 'tbsp',
+  tbs: 'tbsp',
+  tbsps: 'tbsp',
+  teaspoon: 'tsp',
+  teaspoons: 'tsp',
+  tsps: 'tsp',
+  gram: 'g',
+  grams: 'g',
+  gr: 'g',
+  kilogram: 'kg',
+  kilograms: 'kg',
+  kgs: 'kg',
+  milliliter: 'ml',
+  milliliters: 'ml',
+  millilitre: 'ml',
+  millilitres: 'ml',
+  liter: 'l',
+  liters: 'l',
+  litre: 'l',
+  litres: 'l',
+  ounce: 'oz',
+  ounces: 'oz',
+  pound: 'lb',
+  pounds: 'lb',
+  lbs: 'lb',
+}
+function unitOf(word: string | undefined): string | undefined {
+  if (!word) return undefined
+  const w = word.toLowerCase().replace(/[.,]$/, '')
+  if (UNIT_SET.has(w)) return w
+  return UNIT_ALIASES[w]
+}
 const VULGAR: Record<string, number> = { '½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3 }
 
 const ING_HEADING = /^\s*(?:#+\s*)?ingredients?\b\s*:?\s*$/i
@@ -92,9 +127,20 @@ export function parseIngredientLine(raw: string): ParsedIngredient | null {
     /^(\d+)\s+(\d+\/\d+)/,
     (_, a: string, b: string) => `${Number(a) + parseQuantityToken(b)!}`
   )
+  // Ranges: "2 to 2 1/4 pounds", "2-3 cloves" -> the first number
+  line = line.replace(
+    /^(\d+(?:[.,]\d+)?)\s*(?:to|-|–|or)\s*\d+(?:\s+\d+\/\d+|[.,]\d+|\/\d+)?(?=\s)/i,
+    '$1'
+  )
+  // "1 ½" with a space
+  line = line.replace(
+    /^(\d+)\s+([½¼¾⅓⅔])(?=\s|$)/,
+    (_, a: string, b: string) => `${Number(a) + VULGAR[b]}`
+  )
   if (!line) return null
   const parts = line.split(/\s+/)
-  let quantity = 1
+  // No number means "to taste" or "a pinch": leave the amount blank rather than invent 1.
+  let quantity = 0
   let idx = 0
   const q = parseQuantityToken(parts[0])
   if (q !== undefined) {
@@ -103,13 +149,13 @@ export function parseIngredientLine(raw: string): ParsedIngredient | null {
   } else {
     // quantity glued to unit: "200g"
     const glued = parts[0].match(/^(\d+(?:\.\d+)?)([a-z]+)$/i)
-    if (glued && UNIT_SET.has(glued[2].toLowerCase())) {
-      return finish(Number(glued[1]), glued[2].toLowerCase(), parts.slice(1))
-    }
+    const gluedUnit = glued ? unitOf(glued[2]) : undefined
+    if (glued && gluedUnit) return finish(Number(glued[1]), gluedUnit, parts.slice(1))
   }
   let unit = ''
-  if (idx > 0 && parts[idx] && UNIT_SET.has(parts[idx].toLowerCase().replace(/[.,]$/, ''))) {
-    unit = parts[idx].toLowerCase().replace(/[.,]$/, '')
+  const u = idx > 0 ? unitOf(parts[idx]) : undefined
+  if (u) {
+    unit = u
     idx += 1
   }
   return finish(quantity, unit, parts.slice(idx))
@@ -118,9 +164,13 @@ export function parseIngredientLine(raw: string): ParsedIngredient | null {
 function finish(quantity: number, unit: string, nameParts: string[]): ParsedIngredient | null {
   let name = nameParts.join(' ').replace(/^of\s+/i, '')
   name = name
-    .split(',')[0]
     .replace(/\(.*?\)/g, '')
+    .split(/[,;]/)[0]
     .replace(/\s+/g, ' ')
+    .replace(
+      /\s+(?:(?:very\s+)?(?:finely|roughly|thinly|coarsely)\s+)?(?:chopped|crushed|minced|diced|sliced|grated|peeled|halved|quartered|beaten|melted|softened)$/i,
+      ''
+    )
     .trim()
   if (!name) return null
   return { name, quantity, unit }

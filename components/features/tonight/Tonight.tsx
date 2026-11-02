@@ -149,7 +149,8 @@ export function Tonight() {
         </motion.section>
       )}
 
-      {!settings.weatherEnabled && (
+      {/* Ask about weather once Plantry has earned it, not on the first visit. */}
+      {!settings.weatherEnabled && cooked.length >= 2 && (
         <motion.div variants={reveal}>
           <WeatherOptIn />
         </motion.div>
@@ -222,23 +223,7 @@ function NudgeCard({
     )
   }
 
-  if (nudge === 'start-now' && recipe) {
-    const eat = new Date(new Date(now).getTime() + recipe.totalMinutes * 60_000)
-    const time = eat.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })
-    return shell(
-      t("Start now and you'll eat by {time}", { time }),
-      t('{title} takes {v1} start to finish.', {
-        title: recipe.title,
-        v1: formatMinutes(recipe.totalMinutes),
-      }),
-      <Link
-        href={`/cook/${recipe.id}?date=${targetDate}`}
-        className={buttonVariants({ variant: 'primary', size: 'sm' })}
-      >
-        {t('Cook')}
-      </Link>
-    )
-  }
+  // 'start-now' lives on the dinner card itself as "Ready by …", so it isn't repeated here.
 
   if (nudge === 'leftovers') {
     const yesterday = addDays(today, -1)

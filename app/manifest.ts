@@ -18,10 +18,17 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
+    // Share a recipe page from the browser straight into Plantry.
+    share_target: {
+      action: '/recipes/new',
+      method: 'GET',
+      params: { title: 'title', text: 'text', url: 'url' },
+    },
     shortcuts: [
       { name: 'Tonight', url: '/' },
       { name: 'Shopping list', url: '/shop' },
       { name: 'This week', url: '/week' },
+      { name: 'Save a recipe', url: '/recipes/new?tab=link' },
     ],
   }
 }
