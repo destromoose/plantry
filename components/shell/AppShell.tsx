@@ -22,6 +22,7 @@ import { page, settle } from '@/lib/motion'
 import { Logo } from '@/components/ui/Logo'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Toaster } from '@/components/ui/Toast'
+import { NewHomeNote } from './NewHomeNote'
 import { useAppContext } from './Providers'
 import { setWriteErrorListener, useStorageStatus } from '@/lib/storage'
 import { toast } from '@/components/ui/Toast'
@@ -110,6 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Toaster />
       <p id="announcer" className="sr-only" aria-live="polite" />
+      <NewHomeNote />
     </>
   )
 

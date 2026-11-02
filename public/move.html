@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#FAF4EA">
+<title>Moving in · Plantry</title>
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<style>
+  /* Plantry's new address receives a phone's data from the old one here, before the app
+     starts, so nothing in the app can overwrite it halfway. Colours match the app. */
+  :root { --canvas:#FAF4EA; --surface:#FFFCF7; --ink:#2A1F1A; --ink-2:#5C4B42; --line:#E8DCCB; --accent:#AE4A29; --accent-ink:#FFFAF4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --canvas:#1E1620; --surface:#2A202C; --ink:#FAF4EA; --ink-2:#D9CBBE; --line:#433646; --accent:#E9A23B; --accent-ink:#1E1620; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; min-height:100dvh; display:grid; place-items:center; background:var(--canvas); color:var(--ink);
+         font:17px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; text-align:center; padding:24px; }
+  main { width:100%; max-width:380px; }
+  svg.logo { color:var(--accent); margin-bottom:20px; }
+  h1 { font:600 26px/1.2 Georgia, "Times New Roman", serif; margin:0 0 8px; letter-spacing:-0.01em; }
+  p { margin:0 0 20px; color:var(--ink-2); }
+  .actions { display:grid; gap:12px; }
+  button, a.btn { appearance:none; border:0; font:inherit; font-weight:600; cursor:pointer; min-height:52px; padding:12px 20px; border-radius:999px; text-decoration:none; display:flex; align-items:center; justify-content:center; }
+  .primary { background:var(--accent); color:var(--accent-ink); }
+  .secondary { background:var(--surface); color:var(--ink); border:1px solid var(--line); }
+  .hint { display:block; font-weight:400; font-size:14px; opacity:.8; }
+  .stack { flex-direction:column; gap:2px; }
+  .spin { width:28px; height:28px; margin:8px auto 0; border-radius:50%; border:3px solid var(--line); border-top-color:var(--accent); animation:spin 0.9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg) } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration:3s } }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <svg class="logo" width="44" height="44" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+    <circle cx="14" cy="14" r="12" stroke="currentColor" stroke-width="2"/>
+    <circle cx="14" cy="14" r="7" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+    <path d="M14 18c0-4 2.5-6.5 6.5-6.5C20.5 15.5 18 18 14 18Z" fill="currentColor"/>
+  </svg>
+  <section id="moving">
+    <h1 data-t="moving.title">Moving your kitchen in</h1>
+    <p data-t="moving.body" aria-live="polite">Your plan, pantry, recipes and history are on their way.</p>
+    <div class="spin" aria-hidden="true"></div>
+  </section>
+  <section id="confirm" hidden>
+    <h1 data-t="confirm.title">Bring your kitchen over?</h1>
+    <p data-t="confirm.body">This brings your Plantry data, and household sharing if it's on, from plantry-pi.vercel.app to this address. Only continue if you just tapped Open the new Plantry there.</p>
+    <div class="actions">
+      <button id="bring" class="primary" data-t="confirm.yes">Bring it over</button>
+      <button id="notNow" class="secondary" data-t="confirm.no">Not now</button>
+    </div>
+  </section>
+  <section id="choose" hidden>
+    <h1 data-t="choose.title">You have Plantry here already</h1>
+    <p data-t="choose.body">This phone already has a kitchen saved at the new address. Which one do you want to keep?</p>
+    <div class="actions">
+      <button id="useOld" class="primary stack"><span data-t="choose.old">Use my kitchen from the old address</span></button>
+      <button id="keepNew" class="secondary stack"><span data-t="choose.new">Keep what's here</span></button>
+    </div>
+  </section>
+  <section id="failed" hidden>
+    <h1 data-t="failed.title">Your kitchen didn't come over</h1>
+    <p id="failedBody"></p>
+    <div class="actions">
+      <button id="retry" class="primary" data-t="failed.retry">Try again</button>
+      <button id="skip" class="secondary" data-t="failed.skip">Continue to Plantry</button>
+    </div>
+  </section>
+</main>
+<script>
+(function () {
+  var es = /^es\b/i.test((function () { try { var l = localStorage.getItem('plantry-lang'); if (l === 'en' || l === 'es') return l } catch (e) {} return navigator.language || 'en' })())
+  var T = es ? {
+    'moving.title': 'Trayendo tu cocina', 'moving.body': 'Tu plan, despensa, recetas e historial ya vienen en camino.',
+    'confirm.title': '¿Traer tu cocina?', 'confirm.body': 'Esto trae tus datos de Plantry, y el hogar compartido si está activo, desde plantry-pi.vercel.app a esta dirección. Sigue solo si acabas de tocar Abrir el nuevo Plantry allí.',
+    'confirm.yes': 'Traerla', 'confirm.no': 'Ahora no',
+    'choose.title': 'Ya tienes Plantry aquí', 'choose.body': 'Este teléfono ya tiene una cocina guardada en la dirección nueva. ¿Cuál quieres conservar?',
+    'choose.old': 'Usar mi cocina de la dirección anterior', 'choose.new': 'Conservar lo que hay aquí',
+    'failed.title': 'Tu cocina no se trajo', 'failed.retry': 'Intentar de nuevo', 'failed.skip': 'Seguir a Plantry',
+    'failed.gone': 'Este enlace ya se usó o caducó. Abre Plantry en la dirección anterior para traer tus datos de nuevo. Ahí siguen guardados.',
+    'failed.full': 'Este teléfono no tiene espacio para guardar tu cocina. Libera espacio y vuelve a intentarlo. Tus datos siguen guardados en la dirección anterior.',
+    'failed.net': 'No se pudo conectar con Plantry. Revisa tu conexión e inténtalo de nuevo. Tus datos siguen guardados en la dirección anterior.'
+  } : {
+    'failed.gone': 'This link was already used or has expired. Open Plantry at the old address to bring your data over again. It is still saved there.',
+    'failed.full': "This phone doesn't have room to save your kitchen. Free up some space and try again. Your data is still saved at the old address.",
+    'failed.net': "Plantry couldn't be reached. Check your connection and try again. Your data is still saved at the old address."
+  }
+  if (es) {
+    document.documentElement.lang = 'es'
+    document.querySelectorAll('[data-t]').forEach(function (el) { var v = T[el.getAttribute('data-t')]; if (v) el.textContent = v })
+  }
+
+  var q = new URLSearchParams(location.search)
+  // Only ever continue to a page on this address.
+  var next = (function (v) {
+    try { var u = new URL(v || '/', location.origin); return u.origin === location.origin ? '/' + u.pathname.replace(/^[\/\\]+/, '') + u.search + u.hash : '/' } catch (e) { return '/' }
+  })(q.get('next'))
+  var from = q.get('from') === 'app' ? 'app' : 'web'
+  var h = new URLSearchParams(location.hash.slice(1))
+  var token = h.get('t')
+  if (token && !/^[a-f0-9]{32}$/.test(token)) token = null
+  // Moves start on the old address. Arriving from anywhere else, ask before bringing data in.
+  var LEGACY = ['https://plantry-pi.vercel.app']
+  var cameFromOld = (function () { try { return LEGACY.indexOf(new URL(document.referrer).origin) !== -1 } catch (e) { return false } })()
+  // The handover details never stay in the address bar or history.
+  history.replaceState(null, '', location.pathname + location.search)
+
+  var IMPORTED = 'plantry-move-imported', WELCOME = 'plantry-move-welcome', MAIN = 'plantry-v1'
+  var ls; try { ls = window.localStorage; ls.setItem('__plantry_probe__', '1'); ls.removeItem('__plantry_probe__') } catch (e) { ls = null }
+
+  function go() { location.replace(next) }
+  function show(id) { ['moving', 'confirm', 'choose', 'failed'].forEach(function (s) { document.getElementById(s).hidden = s !== id }) }
+  function fail(kind) {
+    document.getElementById('failedBody').textContent = T['failed.' + kind]
+    document.getElementById('retry').hidden = kind === 'gone'
+    show('failed')
+  }
+  function seen() { try { return JSON.parse(ls.getItem(IMPORTED) || '[]') } catch (e) { return [] } }
+  function remember(fp) { if (!fp) return; var s = seen().filter(function (x) { return x !== fp }); s.push(fp); ls.setItem(IMPORTED, JSON.stringify(s.slice(-10))) }
+  function onboarded(text) { try { return !!JSON.parse(text).state.settings.onboarded } catch (e) { return false } }
+
+  var mine = function (k) { return k && k.indexOf('plantry-') === 0 && k.indexOf('plantry-move') !== 0 }
+  var pending = null
+
+  // Writes the moved data, or puts back exactly what was here if the phone can't save it.
+  function apply(items, fp) {
+    pending = { items: items, fp: fp }
+    var before = {}
+    for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (mine(k)) before[k] = ls.getItem(k) }
+    try {
+      Object.keys(before).forEach(function (k) { ls.removeItem(k) })
+      Object.keys(items).forEach(function (k) { if (mine(k)) ls.setItem(k, String(items[k])) })
+      remember(fp)
+      ls.setItem(WELCOME, from)
+    } catch (e) {
+      try {
+        Object.keys(items).forEach(function (k) { if (mine(k)) ls.removeItem(k) })
+        Object.keys(before).forEach(function (k) { ls.setItem(k, before[k]) })
+      } catch (e2) {}
+      return fail('full')
+    }
+    go()
+  }
+
+  function receive(payload) {
+    var items = (payload && payload.items) || {}, fp = payload && payload.fp
+    if (!ls || !items[MAIN]) return go()
+    // The same data arriving again (an old bookmark opened later) is already here.
+    if (fp && seen().indexOf(fp) !== -1) return go()
+    var here = ls.getItem(MAIN)
+    if (here && here !== items[MAIN] && onboarded(here)) {
+      show('choose')
+      document.getElementById('useOld').onclick = function () { apply(items, fp) }
+      document.getElementById('keepNew').onclick = function () { remember(fp); go() }
+      return
+    }
+    apply(items, fp)
+  }
+
+  function collect() {
+    show('moving')
+    // The link is spent once collected, so a retry after a save problem reuses what came.
+    if (pending) return apply(pending.items, pending.fp)
+    fetch('/api/move/' + encodeURIComponent(token), { method: 'POST', cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 404 || r.status === 400) return fail('gone')
+        if (!r.ok) return fail('net')
+        return r.json().then(receive).catch(function () { fail('net') })
+      }, function () { fail('net') })
+  }
+
+  document.getElementById('retry').onclick = collect
+  document.getElementById('skip').onclick = go
+
+  document.getElementById('bring').onclick = collect
+  document.getElementById('notNow').onclick = go
+
+  if (!token) {
+    if (from === 'app' && ls) ls.setItem(WELCOME, from)
+    go()
+  } else if (cameFromOld) collect()
+  else show('confirm')
+})()
+</script>
+</body>
+</html>
