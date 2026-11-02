@@ -871,6 +871,26 @@ export const es: Record<string, string> = {
   'Ready by {time} if you start now': 'Lista a las {time} si empiezas ya',
   '{total} ingredients.': '{total} ingredientes.',
   'Tell Plantry what you have': 'Dile a Plantry qué tienes',
+  'Your kitchen': 'Tu cocina',
+  'Money and nutrition': 'Dinero y nutrición',
+  'Look and feel': 'Aspecto',
+  'Sharing and your data': 'Compartir y tus datos',
+  'All in. Tap Done shopping to put it away.': 'Todo dentro. Toca Ya compré para guardarlo.',
+  'Put Plantry on your home screen': 'Pon Plantry en tu pantalla de inicio',
+  'It opens full screen like an app, works without signal, and lets you share recipe pages into it.':
+    'Se abre a pantalla completa como una app, funciona sin señal y te deja compartir recetas con ella.',
+  'Install Plantry': 'Instalar Plantry',
+  'Open this page in Safari.': 'Abre esta página en Safari.',
+  'Tap Share': 'Toca Compartir',
+  'the Share button': 'el botón Compartir',
+  'at the bottom of the screen (on iPad, top right).':
+    'abajo en la pantalla (en iPad, arriba a la derecha).',
+  'Scroll down and tap Add to Home Screen': 'Desplázate y toca Añadir a pantalla de inicio',
+  ', then Add.': ', y luego Añadir.',
+  'Open Plantry from its new icon. It works full screen and offline.':
+    'Abre Plantry desde su nuevo icono. Funciona a pantalla completa y sin conexión.',
+  'In your browser menu, choose Install app or Add to Home screen. Plantry then opens full screen and works offline.':
+    'En el menú del navegador, elige Instalar app o Añadir a pantalla de inicio. Plantry se abrirá a pantalla completa y funcionará sin conexión.',
   // Moving to Plantry's own domain.
   'Plantry has a new home': 'Plantry tiene casa nueva',
   'Bringing your kitchen over to {v0}…': 'Llevando tu cocina a {v0}…',

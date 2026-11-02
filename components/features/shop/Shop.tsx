@@ -12,7 +12,7 @@ import { useTapGuard } from '@/lib/useTapGuard'
 import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { cn, pluralize, weekOf } from '@/lib/utils'
-import { checkPop, reveal } from '@/lib/motion'
+import { checkPop, reveal, settle } from '@/lib/motion'
 import type { Aisle, ShopItem } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -162,6 +162,8 @@ export function Shop() {
           </>
         }
       />
+
+      {shop.length > 0 && <BasketProgress done={checked} total={shop.length} />}
 
       <AddForm onAdd={add} />
 
@@ -433,7 +435,12 @@ const Row = memo(function Row({
         role="checkbox"
         aria-checked={item.checked}
         aria-label={qty ? `${item.name}, ${qty}` : item.name}
-        onClick={() => !dragged.current && toggleOnce(item.id)}
+        onClick={() => {
+          if (dragged.current) return
+          // A tiny tap of feedback on phones that support it.
+          if (!item.checked) navigator.vibrate?.(8)
+          toggleOnce(item.id)
+        }}
         className="flex h-14 min-w-0 flex-1 items-center gap-3 pl-3 text-left"
       >
         <span
@@ -466,9 +473,21 @@ const Row = memo(function Row({
         </span>
         <span className="min-w-0 flex-1">
           <span
-            className={cn('block truncate', item.checked ? 'text-ink-3 line-through' : 'text-ink')}
+            className={cn(
+              'relative inline-block max-w-full truncate align-top transition-colors duration-200',
+              item.checked ? 'text-ink-3' : 'text-ink'
+            )}
           >
             {item.name}
+            {/* A strike that draws across, instead of snapping on. */}
+            <motion.span
+              aria-hidden
+              initial={false}
+              animate={{ scaleX: item.checked ? 1 : 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              style={{ originX: 0 }}
+              className="pointer-events-none absolute left-0 right-0 top-1/2 h-px bg-current"
+            />
           </span>
           {fromTitle && (
             <span className="block truncate text-xs text-ink-3">
@@ -503,3 +522,34 @@ const Row = memo(function Row({
 // Hidden until hover only where there is a mouse. Touch screens of any width always see them.
 const hoverReveal =
   'shrink-0 opacity-70 hover:opacity-100 focus-visible:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:focus-visible:opacity-100'
+
+/** How full the basket is. Fills smoothly as things are ticked off. */
+function BasketProgress({ done, total }: { done: number; total: number }) {
+  const all = done === total
+  return (
+    <div className="-mt-2 mb-6" aria-hidden>
+      <div className="h-1.5 overflow-hidden rounded-pill bg-surface-2">
+        <motion.div
+          className={cn('h-full w-full rounded-pill', all ? 'bg-secondary' : 'bg-accent')}
+          style={{ originX: 0 }}
+          initial={false}
+          animate={{ scaleX: total ? done / total : 0 }}
+          transition={settle}
+        />
+      </div>
+      <AnimatePresence initial={false}>
+        {all && (
+          <motion.p
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={settle}
+            className="mt-2 font-display text-base italic text-ink-2"
+          >
+            {t('All in. Tap Done shopping to put it away.')}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

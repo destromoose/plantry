@@ -154,6 +154,15 @@ function Deck(props: HeroProps) {
   const [shownId, setShownId] = useState<string | undefined>()
   const [dir, setDir] = useState(1)
   const moved = useRef(false)
+  // The swipe hint is for newcomers: it goes once someone has shuffled a few times.
+  const [hint, setHint] = useState(false)
+  useEffect(() => {
+    try {
+      setHint(Number(localStorage.getItem(SHUFFLES_KEY) ?? 0) < 3)
+    } catch {
+      setHint(true)
+    }
+  }, [])
 
   const scored = ranked.find((r) => r.recipe.id === shownId) ?? ranked[0]
 
@@ -167,6 +176,14 @@ function Deck(props: HeroProps) {
     const next = pickNext(ranked, nextSeen)
     setDir(direction)
     setSeen(nextSeen)
+    try {
+      localStorage.setItem(
+        SHUFFLES_KEY,
+        String(Number(localStorage.getItem(SHUFFLES_KEY) ?? 0) + 1)
+      )
+    } catch {
+      /* the hint just stays */
+    }
     setShownId(
       next && next.recipe.id !== scored.recipe.id
         ? next.recipe.id
@@ -222,9 +239,11 @@ function Deck(props: HeroProps) {
           </WhilePresent>
         </motion.div>
       </AnimatePresence>
-      <p className="mt-3 text-center text-sm text-ink-2">
-        {t('Swipe the card sideways to shuffle')}
-      </p>
+      {hint && (
+        <p className="mt-3 text-center text-sm text-ink-2">
+          {t('Swipe the card sideways to shuffle')}
+        </p>
+      )}
       <span className="sr-only" aria-live="polite">
         {t('Showing {title}', { title: scored.recipe.title })}
       </span>
@@ -247,6 +266,7 @@ function WhilePresent({ children }: { children: React.ReactNode }) {
   )
 }
 
+const SHUFFLES_KEY = 'plantry-shuffles'
 const quickDeal = { type: 'spring', stiffness: 380, damping: 32 } as const
 
 /* ------------------------------------------------------------------ */

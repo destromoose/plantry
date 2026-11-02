@@ -92,7 +92,7 @@ export function SyncCard() {
 
   return (
     <Card id="sharing" className="scroll-mt-24">
-      <SectionTitle>{t('Share with your household')}</SectionTitle>
+      <SectionTitle as="h3">{t('Share with your household')}</SectionTitle>
       {sync.code ? (
         <>
           <p className="text-[0.9375rem] text-ink-2">
