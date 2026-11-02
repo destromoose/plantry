@@ -67,7 +67,8 @@ struct WeekView: View {
             .overlay(alignment: .bottomTrailing) { EmptyView() }
 
             Button("Make the shopping list") {
-                store.generateShop(dates: dates)
+                let result = store.generateShop(dates: dates, today: today)
+                if result.kept { toaster.show("Nothing left to buy for these nights") }
                 nav.go(.shop)
             }
             .pbutton(decided == 0 ? .secondary : .primary, .lg, fill: true)
@@ -85,15 +86,26 @@ struct WeekView: View {
     private func cookDay(_ date: String) {
         let e = entry(for: date)
         let r = recipes.first { $0.id == (e?.recipeId ?? e?.leftoversOf) }
-        store.markCooked(date, leftovers: (r?.leftovers ?? false) && e?.recipeId != nil)
+        let undo = store.undoable { _ = store.markCooked(date, leftovers: (r?.leftovers ?? false) && e?.recipeId != nil) }
         ctxProvider.refresh()
-        toaster.show("Cooked. Nicely done.")
+        toaster.show("Cooked. Nicely done.") { undo(); ctxProvider.refresh() }
         Haptic.success()
     }
 
     private func fillWeek(_ dates: [String]) {
+        guard TapGuard.allow("fill-week") else { return }
+        let undo = store.undoable { fill(dates) }
+        ctxProvider.refresh()
+        Haptic.success()
+        toaster.show(filledCount > 0 ? "Week filled. Shuffle anything you don't fancy." : "Nothing left to fill this week") { undo(); ctxProvider.refresh() }
+    }
+
+    @State private var filledCount = 0
+
+    private func fill(_ dates: [String]) {
         let ctx = ctxProvider.context
         let settings = settingsRows.first
+        let avoid = Diet.householdAvoid(settingsAvoid: settings?.avoid ?? [], members: members.map(\.value))
         var used = Set(plan.filter { dates.contains($0.date) && $0.slot == .dinner }.compactMap(\.recipeId))
         var filled = 0
         let recipeValues = recipes.map(\.value)
@@ -108,16 +120,15 @@ struct WeekView: View {
                 filled += 1
                 continue
             }
-            let ranked = suggest(SuggestInput(recipes: recipeValues, pantry: pantryValues, tastes: settings?.tastes ?? [], weatherLean: ctx.weatherLean, isWeekend: DateKey.isWeekend(date), today: today, recent: recent, exclude: used))
-            let pick = ranked.first ?? suggest(SuggestInput(recipes: recipeValues, pantry: pantryValues, tastes: settings?.tastes ?? [], weatherLean: ctx.weatherLean, isWeekend: ctx.isWeekend, today: today)).first
+            // A little variety: pick from the top three instead of always the first.
+            let ranked = suggest(SuggestInput(recipes: recipeValues, pantry: pantryValues, tastes: settings?.tastes ?? [], weatherLean: ctx.weatherLean, isWeekend: DateKey.isWeekend(date), today: today, recent: recent, exclude: used, avoid: avoid))
+            let pick = ranked.prefix(3).randomElement() ?? suggest(SuggestInput(recipes: recipeValues, pantry: pantryValues, tastes: settings?.tastes ?? [], weatherLean: ctx.weatherLean, isWeekend: ctx.isWeekend, today: today, avoid: avoid)).first
             guard let pick else { continue }
             used.insert(pick.recipe.id)
             store.setDinner(date, recipeId: pick.recipe.id, cookId: current?.cookId)
             filled += 1
         }
-        ctxProvider.refresh()
-        Haptic.success()
-        toaster.show(filled > 0 ? "Week filled. Shuffle anything you don't fancy." : "Nothing left to fill this week")
+        filledCount = filled
     }
 }
 

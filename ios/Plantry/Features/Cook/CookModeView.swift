@@ -1,9 +1,9 @@
 import SwiftUI
 import SwiftData
-import AudioToolbox
 
-/// Immersive, one step at a time. Swipe or tap to move, timers run per step,
-/// the screen stays awake, and finishing updates the pantry and the plan.
+/// Immersive, one step at a time. Swipe or tap to move, timers run per step and
+/// keep ringing until tapped, the screen stays awake, progress survives leaving,
+/// and finishing updates the pantry, the list and the plan.
 struct CookModeView: View {
     @Environment(Store.self) private var store
     @Environment(ContextProvider.self) private var ctxProvider
@@ -13,6 +13,7 @@ struct CookModeView: View {
     @Environment(\.theme) private var t
     @Environment(\.plantryReduceMotion) private var reduce
     @Query private var recipes: [RecipeModel]
+    @Query private var settingsRows: [SettingsModel]
     var request: CookRequest
 
     @State private var index = 0
@@ -20,13 +21,27 @@ struct CookModeView: View {
     @State private var drag: CGFloat = 0
     @State private var ingOpen = false
     @State private var finishOpen = false
+    @State private var leaveOpen = false
     @State private var checked: Set<String> = []
+    @State private var people: Int?
     @State private var usePantry = true
     @State private var leftovers = false
+    @State private var replaceTomorrow = false
     @State private var timers = Timers()
+    @State private var loaded = false
+    @State private var resumed = false
 
     private var recipe: RecipeModel? { recipes.first { $0.id == request.recipeId } }
     private var entry: PlanEntryModel? { request.date.flatMap { store.dinner(on: $0) } }
+    private var settings: SettingsModel? { settingsRows.first }
+    private var kids: Bool { settings?.cookingWithKids ?? false }
+    private var alreadyDone: Bool { entry?.done ?? false }
+
+    /// One servings number, in order: changed here, passed in, the plan, the household.
+    private var count: Int {
+        guard let recipe else { return 2 }
+        return people ?? request.servings ?? entry?.servings ?? settings?.cookingFor ?? recipe.servings
+    }
 
     var body: some View {
         ZStack {
@@ -42,41 +57,64 @@ struct CookModeView: View {
         }
         .foregroundStyle(t.ink)
         .preferredColorScheme(t.colorScheme)
-        .onAppear {
-            leftovers = recipe?.leftovers ?? false
-            #if canImport(UIKit)
-            UIApplication.shared.isIdleTimerDisabled = true
-            #endif
-        }
+        .onAppear { load() }
         .onDisappear {
             timers.stop()
             #if canImport(UIKit)
             UIApplication.shared.isIdleTimerDisabled = false
             #endif
         }
+        .onChange(of: index) { persist() }
+        .onChange(of: checked) { persist() }
+        .onChange(of: people) { persist() }
+    }
+
+    private func load() {
+        guard !loaded else { return }
+        loaded = true
+        leftovers = recipe?.leftovers ?? false
+        #if canImport(UIKit)
+        UIApplication.shared.isIdleTimerDisabled = true
+        #endif
+        if let saved = CookSession.load(recipeId: request.recipeId) {
+            index = clamp(saved.index, 0, max(0, (recipe?.steps.count ?? 1) - 1))
+            people = saved.servings
+            checked = Set(saved.checked)
+            timers = Timers(states: saved.timers)
+            resumed = saved.index > 0 || !saved.timers.isEmpty
+            if resumed { toaster.show("Picked up where you left off.") }
+        }
+        timers.onChange = { persist() }
+    }
+
+    private func persist() {
+        guard let recipe else { return }
+        CookSession(recipeId: recipe.id, date: request.date, index: index, servings: people, checked: Array(checked), timers: timers.states).save()
     }
 
     private func content(_ recipe: RecipeModel) -> some View {
         let steps = recipe.steps
         let last = steps.count - 1
         let step = steps[min(index, last)]
-        let active = steps.enumerated().filter { timers.state(for: $0.element.id).map { $0.endsAt != nil || $0.finished } ?? false }
+        let scale = Double(count) / Double(max(recipe.servings, 1))
+        let active = steps.enumerated().filter { timers.state(for: $0.element.id).map { $0.endsAt != nil || ($0.finished && !$0.acknowledged) || ($0.endsAt == nil && $0.remainingMs < $0.durationMs && !$0.finished) } ?? false }
+        let cautions = Safety.cautions(for: step.text, own: step.caution)
 
         return VStack(spacing: 0) {
-            // Header: close, progress, running timers
             VStack(spacing: 12) {
                 HStack {
-                    Button { dismiss() } label: { Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).iconButton() }
+                    Button { leaveOrClose() } label: { Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).iconButton() }
                         .accessibilityLabel("Close cook mode")
                     Spacer()
-                    Text(recipe.title).font(Type.display(16)).lineLimit(1)
+                    VStack(spacing: 1) {
+                        Text(recipe.title).font(Type.display(16)).lineLimit(1)
+                        Text("For \(count) · screen stays on").font(.system(size: 11)).foregroundStyle(t.ink3)
+                    }
                     Spacer()
                     Color.clear.frame(width: 44, height: 44)
                 }
                 HStack(spacing: 4) {
-                    ForEach(steps.indices, id: \.self) { i in
-                        Capsule().fill(i <= index ? t.accent : t.line).frame(height: 4)
-                    }
+                    ForEach(steps.indices, id: \.self) { i in Capsule().fill(i <= index ? t.accent : t.line).frame(height: 4) }
                 }
                 .motion(Motion.settle, value: index)
                 .accessibilityHidden(true)
@@ -85,13 +123,18 @@ struct CookModeView: View {
                         HStack(spacing: 8) {
                             ForEach(active, id: \.element.id) { i, s in
                                 let st = timers.state(for: s.id)!
-                                Button { go(i) } label: {
-                                    Text("Step \(i + 1) · \(st.finished ? "done" : formatClock(st.remaining(now: timers.now)))")
-                                        .font(.system(size: 13, weight: .medium)).monospacedDigit()
-                                        .foregroundStyle(st.finished ? Theme.cream : t.accentInk)
-                                        .padding(.horizontal, 12).frame(height: 34)
-                                        .background(st.finished ? Theme.danger : t.accent, in: Capsule())
+                                let ringing = st.finished && !st.acknowledged
+                                Button {
+                                    if ringing { timers.acknowledge(s.id) }
+                                    go(i)
+                                } label: {
+                                    Text("\(stepWords(s.text)) · \(st.finished ? "done" : st.endsAt == nil ? "paused \(formatClock(st.remainingMs))" : formatClock(st.remaining(now: timers.now)))")
+                                        .font(.system(size: 13, weight: .medium)).monospacedDigit().lineLimit(1)
+                                        .foregroundStyle(ringing ? Theme.cream : t.accentInk)
+                                        .padding(.horizontal, 12).frame(height: 36)
+                                        .background(ringing ? Theme.danger : (st.endsAt == nil ? t.accent.opacity(0.6) : t.accent), in: Capsule())
                                 }
+                                .accessibilityLabel(ringing ? "Timer for \(stepWords(s.text)) finished. Tap to dismiss." : "Timer for \(stepWords(s.text)), \(formatClock(st.remaining(now: timers.now))) left. Go to step.")
                                 .transition(.scale.combined(with: .opacity))
                             }
                         }
@@ -102,14 +145,28 @@ struct CookModeView: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
 
-            // The step
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     Eyebrow(text: "Step \(index + 1) of \(steps.count)")
-                    Text(step.text).font(Type.display(28, weight: .medium)).lineSpacing(2)
+                    Text(Safety.withFahrenheit(step.text)).font(Type.display(28, weight: .medium)).lineSpacing(2)
+                    if !cautions.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(cautions) { c in
+                                Label(c.note, systemImage: icon(for: c.kind)).font(Type.small).foregroundStyle(t.ink2)
+                            }
+                            if kids && Safety.needsGrownUp(cautions) {
+                                Label("New to this? Ask a grown-up to help with this step.", systemImage: "person.2").font(.system(size: 13, weight: .medium)).foregroundStyle(t.accent)
+                            }
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(t.surface2.opacity(0.7), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .accessibilityElement(children: .combine)
+                    }
                     if let m = step.timerMinutes {
                         StepTimerView(minutes: m, state: timers.state(for: step.id), now: timers.now,
-                                      onStart: { timers.start(step.id, minutes: m) }, onPause: { timers.pause(step.id) }, onReset: { timers.reset(step.id) })
+                                      onStart: { startTimer(step, minutes: m) }, onPause: { timers.pause(step.id) }, onReset: { timers.reset(step.id) },
+                                      onDismiss: { timers.acknowledge(step.id) })
                     }
                 }
                 .padding(.horizontal, 24)
@@ -118,21 +175,20 @@ struct CookModeView: View {
                 .id(step.id)
                 .offset(x: drag)
                 .transition(.asymmetric(insertion: .offset(x: dir * 48).combined(with: .opacity), removal: .offset(x: dir * -48).combined(with: .opacity)))
+                .accessibilityElement(children: .combine)
                 .accessibilityLabel("Step \(index + 1) of \(steps.count). \(step.text)")
             }
             .motion(Motion.settle, value: index)
             .simultaneousGesture(
-                DragGesture(minimumDistance: 16)
+                DragGesture(minimumDistance: 24)
                     .onChanged { v in if abs(v.translation.width) > abs(v.translation.height) { drag = v.translation.width * 0.25 } }
                     .onEnded { v in
                         withAnimation(Motion.settle) { drag = 0 }
-                        guard abs(v.translation.width) > abs(v.translation.height) else { return }
-                        if v.translation.width < -80 || v.predictedEndTranslation.width < -200 { next(last) }
-                        else if v.translation.width > 80 || v.predictedEndTranslation.width > 200 { prev() }
+                        guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
+                        if v.translation.width < -100 { next(last) } else if v.translation.width > 100 { prev() }
                     }
             )
 
-            // Footer
             HStack(spacing: 10) {
                 Button { ingOpen = true } label: { Label("Ingredients", systemImage: "list.bullet") }.pbutton(.glass, .lg)
                 Spacer()
@@ -145,53 +201,104 @@ struct CookModeView: View {
             }
             .padding(20)
         }
-        .sheet(isPresented: $ingOpen) {
-            SheetChrome(title: "Ingredients") {
-                VStack(spacing: 4) {
-                    ForEach(recipe.ingredients) { ing in
-                        let on = checked.contains(ing.id)
-                        Button {
-                            if on { checked.remove(ing.id) } else { checked.insert(ing.id) }
-                            Haptic.tap()
-                        } label: {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle().fill(on ? t.secondary : .clear)
-                                    Circle().strokeBorder(on ? .clear : t.ink3, lineWidth: 1.5)
-                                    if on { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(t.secondaryInk).transition(.scale) }
-                                }
-                                .frame(width: 26, height: 26)
-                                .motion(Motion.checkPop, value: on)
-                                Text(ing.name + (ing.isOptional ? " (optional)" : "")).font(Type.body).strikethrough(on, color: t.ink3).foregroundStyle(on ? t.ink3 : t.ink)
-                                Spacer()
-                                Text(formatQuantity(ing.quantity, ing.unit)).font(Type.small).foregroundStyle(t.ink2)
+        .sheet(isPresented: $ingOpen) { ingredientsSheet(recipe, scale: scale) }
+        .sheet(isPresented: $finishOpen) { finishSheet(recipe) }
+        .sheet(isPresented: $leaveOpen) {
+            SheetChrome(title: "A timer is still running") {
+                Text("Leave now and it keeps counting in the background. You can come back any time from Tonight.").font(Type.body).foregroundStyle(t.ink2)
+                HStack(spacing: 8) {
+                    Button("Keep cooking") { leaveOpen = false }.pbutton(.primary)
+                    Button("Leave for now") { leaveOpen = false; close() }.pbutton(.ghost)
+                }
+                .padding(.top, 20)
+            }
+            .presentationDetents([.height(220)])
+        }
+    }
+
+    private func ingredientsSheet(_ recipe: RecipeModel, scale: Double) -> some View {
+        SheetChrome(title: "Ingredients") {
+            HStack {
+                Text("Cooking for").font(Type.label)
+                Spacer()
+                Stepper(value: Binding(get: { count }, set: { people = $0 }), range: 1...24, label: "people")
+            }
+            .padding(.bottom, 12)
+            VStack(spacing: 4) {
+                ForEach(recipe.ingredients) { ing in
+                    let on = checked.contains(ing.id)
+                    Button {
+                        if on { checked.remove(ing.id) } else { checked.insert(ing.id) }
+                        Haptic.tap()
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().fill(on ? t.secondary : .clear)
+                                Circle().strokeBorder(on ? .clear : t.ink3, lineWidth: 1.5)
+                                if on { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(t.secondaryInk).transition(.scale) }
                             }
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
+                            .frame(width: 26, height: 26)
+                            .motion(Motion.checkPop, value: on)
+                            Text(ing.name + (ing.isOptional ? " (optional)" : "")).font(Type.body).strikethrough(on, color: t.ink3).foregroundStyle(on ? t.ink3 : t.ink)
+                            Spacer()
+                            Text(Quantity.format(ing.quantity * scale, ing.unit)).font(Type.small).foregroundStyle(t.ink2)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(on ? [.isSelected] : [])
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(on ? [.isSelected] : [])
+                    .accessibilityLabel("\(ing.name), \(Quantity.format(ing.quantity * scale, ing.unit))")
                 }
             }
-            .presentationDetents([.medium, .large])
         }
-        .sheet(isPresented: $finishOpen) {
-            SheetChrome(title: nil) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Image(systemName: "checkmark").font(.system(size: 22, weight: .bold)).foregroundStyle(t.secondaryInk)
-                        .frame(width: 56, height: 56).background(t.secondary, in: Circle())
-                        .transition(.scale)
-                    Text("That's dinner.").font(Type.title)
-                    if request.date != nil && entry != nil {
-                        Toggle(isOn: $usePantry) { Text("Use up the fresh stuff from my pantry").font(Type.body) }.tint(t.accent)
-                        Toggle(isOn: $leftovers) { Text("There are leftovers").font(Type.body) }.tint(t.accent)
+        .presentationDetents([.medium, .large])
+    }
+
+    private func finishSheet(_ recipe: RecipeModel) -> some View {
+        let tomorrow = request.date.map { DateKey.addDays($0, 1) }
+        let tomorrowBusy = tomorrow.flatMap { store.dinner(on: $0) }.map { $0.recipeId != nil || $0.note != nil } ?? false
+        return SheetChrome(title: nil) {
+            VStack(alignment: .leading, spacing: 16) {
+                Image(systemName: "checkmark").font(.system(size: 22, weight: .bold)).foregroundStyle(t.secondaryInk)
+                    .frame(width: 56, height: 56).background(t.secondary, in: Circle())
+                Text(alreadyDone ? "Already logged." : "That's dinner.").font(Type.title)
+                if alreadyDone {
+                    Text("This night is already marked cooked, so nothing is counted twice.").font(Type.body).foregroundStyle(t.ink2)
+                } else if request.date != nil && entry != nil {
+                    Toggle(isOn: $usePantry) { Text("Use up the fresh stuff from my pantry").font(Type.body) }.tint(t.accent)
+                    Toggle(isOn: $leftovers) { Text("There are leftovers").font(Type.body) }.tint(t.accent)
+                    if leftovers && tomorrowBusy {
+                        Toggle(isOn: $replaceTomorrow) { Text("Swap tomorrow's plan for these leftovers").font(Type.body) }.tint(t.accent)
                     }
-                    Button(request.date != nil && entry != nil ? "Finish" : "Back to the recipe") { finish() }.pbutton(.primary, .lg, fill: true)
+                } else {
+                    Text("Log it as tonight's dinner so the week and the pantry keep up.").font(Type.body).foregroundStyle(t.ink2)
                 }
+                Button(alreadyDone ? "Back to Tonight" : "Finish") { finish() }.pbutton(.primary, .lg, fill: true)
             }
-            .presentationDetents([.medium])
         }
+        .presentationDetents([.medium])
+    }
+
+    private func stepWords(_ text: String) -> String {
+        let words = text.split(separator: " ").prefix(3).joined(separator: " ")
+        return words.trimmingCharacters(in: .punctuationCharacters)
+    }
+
+    private func icon(for kind: CautionKind) -> String {
+        switch kind {
+        case .hot: "flame"
+        case .oven: "oven"
+        case .boil: "drop"
+        case .sharp: "scissors"
+        case .raw: "hand.raised"
+        }
+    }
+
+    private func startTimer(_ step: Step, minutes: Int) {
+        guard TapGuard.allow("timer-\(step.id)") else { return }
+        Notifications.requestOnce(asked: settings?.askedNotifications ?? false) { store.update { $0.askedNotifications = true } }
+        timers.start(step.id, minutes: Double(minutes), label: stepWords(step.text))
     }
 
     private func go(_ to: Int) {
@@ -199,106 +306,59 @@ struct CookModeView: View {
         let n = clamp(to, 0, count - 1)
         if n != index { dir = n > index ? 1 : -1 }
         withAnimation(reduce ? nil : Motion.settle) { index = n }
+        #if canImport(UIKit)
+        UIAccessibility.post(notification: .announcement, argument: "Step \(n + 1) of \(count)")
+        #endif
     }
 
     private func next(_ last: Int) {
+        guard TapGuard.allow("cook-next") else { return }
         if index >= last { finishOpen = true } else { go(index + 1) }
         Haptic.tap()
     }
 
     private func prev() { go(index - 1) }
 
-    private func finish() {
-        finishOpen = false
-        if let date = request.date, entry != nil {
-            store.markCooked(date, leftovers: leftovers, usePantry: usePantry)
-            ctxProvider.refresh()
-            Haptic.success()
-            toaster.show("Nice work.")
-            nav.go(.tonight)
-            nav.popToRoot()
-        }
+    private func leaveOrClose() {
+        if timers.anyRunning { leaveOpen = true } else { close() }
+    }
+
+    /// Back to where you came from, keeping the session so it can be resumed.
+    private func close() {
+        persist()
         dismiss()
     }
-}
 
-func formatClock(_ ms: Int) -> String {
-    let s = Int((Double(ms) / 1000).rounded(.up))
-    return String(format: "%d:%02d", s / 60, s % 60)
-}
-
-// MARK: - Timers
-
-struct TimerState {
-    var durationMs: Int
-    /// Remaining time while paused or idle.
-    var remainingMs: Int
-    /// Wall-clock end while running, else nil.
-    var endsAt: Date?
-    var finished: Bool
-
-    func remaining(now: Date) -> Int {
-        if let endsAt { return max(0, Int(endsAt.timeIntervalSince(now) * 1000)) }
-        return remainingMs
-    }
-}
-
-/// Timers keyed by step id. Accurate via wall clock, independent of tick rate.
-@MainActor
-@Observable
-final class Timers {
-    private(set) var states: [String: TimerState] = [:]
-    private(set) var now = Date()
-    private var ticker: Task<Void, Never>?
-
-    func state(for id: String) -> TimerState? { states[id] }
-
-    func start(_ id: String, minutes: Int) {
-        var t = states[id] ?? TimerState(durationMs: minutes * 60_000, remainingMs: minutes * 60_000, endsAt: nil, finished: false)
-        guard t.endsAt == nil else { return }
-        let rem = t.finished || t.remainingMs <= 0 ? t.durationMs : t.remainingMs
-        t.remainingMs = rem
-        t.endsAt = Date().addingTimeInterval(Double(rem) / 1000)
-        t.finished = false
-        states[id] = t
-        tick()
-    }
-
-    func pause(_ id: String) {
-        guard var t = states[id], let end = t.endsAt else { return }
-        t.remainingMs = max(0, Int(end.timeIntervalSinceNow * 1000))
-        t.endsAt = nil
-        states[id] = t
-    }
-
-    func reset(_ id: String) {
-        guard var t = states[id] else { return }
-        t.remainingMs = t.durationMs; t.endsAt = nil; t.finished = false
-        states[id] = t
-    }
-
-    func stop() { ticker?.cancel(); ticker = nil }
-
-    private func tick() {
-        guard ticker == nil else { return }
-        ticker = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(250))
-                guard let self else { return }
-                let n = Date()
-                self.now = n
-                var rang = false
-                for (id, t) in self.states where t.endsAt != nil && t.endsAt! <= n {
-                    self.states[id] = TimerState(durationMs: t.durationMs, remainingMs: 0, endsAt: nil, finished: true)
-                    rang = true
-                }
-                if rang {
-                    AudioServicesPlayAlertSound(SystemSoundID(1005))
-                    Haptic.success()
-                }
-                if !self.states.values.contains(where: { $0.endsAt != nil }) { self.ticker = nil; return }
-            }
+    private func finish() {
+        guard TapGuard.allow("cook-finish") else { return }
+        finishOpen = false
+        guard let recipe else { dismiss(); return }
+        if alreadyDone {
+            CookSession.clear()
+            dismiss()
+            nav.go(.tonight)
+            return
         }
+        if let date = request.date, entry != nil {
+            store.setServings(date, count)
+            let undo = store.undoable { _ = store.markCooked(date, leftovers: leftovers, usePantry: usePantry, replaceTomorrow: replaceTomorrow) }
+            ctxProvider.refresh()
+            toaster.show("Nice work.") { undo(); ctxProvider.refresh() }
+        } else {
+            // Cooking straight from a recipe: log it as tonight's dinner.
+            let today = ctxProvider.today
+            let undo = store.undoable {
+                store.setDinner(today, recipeId: recipe.id, servings: count)
+                _ = store.markCooked(today, leftovers: leftovers, usePantry: usePantry)
+            }
+            ctxProvider.refresh()
+            toaster.show("Logged as tonight's dinner. Nice work.") { undo(); ctxProvider.refresh() }
+        }
+        Haptic.success()
+        CookSession.clear()
+        dismiss()
+        nav.go(.tonight)
+        nav.popToRoot()
     }
 }
 
@@ -310,25 +370,29 @@ struct StepTimerView: View {
     var onStart: () -> Void
     var onPause: () -> Void
     var onReset: () -> Void
+    var onDismiss: () -> Void
 
     var body: some View {
         let total = minutes * 60_000
         let remaining = state?.remaining(now: now) ?? total
         let running = state?.endsAt != nil
         let finished = state?.finished ?? false
+        let ringing = finished && !(state?.acknowledged ?? true)
         HStack(spacing: 16) {
-            ProgressRing(value: 1 - Double(remaining) / Double(total), size: 72, stroke: 6, tone: finished ? .danger : .accent) {
+            ProgressRing(value: 1 - Double(remaining) / Double(total), size: 72, stroke: 6, tone: finished ? .danger : .accent, label: finished ? "Timer finished" : "\(formatClock(remaining)) left") {
                 Text(formatClock(remaining)).font(Type.display(18)).monospacedDigit()
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text(finished ? "Time's up" : running ? "Running" : "\(minutes) minute timer").font(Type.label)
+                Text(ringing ? "Time's up" : finished ? "Done" : running ? "Running" : "\(minutes) minute timer").font(Type.label)
                 HStack(spacing: 8) {
-                    if running {
+                    if ringing {
+                        Button("Stop ringing", action: onDismiss).pbutton(.danger, .sm)
+                    } else if running {
                         Button("Pause", action: onPause).pbutton(.secondary, .sm)
                     } else {
                         Button(finished ? "Again" : state == nil || remaining == total ? "Start" : "Resume", action: onStart).pbutton(.primary, .sm)
+                        if state != nil { Button("Reset", action: onReset).pbutton(.ghost, .sm) }
                     }
-                    if state != nil && !running { Button("Reset", action: onReset).pbutton(.ghost, .sm) }
                 }
             }
             Spacer(minLength: 0)

@@ -92,6 +92,8 @@ struct Step: Codable, Identifiable, Hashable, Sendable {
     var text: String
     /// Minutes, when the step contains a timer ("simmer 12 minutes").
     var timerMinutes: Int?
+    /// Safety note shown on the step, e.g. "The pan handle gets hot."
+    var caution: String?
 }
 
 struct Recipe: Codable, Identifiable, Hashable, Sendable {
@@ -170,6 +172,12 @@ struct ShopItem: Codable, Identifiable, Hashable, Sendable {
     var aisle: Aisle
     var checked: Bool
     var fromRecipeIds: [String]
+    /// Extra amounts in units that can't be added to the first (350 g + 2 tbsp).
+    var more: [Amount]?
+
+    var amounts: [Amount] {
+        (quantity.map { [Amount(quantity: $0, unit: unit ?? "")] } ?? []) + (more ?? [])
+    }
 }
 
 enum MemberColor: String, Codable, CaseIterable, Sendable {
@@ -181,6 +189,12 @@ struct Member: Codable, Identifiable, Hashable, Sendable {
     var name: String
     var color: MemberColor
     var isMe: Bool?
+    /// Allergens this person must never be served.
+    var avoid: [String]?
+    /// Diet this person follows.
+    var diet: String?
+    /// False for someone who eats but doesn't cook, like a small child.
+    var cooks: Bool?
 }
 
 enum Energy: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -212,9 +226,15 @@ enum Mood: String, Codable, CaseIterable, Sendable {
 }
 
 enum MoodSetting: String, Codable, CaseIterable, Identifiable, Sendable {
-    case auto, dawn, day, dusk, night
+    case auto, system, dawn, day, dusk, night
     var id: String { rawValue }
-    var label: String { self == .auto ? "Follow the day" : rawValue.capitalized }
+    var label: String {
+        switch self {
+        case .auto: "Follow the day"
+        case .system: "Match my phone"
+        default: rawValue.capitalized
+        }
+    }
 }
 
 enum MotionSetting: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -249,6 +269,30 @@ struct Settings: Codable, Hashable, Sendable {
     var tastes: [Taste] = []
     var weatherEnabled: Bool = false
     var householdWord: HouseholdWord = .household
+    /// How many people dinner is usually for.
+    var cookingFor: Int = 2
+    /// Allergens and diets the whole household avoids (see Diet).
+    var avoid: [String] = []
+    /// Show ask-a-grown-up notes on hot and sharp steps.
+    var cookingWithKids: Bool = false
+
+    enum CodingKeys: String, CodingKey { case onboarded, mood, reducedMotion, units, tastes, weatherEnabled, householdWord, cookingFor, avoid, cookingWithKids }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? false
+        mood = try c.decodeIfPresent(MoodSetting.self, forKey: .mood) ?? .auto
+        reducedMotion = try c.decodeIfPresent(MotionSetting.self, forKey: .reducedMotion) ?? .system
+        units = try c.decodeIfPresent(Units.self, forKey: .units) ?? .metric
+        tastes = try c.decodeIfPresent([Taste].self, forKey: .tastes) ?? []
+        weatherEnabled = try c.decodeIfPresent(Bool.self, forKey: .weatherEnabled) ?? false
+        householdWord = try c.decodeIfPresent(HouseholdWord.self, forKey: .householdWord) ?? .household
+        cookingFor = try c.decodeIfPresent(Int.self, forKey: .cookingFor) ?? 2
+        avoid = try c.decodeIfPresent([String].self, forKey: .avoid) ?? []
+        cookingWithKids = try c.decodeIfPresent(Bool.self, forKey: .cookingWithKids) ?? false
+    }
 }
 
 struct Weather: Codable, Hashable, Sendable {
@@ -274,6 +318,8 @@ struct AppContext: Hashable, Sendable {
     /// The date whose dinner the Tonight screen is about. After 9 pm this is tomorrow.
     var targetDate: String
     var targetLabel: String
+    /// True when Tonight jumped to tomorrow and can be asked to stay on today.
+    var canStayTonight: Bool = false
     var weather: Weather?
     var weatherLean: WeatherLean
     var nudge: Nudge
@@ -295,4 +341,7 @@ struct CookedEntry: Codable, Hashable, Sendable {
     var recipeId: String
     var date: String
     var cookId: String?
+    /// "loved", "fine" or "not-again", set by the web app. Carried through untouched.
+    var rating: String?
+    var note: String?
 }

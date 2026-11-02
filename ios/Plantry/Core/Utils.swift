@@ -111,41 +111,69 @@ enum IDs {
     }
 }
 
-/// Lowercase, singularized-ish key for matching ingredients to pantry items.
+// Different names for the same thing, so the pantry and the list match.
+private let synonyms: [String: String] = [
+    "chilli": "chili", "chile": "chili", "chilli flake": "chili flake", "red pepper flake": "chili flake",
+    "spring onion": "scallion", "green onion": "scallion", "coriander": "cilantro", "fresh coriander": "cilantro",
+    "aubergine": "eggplant", "courgette": "zucchini", "capsicum": "bell pepper", "red pepper": "bell pepper",
+    "green pepper": "bell pepper", "yellow pepper": "bell pepper", "garbanzo": "chickpea", "garbanzo bean": "chickpea",
+    "minced beef": "ground beef", "beef mince": "ground beef", "minced pork": "ground pork", "pork mince": "ground pork",
+    "plain yogurt": "yogurt", "yoghurt": "yogurt", "greek yogurt": "yogurt", "extra virgin olive oil": "olive oil",
+    "chicken stock": "stock", "vegetable stock": "stock", "veg stock": "stock", "tinned tomato": "canned tomato",
+    "chopped tomato": "canned tomato", "peas": "frozen pea", "pea": "frozen pea", "noodle": "noodle", "prawn": "prawn", "shrimp": "prawn",
+]
+
+// Words that describe the thing but don't change what you buy.
+private let fillers: Set<String> = [
+    "large", "small", "medium", "big", "fresh", "freshly", "chopped", "diced", "minced", "sliced", "grated", "ripe", "organic",
+    "whole", "raw", "dried", "ground-up", "finely", "roughly", "boneless", "skinless", "peeled", "crushed", "juiced", "zested", "a", "of",
+]
+
+// Plurals ending in -ies that are not -y words.
+private let ieWords: Set<String> = ["cookies", "brownies", "pies", "smoothies", "veggies", "calories", "ties"]
+
+/// Lowercase, singularized key for matching ingredients to pantry items. Unicode aware:
+/// accents are stripped (jalapeño -> jalapeno) but letters and digits from any script stay,
+/// so "2% milk", "豆腐" and "🍋" each get their own key instead of an empty one.
 func keyOf(_ name: String) -> String {
-    var k = name.lowercased()
-    k = k.replacingOccurrences(of: "\\(.*?\\)", with: "", options: .regularExpression)
-    k = k.replacingOccurrences(of: "[^a-z\\s]", with: "", options: .regularExpression)
-    k = k.trimmingCharacters(in: .whitespaces)
-    k = k.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+    let lower = name.lowercased().trimmed
+    var k = lower.replacingOccurrences(of: "\\(.*?\\)", with: "", options: .regularExpression)
+    k = k.folding(options: .diacriticInsensitive, locale: nil)
+    k = k.replacingOccurrences(of: "[^\\p{L}\\p{N}\\s]", with: "", options: .regularExpression)
+    k = k.trimmed.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+    if k.isEmpty { return lower.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression) }
+    if k.range(of: "^[a-z ]+$", options: .regularExpression) == nil { return k }
+    let words = k.replacingOccurrences(of: "free range", with: "").split(separator: " ").map(String.init).filter { !$0.isEmpty && !fillers.contains($0) }
+    let plain = (words.isEmpty ? k.split(separator: " ").map(String.init) : words).joined(separator: " ")
+    let single = singular(plain)
+    return synonyms[single] ?? synonyms[plain] ?? single
+}
+
+private func singular(_ k: String) -> String {
+    let last = k.split(separator: " ").last.map(String.init) ?? k
+    if ieWords.contains(last) { return String(k.dropLast()) }
     if k.hasSuffix("oes") { return String(k.dropLast(2)) }
     if k.hasSuffix("ies") { return String(k.dropLast(3)) + "y" }
-    if k.hasSuffix("s") && !k.hasSuffix("ss") { return String(k.dropLast()) }
+    if k.hasSuffix("s") && !k.hasSuffix("ss") && !k.hasSuffix("us") { return String(k.dropLast()) }
     return k
+}
+
+/// 1 when just bought, 0 when past its soft life. One rule for the Pantry and suggestions.
+func freshnessOf(addedAt: String, softLifeDays: Int, today: String) -> Double {
+    let age = max(0, DateKey.daysBetween(String(addedAt.prefix(10)), today))
+    return clamp(1 - Double(age) / Double(max(1, softLifeDays)), 0, 1)
+}
+
+/// Use it soon: less than 40% of its life left.
+let useSoonThreshold = 0.4
+func isUseSoon(addedAt: String, softLifeDays: Int, today: String) -> Bool {
+    freshnessOf(addedAt: addedAt, softLifeDays: softLifeDays, today: today) < useSoonThreshold
 }
 
 func formatMinutes(_ min: Int) -> String {
     if min < 60 { return "\(min) min" }
     let h = min / 60, m = min % 60
     return m > 0 ? "\(h) h \(m) min" : "\(h) h"
-}
-
-func formatQuantity(_ q: Double?, _ unit: String?) -> String {
-    guard let q, q != 0 else { return unit ?? "" }
-    let nice = q == q.rounded() ? String(Int(q)) : fractionOf(q)
-    if let unit, !unit.isEmpty { return "\(nice) \(unit)" }
-    return nice
-}
-
-private func fractionOf(_ q: Double) -> String {
-    let whole = Int(q.rounded(.down))
-    let frac = q - Double(whole)
-    let map: [(Double, String)] = [(0.25, "¼"), (0.33, "⅓"), (0.5, "½"), (0.66, "⅔"), (0.75, "¾")]
-    guard let hit = map.first(where: { abs($0.0 - frac) < 0.08 }) else {
-        let s = String(format: "%.1f", q)
-        return s.hasSuffix(".0") ? String(s.dropLast(2)) : s
-    }
-    return whole > 0 ? "\(whole)\(hit.1)" : hit.1
 }
 
 func pluralize(_ n: Int, _ word: String, _ plural: String? = nil) -> String {

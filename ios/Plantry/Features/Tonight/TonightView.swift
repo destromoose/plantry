@@ -21,6 +21,7 @@ struct TonightView: View {
     private var energy: Energy? { settings?.energyByDate[target] }
     private var entry: PlanEntryModel? { plan.first { $0.date == target && $0.slot == .dinner } }
     private var me: MemberModel? { members.first { $0.isMe } ?? members.first }
+    private var todayDone: Bool { plan.first { $0.date == today && $0.slot == .dinner }?.done ?? false }
 
     private var ranked: [Scored] {
         suggest(SuggestInput(
@@ -29,9 +30,10 @@ struct TonightView: View {
             tastes: settings?.tastes ?? [],
             energy: energy,
             weatherLean: ctx.weatherLean,
-            isWeekend: ctx.isWeekend,
+            isWeekend: DateKey.isWeekend(target),
             today: today,
-            recent: cooked.prefix(60).map(\.recipeId)
+            recent: cooked.prefix(60).map(\.recipeId),
+            avoid: Diet.householdAvoid(settingsAvoid: settings?.avoid ?? [], members: members.map(\.value))
         ))
     }
 
@@ -47,9 +49,17 @@ struct TonightView: View {
     var body: some View {
         Page {
             VStack(alignment: .leading, spacing: 6) {
-                Eyebrow(text: ctx.targetLabel)
+                HStack(spacing: 10) {
+                    Eyebrow(text: ctx.targetLabel)
+                    if ctx.canStayTonight {
+                        Button("Still tonight?") { ctxProvider.stayTonight() }
+                            .font(.system(size: 12, weight: .semibold)).foregroundStyle(t.accent).frame(minHeight: 32)
+                            .accessibilityHint("Keep planning for today instead of tomorrow")
+                    }
+                }
                 Text(DateKey.longDate(target)).font(Type.title).lineSpacing(-2)
-                Text(me.map { "\(greeting), \($0.name)." } ?? "\(greeting).").font(Type.body).foregroundStyle(t.ink2)
+                Text(todayDone && target != today ? "Tonight's cooked. Here's tomorrow." : (me.map { "\(greeting), \($0.name)." } ?? "\(greeting)."))
+                    .font(Type.body).foregroundStyle(t.ink2)
             }
             .reveal(0)
 
@@ -101,62 +111,42 @@ struct TonightView: View {
 
 // MARK: - Energy
 
+/// A compact row of three chips, so the dinner stays above the fold.
 struct EnergyPicker: View {
     @Environment(\.theme) private var t
     var energy: Energy?
     var label: String
     var onSet: (Energy) -> Void
-    @State private var editing = false
 
     var body: some View {
-        Group {
-            if let energy, !editing {
-                HStack(spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark").font(.system(size: 12, weight: .bold)).foregroundStyle(t.secondary)
-                        Text(energy.label).font(.system(size: 14, weight: .medium))
-                    }
-                    .padding(.horizontal, 14)
-                    .frame(height: 36)
-                    .background(t.surface2, in: Capsule())
-                    Button("Change") { editing = true }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(t.ink2)
-                        .frame(height: 44)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Your energy: \(energy.label). Change.")
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("How are you \(label.lowercased() == "tomorrow" ? "tomorrow" : "tonight")?").font(Type.heading)
-                    VStack(spacing: 10) {
-                        ForEach(Energy.allCases) { option in
-                            let selected = option == energy
-                            Button {
-                                onSet(option)
-                                withAnimation(Motion.settle) { editing = false }
-                            } label: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(option.label).font(Type.cardTitle)
-                                    Text(option.hint).font(Type.small)
-                                        .foregroundStyle(selected ? t.accentInk.opacity(0.8) : t.ink3)
-                                }
-                                .foregroundStyle(selected ? t.accentInk : t.ink)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                                .frame(minHeight: 64)
-                                .background(selected ? t.accent : t.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(selected ? t.accent : t.line, lineWidth: 1))
-                            }
-                            .buttonStyle(PlainPressStyle())
-                            .accessibilityAddTraits(selected ? [.isSelected] : [])
+        VStack(alignment: .leading, spacing: 8) {
+            Text("How are you \(label.lowercased() == "tomorrow" ? "tomorrow" : "tonight")?").font(Type.heading)
+            HStack(spacing: 8) {
+                ForEach(Energy.allCases) { option in
+                    let selected = option == energy
+                    Button { onSet(option) } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(option.label).font(.system(size: 14, weight: .semibold)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                            Text(option.hint).font(.system(size: 11)).foregroundStyle(selected ? t.accentInk.opacity(0.8) : t.ink3).lineLimit(1).minimumScaleFactor(0.7)
                         }
+                        .foregroundStyle(selected ? t.accentInk : t.ink)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .frame(maxHeight: .infinity, alignment: .topLeading)
+                        .frame(minHeight: 64)
+                        .background(selected ? t.accent : t.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(selected ? t.accent : t.line, lineWidth: 1))
                     }
+                    .buttonStyle(PlainPressStyle())
+                    .accessibilityLabel("\(option.label). \(option.hint)")
+                    .accessibilityAddTraits(selected ? [.isSelected] : [])
                 }
             }
+            .motion(Motion.settle, value: energy)
         }
-        .motion(Motion.settle, value: editing)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Your energy")
     }
 }
 
@@ -288,13 +278,14 @@ struct NextDays: View {
 
 struct WeatherOptIn: View {
     @Environment(Store.self) private var store
+    @Environment(ContextProvider.self) private var ctxProvider
     @Environment(\.theme) private var t
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "cloud.sun").foregroundStyle(t.ink2)
-            Text("Let Plantry peek at the weather? Rainy nights lean cozy. Sends your rough location to Open-Meteo.").font(Type.small).foregroundStyle(t.ink2)
+            Text("Let Plantry peek at the weather? Rainy nights lean cozy. Only a rough location is sent.").font(Type.small).foregroundStyle(t.ink2)
             Spacer(minLength: 0)
-            Button("Sure") { store.update { $0.weatherEnabled = true } }.pbutton(.secondary, .sm).fixedSize()
+            Button("Sure") { store.update { $0.weatherEnabled = true }; Task { await ctxProvider.refreshWeather() } }.pbutton(.secondary, .sm).fixedSize()
             Button { store.update { $0.weatherDismissed = true } } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).iconButton() }
                 .foregroundStyle(t.ink2)
                 .accessibilityLabel("Dismiss")

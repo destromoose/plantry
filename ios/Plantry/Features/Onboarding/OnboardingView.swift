@@ -6,21 +6,30 @@ struct OnboardingView: View {
     @Environment(\.theme) private var t
     @Environment(\.plantryReduceMotion) private var reduce
 
-    private enum Step: Int, CaseIterable { case who, taste, pantry }
+    private enum Step: Int, CaseIterable { case who, taste, avoid, pantry }
 
     @State private var step: Step = .who
     /// Each row has a stable id so removing a middle name never rebinds a field to the wrong person.
     private struct NameRow: Identifiable { let id = UUID(); var name = "" }
     @State private var rows: [NameRow] = [NameRow()]
     @State private var tastes: [Taste] = []
-    @State private var picked: Set<String> = Set(Seed.quickPicks.prefix(8))
+    @State private var avoid: [String] = []
+    @State private var picked: Set<String> = []
     @FocusState private var focused: Int?
 
     private var canNext: Bool {
         switch step {
         case .who: rows.contains { !$0.name.isBlank }
         case .taste: !tastes.isEmpty
-        case .pantry: true
+        case .avoid, .pantry: true
+        }
+    }
+
+    private var hint: String? {
+        switch step {
+        case .who: canNext ? nil : "Add your name to continue."
+        case .taste: canNext ? nil : "Pick at least one."
+        default: nil
         }
     }
 
@@ -46,6 +55,7 @@ struct OnboardingView: View {
                     switch step {
                     case .who: who
                     case .taste: taste
+                    case .avoid: avoidStep
                     case .pantry: pantry
                     }
                 }
@@ -56,22 +66,25 @@ struct OnboardingView: View {
             .scrollDismissesKeyboard(.interactively)
             .motion(Motion.settle, value: step)
 
-            HStack {
-                Button("Back") { withAnimation(reduce ? nil : Motion.settle) { step = Step(rawValue: step.rawValue - 1) ?? .who } }
-                    .pbutton(.ghost)
-                    .opacity(step == .who ? 0 : 1)
-                    .disabled(step == .who)
-                Spacer()
-                Button {
-                    next()
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(step == .pantry ? "Show me tonight" : "Next")
-                        Image(systemName: "arrow.right").font(.system(size: 14, weight: .semibold))
+            VStack(alignment: .trailing, spacing: 6) {
+                HStack {
+                    Button("Back") { focused = nil; withAnimation(reduce ? nil : Motion.settle) { step = Step(rawValue: step.rawValue - 1) ?? .who } }
+                        .pbutton(.ghost)
+                        .opacity(step == .who ? 0 : 1)
+                        .disabled(step == .who)
+                    Spacer()
+                    Button {
+                        next()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(step == .pantry ? "Show me tonight" : "Next")
+                            Image(systemName: "arrow.right").font(.system(size: 14, weight: .semibold))
+                        }
                     }
+                    .pbutton(.primary, .lg)
+                    .disabled(!canNext)
                 }
-                .pbutton(.primary, .lg)
-                .disabled(!canNext)
+                if let hint { Text(hint).font(Type.small).foregroundStyle(t.ink3) }
             }
             .padding(.top, 16)
         }
@@ -88,7 +101,7 @@ struct OnboardingView: View {
         if let n = Step(rawValue: step.rawValue + 1) {
             withAnimation(reduce ? nil : Motion.settle) { step = n }
         } else {
-            store.completeOnboarding(names: rows.map(\.name), tastes: tastes, pantryNames: Array(picked))
+            store.completeOnboarding(names: rows.map(\.name), tastes: tastes, avoid: avoid, pantryNames: Array(picked))
             ctx.refresh()
             Haptic.success()
         }
@@ -103,7 +116,11 @@ struct OnboardingView: View {
 
     private var who: some View {
         VStack(alignment: .leading, spacing: 32) {
-            heading("Who eats here?", "First names only. You first. Nobody signs in, nobody gets an email. This stays on your device.")
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Who eats here?").font(Type.hero).lineSpacing(-2)
+                Text("Plantry answers \"what's for dinner?\" with one honest pick a night, from what's in your kitchen.").font(Type.bodyLarge)
+                Text("First names only. You first. Nobody signs in, nobody gets an email. This stays on your phone.").font(Type.body).foregroundStyle(t.ink2)
+            }
             VStack(spacing: 12) {
                 ForEach($rows) { $row in
                     let i = rows.firstIndex { $0.id == row.id } ?? 0
@@ -131,7 +148,7 @@ struct OnboardingView: View {
 
     private var taste: some View {
         VStack(alignment: .leading, spacing: 32) {
-            heading("How do you like to eat?", "Pick a few. These are tastes, not rules. No diets here.")
+            heading("How do you like to eat?", "Pick a few. These are tastes, not rules. Allergies and diets come next.")
             FlowLayout(spacing: 10) {
                 ForEach(Array(Taste.allCases.enumerated()), id: \.element) { i, taste in
                     Chip(label: taste.label, hint: taste.hint, selected: tastes.contains(taste)) {
@@ -140,6 +157,16 @@ struct OnboardingView: View {
                     }
                     .reveal(i)
                 }
+            }
+        }
+    }
+
+    private var avoidStep: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            heading("Anything to keep off the table?", "Plantry will never suggest a dinner with these. You can set it per person later. Skip if nothing applies.")
+            VStack(alignment: .leading, spacing: 16) {
+                AvoidPicker(value: $avoid)
+                Text("Plantry checks ingredient names. Always check packaging for allergens.").font(Type.small).foregroundStyle(t.ink3)
             }
         }
     }
@@ -157,7 +184,7 @@ struct OnboardingView: View {
                         .reveal(i)
                     }
                 }
-                Text("\(picked.count) picked. You can add anything else later.").font(Type.small).foregroundStyle(t.ink3)
+                Text(picked.isEmpty ? "Nothing yet. Skip this and add things as you go." : "\(picked.count) picked. You can add anything else later.").font(Type.small).foregroundStyle(t.ink3)
             }
         }
     }

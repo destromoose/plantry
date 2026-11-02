@@ -50,20 +50,19 @@ struct SuggestInput {
     /// Recipe ids cooked recently, most recent first. Penalized so dinner does not repeat.
     var recent: [String] = []
     var exclude: Set<String> = []
+    /// Allergens and diets to respect. Recipes that break one are never suggested.
+    var avoid: [String] = []
 }
 
 func suggest(_ input: SuggestInput) -> [Scored] {
     let pantryKeys = Set(input.pantry.map(\.key))
-    let aging = Set(
-        input.pantry
-            .filter { Double(DateKey.daysBetween(String($0.addedAt.prefix(10)), input.today)) >= Double($0.softLifeDays) * 0.6 }
-            .map(\.key)
-    )
+    let aging = Set(input.pantry.filter { isUseSoon(addedAt: $0.addedAt, softLifeDays: $0.softLifeDays, today: input.today) }.map(\.key))
     let tasteSet = Set(input.tastes)
 
     var out: [Scored] = []
     out.reserveCapacity(input.recipes.count)
     for recipe in input.recipes where !input.exclude.contains(recipe.id) {
+        if !input.avoid.isEmpty && !Diet.isSafe(recipe, avoid: input.avoid) { continue }
         var reasons: [String] = []
         var score = 0.0
 

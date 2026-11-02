@@ -15,7 +15,7 @@ struct HouseholdView: View {
 
     @State private var newName = ""
     @State private var editing: MemberModel?
-    @State private var editName = ""
+    @State private var removing: MemberModel?
     @State private var claimDate: String?
 
     private var today: String { ctxProvider.context.targetDate }
@@ -41,37 +41,32 @@ struct HouseholdView: View {
         Page {
             VStack(alignment: .leading, spacing: 4) {
                 Text(word).font(Type.hero).lineSpacing(-2)
-                Text("Everyone here is a person, not a shared password. Nights can be claimed or handed off.").font(Type.body).foregroundStyle(t.ink2)
+                Text("Everyone here is a person, not a shared password. Nothing about them leaves this phone.").font(Type.body).foregroundStyle(t.ink2)
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                SectionTitle("Who's cooking")
+                SectionTitle("Who eats here")
                 VStack(spacing: 0) {
                     ForEach(members) { m in
-                        HStack(spacing: 12) {
-                            Avatar(member: m, size: 44)
-                            if editing?.id == m.id {
-                                PField(placeholder: "Name", text: $editName) { commitRename() }
-                                    .onSubmit { commitRename() }
-                            } else {
-                                Button { editing = m; editName = m.name } label: {
+                        Button { editing = m } label: {
+                            HStack(spacing: 12) {
+                                Avatar(member: m, size: 44)
+                                VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 8) {
                                         Text(m.name).font(Type.label).foregroundStyle(t.ink)
                                         if m.isMe { Text("you").font(Type.small).foregroundStyle(t.ink3) }
                                     }
-                                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                                    .contentShape(Rectangle())
+                                    Text(memberLine(m)).font(Type.small).foregroundStyle(t.ink2).lineLimit(1)
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Rename \(m.name)")
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(t.ink3)
                             }
-                            if !m.isMe {
-                                Button { store.removeMember(m) } label: { Image(systemName: "xmark").iconButton() }
-                                    .foregroundStyle(t.ink2).accessibilityLabel("Remove \(m.name)")
-                            }
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 60)
+                            .contentShape(Rectangle())
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(m.name). \(memberLine(m)). Edit.")
                         Divider().overlay(t.line)
                     }
                     HStack(spacing: 8) {
@@ -84,7 +79,7 @@ struct HouseholdView: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                SectionTitle("This week")
+                SectionTitle("Who's cooking this week")
                 VStack(spacing: 0) {
                     ForEach(Array(week.enumerated()), id: \.element) { i, date in
                         let cook = member(dinner(date)?.cookId)
@@ -111,7 +106,7 @@ struct HouseholdView: View {
             VStack(alignment: .leading, spacing: 0) {
                 SectionTitle("Hand-offs")
                 if handoffs.isEmpty {
-                    Text("No hand-offs yet. On the Tonight screen, tap Hand off to pass a night to someone.")
+                    Text("No hand-offs yet. On Tonight, open the menu and tap \"Ask someone else to cook\" to pass a night to someone.")
                         .font(Type.body).foregroundStyle(t.ink2).padding(20).frame(maxWidth: .infinity, alignment: .leading).card()
                 } else {
                     VStack(spacing: 10) {
@@ -123,7 +118,7 @@ struct HouseholdView: View {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("\(DateKey.weekdayName(h.date))'s dinner").font(Type.label)
                                     if let title { Text(title).font(Type.cardTitle) }
-                                    Text("\(from?.name ?? "Someone") → \(to?.name ?? "someone")").font(Type.small).foregroundStyle(t.ink2)
+                                    Text("\(from?.name ?? "Someone") asked \(to?.name ?? "someone") to cook").font(Type.small).foregroundStyle(t.ink2)
                                     if let m = h.message { Text("“\(m)”").font(Type.small).italic().foregroundStyle(t.ink2) }
                                 }
                                 Spacer()
@@ -141,7 +136,7 @@ struct HouseholdView: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                SectionTitle("This week")
+                SectionTitle("This week so far")
                 VStack(alignment: .leading, spacing: 6) {
                     Text("You decided dinner \(pluralize(decided, "time")) this week.").font(Type.cardTitle)
                     ForEach(members) { m in
@@ -158,11 +153,31 @@ struct HouseholdView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .sheet(item: $editing) { m in
+            MemberSheet(member: m) { removing = m }
+                .presentationDetents([.large])
+        }
+        .sheet(item: $removing) { m in
+            SheetChrome(title: "Remove \(m.name)?") {
+                Text("Nights they were cooking go back to nobody, and their hand-offs are cleared.").font(Type.body).foregroundStyle(t.ink2)
+                HStack(spacing: 8) {
+                    Button("Remove") {
+                        removing = nil
+                        let undo = store.undoable { store.removeMember(m) }
+                        toaster.show("\(m.name) removed") { undo() }
+                    }
+                    .pbutton(.danger)
+                    Button("Keep") { removing = nil }.pbutton(.ghost)
+                }
+                .padding(.top, 20)
+            }
+            .presentationDetents([.height(220)])
+        }
         .sheet(isPresented: Binding(get: { claimDate != nil }, set: { if !$0 { claimDate = nil } })) {
             if let date = claimDate {
                 SheetChrome(title: "Who is cooking \(DateKey.dayLabel(date, today: today).lowercased())?") {
                     VStack(spacing: 8) {
-                        ForEach(members) { m in
+                        ForEach(members.filter(\.cooks)) { m in
                             Button {
                                 store.claimNight(date, cookId: m.id); toaster.show("\(m.name) has it"); claimDate = nil
                             } label: {
@@ -184,15 +199,71 @@ struct HouseholdView: View {
         }
     }
 
+    private func memberLine(_ m: MemberModel) -> String {
+        var parts: [String] = []
+        if !m.cooks { parts.append("Eats, doesn't cook") }
+        let avoid = m.avoid + (m.diet.map { [$0] } ?? [])
+        if !avoid.isEmpty { parts.append("Avoids \(avoid.map { Diet.label($0).lowercased() }.joined(separator: ", "))") }
+        return parts.isEmpty ? "Cooks · no allergies set" : parts.joined(separator: " · ")
+    }
+
     private func addMember() {
         guard !newName.isBlank else { return }
         store.addMember(newName)
         toaster.show("\(newName.trimmed) is in")
         newName = ""
     }
+}
 
-    private func commitRename() {
-        if let m = editing, !editName.isBlank { store.renameMember(m, editName) }
-        editing = nil
+/// Name, cooks or not, allergies and diet for one person.
+struct MemberSheet: View {
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var t
+    var member: MemberModel
+    var onRemove: () -> Void
+    @State private var name = ""
+    @State private var cooks = true
+    @State private var avoid: [String] = []
+    @State private var loaded = false
+
+    var body: some View {
+        SheetChrome(title: member.name) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Name").font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+                    PField(placeholder: "Name", text: $name)
+                }
+                Toggle(isOn: $cooks) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Takes a turn cooking").font(Type.body)
+                        Text("Off for someone who eats but doesn't cook, like a small child.").font(Type.small).foregroundStyle(t.ink2)
+                    }
+                }
+                .tint(t.accent)
+                AvoidPicker(value: $avoid, small: true)
+                Text("Plantry checks ingredient names. Always check packaging for allergens.").font(Type.small).foregroundStyle(t.ink3)
+                HStack(spacing: 8) {
+                    Button("Save") { save() }.pbutton(.primary, .lg)
+                    Spacer()
+                    if !member.isMe { Button("Remove") { dismiss(); onRemove() }.pbutton(.danger, .sm) }
+                }
+            }
+        }
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            name = member.name; cooks = member.cooks
+            avoid = member.avoid + (member.diet.map { [$0] } ?? [])
+        }
+    }
+
+    private func save() {
+        if !name.isBlank { store.renameMember(member, name) }
+        store.setMemberCooks(member, cooks)
+        let diets = avoid.filter { Diet.isDiet($0) }
+        store.setMemberAvoid(member, avoid: avoid.filter { !Diet.isDiet($0) } + diets.dropFirst(), diet: diets.first)
+        Haptic.success()
+        dismiss()
     }
 }

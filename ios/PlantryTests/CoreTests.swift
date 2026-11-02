@@ -31,10 +31,19 @@ final class ContextEngineTests: XCTestCase {
         XCTAssertEqual(ContextEngine.mood(forHour: 0), .night)
     }
 
-    func testTargetsTomorrowAfterNine() {
-        let late = ContextEngine.build(.init(now: date(2026, 11, 3, 21, 30), settings: Settings(), weather: nil, plan: [], recipes: []))
+    func testTargetsTomorrowAfterTen() {
+        let nine = ContextEngine.build(.init(now: date(2026, 11, 3, 21, 30), settings: Settings(), weather: nil, plan: [], recipes: []))
+        XCTAssertEqual(nine.targetLabel, "Tonight", "the cutoff moved to 10 pm")
+        let late = ContextEngine.build(.init(now: date(2026, 11, 3, 22, 30), settings: Settings(), weather: nil, plan: [], recipes: []))
         XCTAssertEqual(late.targetLabel, "Tomorrow")
         XCTAssertEqual(late.targetDate, "2026-11-04")
+        XCTAssertTrue(late.canStayTonight)
+        let stay = ContextEngine.build(.init(now: date(2026, 11, 3, 22, 30), settings: Settings(), weather: nil, plan: [], recipes: [], stillTonight: true))
+        XCTAssertEqual(stay.targetLabel, "Tonight")
+        // Past midnight the date has rolled over, so the new day's dinner is the target.
+        let small = ContextEngine.build(.init(now: date(2026, 11, 4, 0, 30), settings: Settings(), weather: nil, plan: [], recipes: []))
+        XCTAssertEqual(small.targetLabel, "Tonight")
+        XCTAssertEqual(small.targetDate, "2026-11-04")
         let evening = ContextEngine.build(.init(now: date(2026, 11, 3, 18), settings: Settings(), weather: nil, plan: [], recipes: []))
         XCTAssertEqual(evening.targetLabel, "Tonight")
         XCTAssertEqual(evening.targetDate, "2026-11-03")
@@ -71,7 +80,7 @@ final class ContextEngineTests: XCTestCase {
         XCTAssertEqual(keyOf("Tomatoes"), "tomato")
         XCTAssertEqual(keyOf("Berries"), "berry")
         XCTAssertEqual(keyOf("Garlic (minced)"), "garlic")
-        XCTAssertEqual(formatQuantity(1.5, "cup"), "1½ cup")
+        XCTAssertEqual(formatQuantity(1.5, "cup"), "1½ cups")
         XCTAssertEqual(formatMinutes(75), "1 h 15 min")
     }
 }
@@ -185,7 +194,7 @@ final class StoreTests: XCTestCase {
     func testOnboardingSeedsHouseholdAndPantry() throws {
         let store = try makeStore()
         XCTAssertEqual(store.fetch(RecipeModel.self).count, 24)
-        store.completeOnboarding(names: ["Alex", "Sam"], tastes: [.fast], pantryNames: ["Garlic", "Rice"])
+        store.completeOnboarding(names: ["Alex", "Sam"], tastes: [.fast], avoid: [], pantryNames: ["Garlic", "Rice"])
         XCTAssertTrue(store.settings.onboarded)
         XCTAssertEqual(store.members.map(\.name), ["Alex", "Sam"])
         XCTAssertTrue(store.me?.isMe ?? false)
@@ -194,7 +203,7 @@ final class StoreTests: XCTestCase {
 
     func testLockInCookAndLeftovers() throws {
         let store = try makeStore()
-        store.completeOnboarding(names: ["Alex"], tastes: [], pantryNames: ["Spinach", "Feta"])
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: ["Spinach", "Feta"])
         let recipe = store.fetch(RecipeModel.self).first { $0.leftovers }!
         store.setDinner("2026-11-03", recipeId: recipe.id)
         XCTAssertEqual(store.dinner(on: "2026-11-03")?.recipeId, recipe.id)
@@ -206,7 +215,7 @@ final class StoreTests: XCTestCase {
 
     func testShopFromPlanAndFinishShopping() throws {
         let store = try makeStore()
-        store.completeOnboarding(names: ["Alex"], tastes: [], pantryNames: ["Olive oil"])
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: ["Olive oil"])
         let recipe = store.fetch(RecipeModel.self).first!
         store.setDinner("2026-11-05", recipeId: recipe.id)
         store.generateShop(dates: ["2026-11-05"])
@@ -220,7 +229,7 @@ final class StoreTests: XCTestCase {
 
     func testExportImportRoundTrip() throws {
         let store = try makeStore()
-        store.completeOnboarding(names: ["Alex"], tastes: [.cozy], pantryNames: ["Rice"])
+        store.completeOnboarding(names: ["Alex"], tastes: [.cozy], avoid: [], pantryNames: ["Rice"])
         store.setDinner("2026-11-03", note: "Takeout")
         let data = store.exportJSON()
         let other = try makeStore()
@@ -230,5 +239,79 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(other.dinner(on: "2026-11-03")?.note, "Takeout")
         XCTAssertEqual(other.fetch(RecipeModel.self).count, 24)
         XCTAssertThrowsError(try other.importJSON(Data("{\"nope\":1}".utf8)))
+    }
+
+    func testShopSubtractsPantryAndMergesManualRows() throws {
+        let store = try makeStore()
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: [])
+        let recipe = store.fetch(RecipeModel.self).first { $0.title == "Mushroom and spinach frittata" }!
+        let eggs = recipe.ingredients.first { $0.key == "egg" }!
+        store.addPantryItem(name: "Eggs", quantity: 4, unit: "whole")
+        store.addShopItem("Mushrooms")
+        store.setDinner("2026-11-05", recipeId: recipe.id, servings: recipe.servings)
+        store.generateShop(dates: ["2026-11-05"], today: "2026-11-03")
+        let shop = store.fetch(ShopItemModel.self)
+        let eggRow = shop.first { $0.key == "egg" }
+        XCTAssertEqual(eggRow?.quantity, eggs.quantity - 4)
+        XCTAssertEqual(shop.filter { $0.key == "mushroom" }.count, 1, "manual row merged into the plan row")
+        XCTAssertEqual(store.generateShop(dates: ["2026-11-20"], today: "2026-11-03").kept, true, "an empty plan never wipes the list")
+    }
+
+    func testDismissedRowsStayOffAndUndoRestores() throws {
+        let store = try makeStore()
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: [])
+        let recipe = store.fetch(RecipeModel.self).first!
+        store.setDinner("2026-11-05", recipeId: recipe.id)
+        store.generateShop(dates: ["2026-11-05"], today: "2026-11-03")
+        let before = store.fetch(ShopItemModel.self).count
+        let row = store.fetch(ShopItemModel.self).first!
+        let undo = store.undoable { store.removeShopItem(row) }
+        store.generateShop(dates: ["2026-11-05"], today: "2026-11-03")
+        XCTAssertEqual(store.fetch(ShopItemModel.self).count, before - 1)
+        undo()
+        XCTAssertEqual(store.fetch(ShopItemModel.self).count, before)
+    }
+
+    func testCookedTwiceLogsOnceAndTrimsNothing() throws {
+        let store = try makeStore()
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: [])
+        let recipe = store.fetch(RecipeModel.self).first!
+        store.setDinner("2026-11-03", recipeId: recipe.id)
+        store.markCooked("2026-11-03")
+        store.markCooked("2026-11-03")
+        XCTAssertEqual(store.fetch(CookedModel.self).count, 1)
+    }
+
+    func testAllergyFilterReachesSuggestions() throws {
+        let store = try makeStore()
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: ["peanut"], pantryNames: [])
+        XCTAssertEqual(store.householdAvoid, ["peanut"])
+        let out = suggest(SuggestInput(recipes: store.fetch(RecipeModel.self).map(\.value), pantry: [], tastes: [], weatherLean: .any, isWeekend: false, today: "2026-11-03", avoid: store.householdAvoid))
+        XCTAssertFalse(out.contains { $0.recipe.title == "Peanut chicken noodles" })
+    }
+
+    func testImportPreviewDropsBadRowsAndKeepsGoodOnes() throws {
+        let store = try makeStore()
+        let json = """
+        {"version":1,"recipes":[],"members":[{"id":"m1","name":"Sam","color":"sage"},{"bad":true}],"plan":[{"id":"p1","date":"2026-11-03","slot":"dinner","note":"Takeout"}]}
+        """
+        let p = try store.checkImport(Data(json.utf8))
+        XCTAssertEqual(p.members.map(\.name), ["Sam"])
+        XCTAssertEqual(p.dropped, 1)
+        XCTAssertEqual(p.recipes.count, 24, "an empty recipe list falls back to the starters")
+        XCTAssertThrowsError(try store.checkImport(Data("not json".utf8)))
+        XCTAssertThrowsError(try store.checkImport(Data("{\"nope\":1}".utf8)))
+    }
+
+    func testUndoRestoresAClearedNight() throws {
+        let store = try makeStore()
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: [])
+        let recipe = store.fetch(RecipeModel.self).first!
+        store.setDinner("2026-11-03", recipeId: recipe.id, servings: 3)
+        let undo = store.undoable { store.clearDinner("2026-11-03") }
+        XCTAssertNil(store.dinner(on: "2026-11-03"))
+        undo()
+        XCTAssertEqual(store.dinner(on: "2026-11-03")?.recipeId, recipe.id)
+        XCTAssertEqual(store.dinner(on: "2026-11-03")?.servings, 3)
     }
 }

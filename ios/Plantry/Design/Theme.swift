@@ -44,22 +44,22 @@ struct Theme: Equatable {
         switch mood {
         case .day:
             Theme(mood: .day, canvas: rgb(250, 244, 234), surface: rgb(255, 252, 247), surface2: rgb(243, 235, 221),
-                  ink: rgb(42, 31, 26), ink2: rgb(94, 78, 70), ink3: rgb(150, 134, 124), line: rgb(226, 214, 196),
-                  accent: rgb(200, 85, 47), accentInk: rgb(255, 250, 244), secondary: rgb(122, 158, 126), secondaryInk: .white,
+                  ink: rgb(42, 31, 26), ink2: rgb(94, 78, 70), ink3: rgb(115, 103, 95), line: rgb(226, 214, 196),
+                  accent: rgb(174, 74, 41), accentInk: rgb(255, 250, 244), secondary: rgb(85, 110, 88), secondaryInk: .white,
                   glowA: rgb(255, 214, 170), glowB: rgb(250, 244, 234), glowC: rgb(214, 232, 214))
         case .dawn:
             Theme(mood: .dawn, canvas: rgb(252, 241, 230), surface: rgb(255, 251, 246), surface2: rgb(247, 230, 214),
-                  ink: rgb(42, 31, 26), ink2: rgb(94, 78, 70), ink3: rgb(150, 134, 124), line: rgb(226, 214, 196),
-                  accent: rgb(214, 101, 62), accentInk: rgb(255, 250, 244), secondary: rgb(122, 158, 126), secondaryInk: .white,
+                  ink: rgb(42, 31, 26), ink2: rgb(94, 78, 70), ink3: rgb(113, 101, 93), line: rgb(226, 214, 196),
+                  accent: rgb(165, 78, 48), accentInk: rgb(255, 250, 244), secondary: rgb(85, 110, 88), secondaryInk: .white,
                   glowA: rgb(255, 196, 160), glowB: rgb(255, 236, 214), glowC: rgb(246, 214, 190))
         case .dusk:
             Theme(mood: .dusk, canvas: rgb(247, 236, 222), surface: rgb(255, 250, 242), surface2: rgb(240, 224, 204),
-                  ink: rgb(42, 31, 26), ink2: rgb(94, 78, 70), ink3: rgb(150, 134, 124), line: rgb(226, 214, 196),
+                  ink: rgb(42, 31, 26), ink2: rgb(94, 78, 70), ink3: rgb(109, 97, 90), line: rgb(226, 214, 196),
                   accent: rgb(221, 146, 44), accentInk: rgb(42, 31, 26), secondary: rgb(110, 70, 112), secondaryInk: .white,
                   glowA: rgb(255, 190, 110), glowB: rgb(247, 236, 222), glowC: rgb(196, 160, 196))
         case .night:
             Theme(mood: .night, canvas: rgb(30, 22, 32), surface: rgb(42, 32, 44), surface2: rgb(56, 44, 58),
-                  ink: rgb(250, 244, 234), ink2: rgb(214, 202, 196), ink3: rgb(156, 142, 148), line: rgb(70, 56, 72),
+                  ink: rgb(250, 244, 234), ink2: rgb(214, 202, 196), ink3: rgb(165, 152, 157), line: rgb(70, 56, 72),
                   accent: rgb(233, 162, 59), accentInk: rgb(30, 22, 32), secondary: rgb(140, 176, 144), secondaryInk: rgb(30, 22, 32),
                   glowA: rgb(90, 50, 80), glowB: rgb(30, 22, 32), glowC: rgb(40, 60, 60))
         }

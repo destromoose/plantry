@@ -86,11 +86,9 @@ final class PantryItemModel {
                    addedAt: addedAt, softLifeDays: softLifeDays, staple: staple ? true : nil)
     }
 
-    /// 1 is just bought, 0 is past its soft life.
-    func freshness(today: String) -> Double {
-        let age = max(0, DateKey.daysBetween(String(addedAt.prefix(10)), today))
-        return clamp(1 - Double(age) / Double(max(softLifeDays, 1)), 0, 1)
-    }
+    /// 1 is just bought, 0 is past its soft life. One rule for the Pantry and suggestions.
+    func freshness(today: String) -> Double { freshnessOf(addedAt: addedAt, softLifeDays: softLifeDays, today: today) }
+    func isUseSoon(today: String) -> Bool { freshness(today: today) < useSoonThreshold }
 }
 
 @Model
@@ -130,14 +128,24 @@ final class ShopItemModel {
     var checked: Bool
     var fromRecipeIds: [String]
     var order: Int
+    /// Extra amounts in units that can't be added to the first (350 g + 2 tbsp).
+    var more: [Amount] = []
 
     init(_ s: ShopItem, order: Int) {
         id = s.id; name = s.name; key = s.key; quantity = s.quantity; unit = s.unit
-        aisle = s.aisle; checked = s.checked; fromRecipeIds = s.fromRecipeIds; self.order = order
+        aisle = s.aisle; checked = s.checked; fromRecipeIds = s.fromRecipeIds; self.order = order; more = s.more ?? []
     }
 
     var value: ShopItem {
-        ShopItem(id: id, name: name, key: key, quantity: quantity, unit: unit, aisle: aisle, checked: checked, fromRecipeIds: fromRecipeIds)
+        ShopItem(id: id, name: name, key: key, quantity: quantity, unit: unit, aisle: aisle, checked: checked, fromRecipeIds: fromRecipeIds, more: more.isEmpty ? nil : more)
+    }
+
+    var amounts: [Amount] { value.amounts }
+
+    func apply(amounts: [Amount]) {
+        quantity = amounts.first?.quantity
+        unit = amounts.first?.unit
+        more = Array(amounts.dropFirst())
     }
 }
 
@@ -148,12 +156,19 @@ final class MemberModel {
     var color: MemberColor
     var isMe: Bool
     var order: Int
+    /// Allergens this person must never be served.
+    var avoid: [String] = []
+    /// Diet this person follows.
+    var diet: String?
+    /// False for someone who eats but doesn't cook, like a small child.
+    var cooks: Bool = true
 
     init(_ m: Member, order: Int) {
         id = m.id; name = m.name; color = m.color; isMe = m.isMe ?? false; self.order = order
+        avoid = m.avoid ?? []; diet = m.diet; cooks = m.cooks ?? true
     }
 
-    var value: Member { Member(id: id, name: name, color: color, isMe: isMe ? true : nil) }
+    var value: Member { Member(id: id, name: name, color: color, isMe: isMe ? true : nil, avoid: avoid.isEmpty ? nil : avoid, diet: diet, cooks: cooks ? nil : false) }
 }
 
 @Model
@@ -184,12 +199,14 @@ final class CookedModel {
     var date: String
     var cookId: String?
     var at: Date
+    var rating: String?
+    var note: String?
 
-    init(recipeId: String, date: String, cookId: String?, at: Date = Date()) {
-        self.recipeId = recipeId; self.date = date; self.cookId = cookId; self.at = at
+    init(recipeId: String, date: String, cookId: String?, at: Date = Date(), rating: String? = nil, note: String? = nil) {
+        self.recipeId = recipeId; self.date = date; self.cookId = cookId; self.at = at; self.rating = rating; self.note = note
     }
 
-    var value: CookedEntry { CookedEntry(recipeId: recipeId, date: date, cookId: cookId) }
+    var value: CookedEntry { CookedEntry(recipeId: recipeId, date: date, cookId: cookId, rating: rating, note: note) }
 }
 
 /// One row. Holds settings, the energy answers, and the cached weather.
@@ -205,21 +222,38 @@ final class SettingsModel {
     var energyByDate: [String: Energy]
     var weather: Weather?
     var weatherDismissed: Bool
+    /// How many people dinner is usually for.
+    var cookingFor: Int = 2
+    /// Allergens and diets the whole household avoids.
+    var avoid: [String] = []
+    /// Show ask-a-grown-up notes on hot and sharp steps.
+    var cookingWithKids: Bool = false
+    /// Keys of plan items the person removed from the list, so they don't come back.
+    var shopDismissed: [String] = []
+    /// The date the person asked Tonight to stay on after the late cutoff.
+    var stillTonightDate: String?
+    /// Set once the first timer asked about notifications.
+    var askedNotifications: Bool = false
 
     init(_ s: Settings = Settings()) {
         onboarded = s.onboarded; mood = s.mood; reducedMotion = s.reducedMotion; units = s.units
         tastes = s.tastes; weatherEnabled = s.weatherEnabled; householdWord = s.householdWord
         energyByDate = [:]; weather = nil; weatherDismissed = false
+        cookingFor = s.cookingFor; avoid = s.avoid; cookingWithKids = s.cookingWithKids
     }
 
     var value: Settings {
-        Settings(onboarded: onboarded, mood: mood, reducedMotion: reducedMotion, units: units,
-                 tastes: tastes, weatherEnabled: weatherEnabled, householdWord: householdWord)
+        var v = Settings()
+        v.onboarded = onboarded; v.mood = mood; v.reducedMotion = reducedMotion; v.units = units
+        v.tastes = tastes; v.weatherEnabled = weatherEnabled; v.householdWord = householdWord
+        v.cookingFor = cookingFor; v.avoid = avoid; v.cookingWithKids = cookingWithKids
+        return v
     }
 
     func apply(_ s: Settings) {
         onboarded = s.onboarded; mood = s.mood; reducedMotion = s.reducedMotion; units = s.units
         tastes = s.tastes; weatherEnabled = s.weatherEnabled; householdWord = s.householdWord
+        cookingFor = s.cookingFor; avoid = s.avoid; cookingWithKids = s.cookingWithKids
     }
 }
 

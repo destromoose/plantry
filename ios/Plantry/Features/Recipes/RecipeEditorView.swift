@@ -35,7 +35,7 @@ struct RecipeEditorView: View {
     private var existing: RecipeModel? { recipes.first { $0.id == recipeId } }
 
     private var errors: (title: String?, ingredients: String?, steps: String?) {
-        (title.isBlank ? "Give it a name." : nil,
+        (title.isBlank ? "Give it a name." : title.trimmed.count > 80 ? "Keep the name under 80 characters." : nil,
          ings.contains { !$0.name.isBlank } ? nil : "Add at least one ingredient.",
          steps.contains { !$0.text.isBlank } ? nil : "Add at least one step.")
     }
@@ -96,7 +96,7 @@ struct RecipeEditorView: View {
         VStack(alignment: .leading, spacing: 24) {
             field("Name", error: tried ? errors.title : nil) { PField(placeholder: "Lemon pasta", text: $title) }
             field("Description") { PField(placeholder: "One line that says why you'd want it", text: $summary) }
-            field("Image link (optional)") { PField(placeholder: "https://images.unsplash.com/...", text: $imageUrl).keyboardType(.URL).textInputAutocapitalization(.never) }
+            field("Image link (optional, https)") { PField(placeholder: "https://...", text: $imageUrl).keyboardType(.URL).textInputAutocapitalization(.never) }
 
             HStack(spacing: 16) {
                 field("Active min") { Stepper(value: $active, range: 1...600, label: "active minutes") }
@@ -123,6 +123,7 @@ struct RecipeEditorView: View {
                     VStack(spacing: 8) {
                         HStack(spacing: 8) {
                             PField(placeholder: "Name", text: $row.name)
+                                .onChange(of: row.name) { _, v in if row.aisle == .other { row.aisle = PantryGuess.aisle(for: v) } }
                             Button { ings.removeAll { $0.id == row.id }; if ings.isEmpty { ings = [IngRow()] } } label: { Image(systemName: "trash").iconButton() }
                                 .foregroundStyle(t.ink2).accessibilityLabel("Remove ingredient")
                         }
@@ -196,9 +197,12 @@ struct RecipeEditorView: View {
             pasteNote = "Couldn't find ingredients or steps in that. Try adding \"Ingredients\" and \"Method\" headings."
             return
         }
-        if let t = parsed.title { title = t }
+        if let t = parsed.title { title = String(t.prefix(80)) }
+        if let sv = parsed.servings { servings = sv }
+        if let a = parsed.activeMinutes { active = clamp(a, 1, 600) }
+        if let tt = parsed.totalMinutes { total = clamp(tt, 1, 900) }
         if !parsed.ingredients.isEmpty {
-            ings = parsed.ingredients.map { IngRow(name: $0.name, quantity: $0.quantity == 0 ? "" : formatQuantity($0.quantity, nil), unit: $0.unit, aisle: Seed.staple(for: $0.name)?.aisle ?? .other) }
+            ings = parsed.ingredients.map { IngRow(name: $0.name, quantity: $0.quantity == 0 ? "" : Quantity.niceNumber($0.quantity), unit: $0.unit, aisle: PantryGuess.aisle(for: $0.name)) }
         }
         if !parsed.steps.isEmpty { steps = parsed.steps.map { StepRow(text: $0.text) } }
         pasteNote = nil
@@ -210,10 +214,11 @@ struct RecipeEditorView: View {
         tried = true
         guard !hasErrors else { return }
         let ingredients: [Ingredient] = ings.filter { !$0.name.isBlank }.map {
-            Ingredient(id: $0.id, name: $0.name.trimmed, key: keyOf($0.name), quantity: parseQty($0.quantity), unit: $0.unit.trimmed, aisle: $0.aisle, optional: $0.optional ? true : nil)
+            Ingredient(id: $0.id, name: String($0.name.trimmed.prefix(60)), key: keyOf($0.name), quantity: parseQty($0.quantity), unit: String($0.unit.trimmed.prefix(12)), aisle: $0.aisle == .other ? PantryGuess.aisle(for: $0.name) : $0.aisle, optional: $0.optional ? true : nil)
         }
         let stepList: [Step] = steps.filter { !$0.text.isBlank }.map { Step(id: $0.id, text: $0.text.trimmed, timerMinutes: RecipeParser.detectTimer($0.text)) }
-        let recipe = Recipe(id: existing?.id ?? "", title: title.trimmed, description: summary.trimmed, imageUrl: imageUrl.isBlank ? nil : imageUrl.trimmed,
+        let image = imageUrl.trimmed
+        let recipe = Recipe(id: existing?.id ?? "", title: String(title.trimmed.prefix(80)), description: String(summary.trimmed.prefix(300)), imageUrl: image.lowercased().hasPrefix("https://") ? image : nil,
                             activeMinutes: active, totalMinutes: max(total, active), servings: servings, ingredients: ingredients, steps: stepList,
                             tastes: tastes, weather: .any, leftovers: leftovers ? true : nil, source: "You", sourceUrl: nil,
                             isFavorite: existing?.isFavorite ?? false, createdAt: existing?.createdAt ?? ISO.now(), custom: true)
@@ -231,9 +236,6 @@ struct RecipeEditorView: View {
     }
 
     private func parseQty(_ s: String) -> Double {
-        let t = s.trimmed
-        if t.isEmpty { return 1 }
-        if let d = Double(t.replacingOccurrences(of: ",", with: ".")) { return d }
-        return RecipeParser.parseIngredientLine("\(t) x")?.quantity ?? 1
+        s.isBlank ? 1 : (Quantity.parse(s) ?? 1)
     }
 }

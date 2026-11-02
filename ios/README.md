@@ -19,7 +19,7 @@ xcodebuild -project Plantry.xcodeproj -scheme Plantry -destination 'platform=iOS
 xcodebuild -project Plantry.xcodeproj -scheme Plantry -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-Bundle id is `app.plantry.ios`. Signing is automatic and only needed for a real device.
+Bundle id is `com.destromoose.plantry`. Signing is automatic; see `INSTALL.md` for putting it on a real iPhone, free or via TestFlight.
 
 ## Where things live
 

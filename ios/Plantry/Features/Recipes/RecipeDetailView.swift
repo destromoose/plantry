@@ -10,6 +10,7 @@ struct RecipeDetailView: View {
     @Environment(\.theme) private var t
     @Query private var recipes: [RecipeModel]
     @Query private var pantry: [PantryItemModel]
+    @Query private var settingsRows: [SettingsModel]
     var recipeId: String
 
     @State private var servings: Int?
@@ -33,7 +34,7 @@ struct RecipeDetailView: View {
 
     private func content(_ recipe: RecipeModel) -> some View {
         let pantryKeys = Set(pantry.map(\.key))
-        let current = servings ?? recipe.servings
+        let current = servings ?? settingsRows.first?.cookingFor ?? recipe.servings
         let scale = Double(current) / Double(max(recipe.servings, 1))
         let missing = recipe.ingredients.filter { !$0.isOptional && !pantryKeys.contains($0.key) }
         let today = ctxProvider.today
@@ -60,6 +61,7 @@ struct RecipeDetailView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(recipe.title).font(Type.hero).lineSpacing(-2)
                         if !recipe.summary.isEmpty { Text(recipe.summary).font(Type.bodyLarge).foregroundStyle(t.ink2) }
+                        AvoidWarning(recipe: recipe.value)
                         FlowLayout(spacing: 6) {
                             ForEach(recipe.tastes) { Tag(text: $0.label) }
                             if recipe.leftovers { Tag(text: "Leftovers") }
@@ -75,6 +77,12 @@ struct RecipeDetailView: View {
                                 Button { nav.push(.editRecipe(recipe.id)) } label: { Label("Edit", systemImage: "pencil") }.pbutton(.ghost, .sm)
                                 Button { deleteOpen = true } label: { Label("Delete", systemImage: "trash") }.pbutton(.danger, .sm)
                             }
+                        } else {
+                            Button {
+                                let copy = store.copyRecipe(recipe)
+                                toaster.show("Your copy is ready to edit")
+                                nav.push(.editRecipe(copy.id))
+                            } label: { Label("Make my own version", systemImage: "doc.on.doc") }.pbutton(.ghost, .sm)
                         }
                     }
                     .reveal(0)
@@ -108,9 +116,10 @@ struct RecipeDetailView: View {
                         }
                         if !missing.isEmpty {
                             Button {
-                                missing.forEach { store.addShopItem($0.name, aisle: $0.aisle) }
-                                toaster.show("\(missing.count) added to your list")
-                            } label: { Label("Add missing to list (\(missing.count))", systemImage: "basket") }
+                                var added = 0
+                                for i in missing where store.addShopItem(i.name, aisle: i.aisle, quantity: i.quantity > 0 ? i.quantity * scale : nil, unit: i.unit, recipeId: recipe.id) == .added { added += 1 }
+                                toaster.show(added > 0 ? "\(added) added to your list" : "Already on your list")
+                            } label: { Label("Add \(missing.count) missing to list", systemImage: "basket") }
                             .pbutton(.outline, .sm)
                             .padding(.top, 14)
                         }
@@ -155,7 +164,7 @@ struct RecipeDetailView: View {
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 10) {
                 Button { planOpen = true } label: { Label("Plan it", systemImage: "calendar.badge.plus") }.pbutton(.glass, .lg, fill: true)
-                Button("Cook") { nav.cooking = CookRequest(recipeId: recipe.id, date: nil) }.pbutton(.primary, .lg, fill: true)
+                Button("Cook") { nav.cooking = CookRequest(recipeId: recipe.id, date: plannedDate(recipe), servings: current) }.pbutton(.primary, .lg, fill: true)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -189,6 +198,13 @@ struct RecipeDetailView: View {
             }
             .presentationDetents([.height(220)])
         }
+    }
+
+    /// If this recipe is planned for today or tomorrow, cooking it should log that night.
+    private func plannedDate(_ recipe: RecipeModel) -> String? {
+        let today = ctxProvider.today
+        for d in [today, DateKey.addDays(today, 1)] where store.dinner(on: d)?.recipeId == recipe.id && store.dinner(on: d)?.done != true { return d }
+        return nil
     }
 
     private func stat(_ icon: String, _ label: String, _ value: String) -> some View {

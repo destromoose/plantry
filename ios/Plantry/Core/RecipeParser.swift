@@ -16,6 +16,9 @@ struct ParsedStep: Equatable {
 
 struct ParsedRecipe: Equatable {
     var title: String?
+    var servings: Int?
+    var activeMinutes: Int?
+    var totalMinutes: Int?
     var ingredients: [ParsedIngredient] = []
     var steps: [ParsedStep] = []
 }
@@ -39,17 +42,33 @@ enum RecipeParser {
         matches("^\\s*(?:#+\\s*)?(?:method|instructions?|directions?|steps?|preparation)\\b\\s*:?\\s*$", l)
     }
 
-    /// Finds a timer in step text: "12 minutes", "10-12 min" (takes the upper bound).
+    /// Minutes for a step's timer: "12 minutes", "10-12 mins", "1 hour 10 minutes",
+    /// "1½ hours", "90 seconds". Whole words only, so "2 minced garlic" is not a timer.
     static func detectTimer(_ text: String) -> Int? {
-        let re = try! NSRegularExpression(pattern: "(\\d+)\\s*(?:-|–|to)?\\s*(\\d+)?\\s*(?:min|minute)", options: .caseInsensitive)
-        guard let m = re.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
-        func group(_ i: Int) -> String? {
-            let r = m.range(at: i)
-            guard r.location != NSNotFound, let range = Range(r, in: text) else { return nil }
-            return String(text[range])
+        guard let total = timerMinutes(text) else { return nil }
+        return Int(total.rounded())
+    }
+
+    static func timerMinutes(_ text: String) -> Double? {
+        let num = "(\\d+(?:[.,]\\d+)?|\\d*[½¼¾⅓⅔])"
+        let range = "\(num)(?:\\s*(?:-|–|to)\\s*\(num))?"
+        func find(_ unit: String) -> Double? {
+            guard let m = capture("\(range)\\s*(?:\(unit))\\b", text) else { return nil }
+            return toNumber(m[1].isEmpty ? m[0] : m[1])
         }
-        let n = Int(group(2) ?? group(1) ?? "") ?? 0
-        return n > 0 && n < 600 ? n : nil
+        var total = 0.0
+        let hours = find("hours?|hrs?")
+        let mins = find("minutes?|mins?")
+        if let hours { total += hours * 60 }
+        if let mins { total += mins }
+        if hours == nil && mins == nil, let secs = find("seconds?|secs?") { total += secs / 60 }
+        return total > 0 && total < 600 ? (total * 100).rounded() / 100 : nil
+    }
+
+    private static func toNumber(_ s: String) -> Double {
+        let t = s.replacingOccurrences(of: ",", with: ".")
+        if let last = t.last, let v = vulgar[last] { return Double(Int(String(t.dropLast())) ?? 0) + v }
+        return Double(t) ?? 0
     }
 
     private static func parseQuantityToken(_ tok: String) -> Double? {
@@ -140,10 +159,41 @@ enum RecipeParser {
         matches("^\\s*(?:[-*•–]|\\d|[½¼¾⅓⅔])", l)
     }
 
+    /// "1 hr 15 mins" -> 75.
+    private static func minutesIn(_ s: String) -> Int? {
+        let h = capture("(\\d+(?:[.,]\\d+)?)\\s*(?:h|hrs?|hours?)\\b", s)
+        let m = capture("(\\d+)\\s*(?:m|mins?|minutes?)\\b", s)
+        if h == nil && m == nil { return nil }
+        let total = (h.flatMap { Double($0[0].replacingOccurrences(of: ",", with: ".")) } ?? 0) * 60 + (m.flatMap { Double($0[0]) } ?? 0)
+        return total > 0 && total < 48 * 60 ? Int(total.rounded()) : nil
+    }
+
+    /// Take "Serves 4", "Prep: 10 min" and the like out of the text, keeping what they say.
+    private static func takeMeta(_ lines: [String], _ out: inout ParsedRecipe) -> [String] {
+        var cook: Int?
+        var kept: [String] = []
+        for l in lines {
+            if let sv = capture("^(?:serves|servings?|makes|yield)\\b\\s*:?\\s*(\\d+)", l), let n = Int(sv[0]) {
+                if n >= 1 && n <= 24 { out.servings = n }
+                continue
+            }
+            var taken = false
+            if l.count < 60 {
+                if let m = capture("^(?:prep(?:aration)?|active)(?:\\s*time)?\\s*:?\\s*(.+)$", l), let n = minutesIn(m[0]) { out.activeMinutes = n; taken = true }
+                else if let m = capture("^cook(?:ing)?\\s*time\\s*:?\\s*(.+)$", l), let n = minutesIn(m[0]) { cook = n; taken = true }
+                else if let m = capture("^(?:total|ready in)(?:\\s*time)?\\s*:?\\s*(.+)$", l), let n = minutesIn(m[0]) { out.totalMinutes = n; taken = true }
+            }
+            if !taken { kept.append(l) }
+        }
+        if out.totalMinutes == nil, out.activeMinutes != nil || cook != nil { out.totalMinutes = (out.activeMinutes ?? 0) + (cook ?? 0) }
+        if out.activeMinutes == nil, let cook, let total = out.totalMinutes { out.activeMinutes = min(cook, total) }
+        return kept
+    }
+
     static func parse(_ text: String) -> ParsedRecipe {
-        let lines = text.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n").map { $0.trimmed }
-        let nonEmpty = lines.filter { !$0.isEmpty }
         var out = ParsedRecipe()
+        let lines = takeMeta(text.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n").map { $0.trimmed }, &out)
+        let nonEmpty = lines.filter { !$0.isEmpty }
         guard let first = nonEmpty.first else { return out }
 
         var body = lines

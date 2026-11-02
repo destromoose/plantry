@@ -6,14 +6,18 @@ struct RootView: View {
     @Environment(Store.self) private var store
     @Environment(ContextProvider.self) private var ctx
     @Environment(\.accessibilityReduceMotion) private var systemReduce
+    @Environment(\.colorScheme) private var systemScheme
     @Query private var settingsRows: [SettingsModel]
 
     private var settings: SettingsModel? { settingsRows.first }
 
     private var theme: Theme {
         let mood: Mood
-        if let setting = settings?.mood, setting != .auto { mood = Mood(rawValue: setting.rawValue) ?? .day }
-        else { mood = ctx.context.mood }
+        switch settings?.mood ?? .auto {
+        case .auto: mood = ctx.context.mood
+        case .system: mood = systemScheme == .dark ? .night : .day
+        case let m: mood = Mood(rawValue: m.rawValue) ?? .day
+        }
         return Theme.forMood(mood)
     }
 
@@ -43,6 +47,7 @@ struct RootView: View {
         .modifier(ToastHost())
         .animation(.easeInOut(duration: 0.3), value: settings?.onboarded)
         .onChange(of: settings?.mood) { ctx.refresh() }
+        .onChange(of: systemScheme, initial: true) { ctx.prefersDark = systemScheme == .dark }
         .onChange(of: settings?.weatherEnabled) { ctx.refresh(); Task { await ctx.refreshWeather() } }
     }
 }
@@ -90,6 +95,7 @@ final class Navigator {
 struct CookRequest: Identifiable, Hashable {
     var recipeId: String
     var date: String?
+    var servings: Int? = nil
     var id: String { recipeId + (date ?? "") }
 }
 

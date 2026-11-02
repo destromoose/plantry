@@ -64,13 +64,13 @@ struct HandoffSheet: View {
     private var me: MemberModel? { members.first { $0.isMe } ?? members.first }
 
     var body: some View {
-        let others = members.filter { $0.id != me?.id }
-        SheetChrome(title: "Hand off dinner") {
+        let others = members.filter { $0.id != me?.id && $0.cooks }
+        SheetChrome(title: "Ask someone else to cook") {
             if others.isEmpty || me == nil {
-                Text("Add someone to your household first. Then you can pass the apron.").font(Type.body).foregroundStyle(t.ink2)
+                Text("Add someone who cooks to your household first. Nothing is sent anywhere: the note shows on this phone's Tonight screen.").font(Type.body).foregroundStyle(t.ink2)
                 Button("Go to household") { dismiss(); nav.push(.household) }.pbutton().padding(.top, 20)
             } else {
-                Text(recipe.map { "Pass \($0.title) to someone." } ?? "Pass tonight to someone.").font(Type.body).foregroundStyle(t.ink2).padding(.bottom, 16)
+                Text(recipe.map { "Ask someone to cook \($0.title). The note shows on Tonight for that night." } ?? "Ask someone to cook tonight.").font(Type.body).foregroundStyle(t.ink2).padding(.bottom, 16)
                 Text("Add a note (optional)").font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2).padding(.bottom, 6)
                 PField(placeholder: "Rice is already washed", text: $message).padding(.bottom, 16)
                 VStack(spacing: 8) {
@@ -78,7 +78,7 @@ struct HandoffSheet: View {
                         Button {
                             onBeforeHandoff?()
                             store.createHandoff(date: date, from: me!, to: m, recipeId: recipe?.id, message: message.isBlank ? nil : message.trimmed)
-                            toaster.show("Handed to \(m.name)")
+                            toaster.show("\(m.name) is cooking")
                             Haptic.success()
                             dismiss()
                         } label: {

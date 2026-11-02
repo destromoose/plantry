@@ -49,6 +49,7 @@ struct PickBody: View {
     @Query private var pantry: [PantryItemModel]
     @Query(sort: \CookedModel.at, order: .reverse) private var cooked: [CookedModel]
     @Query private var settingsRows: [SettingsModel]
+    @Query private var members: [MemberModel]
     var date: String
     var today: String
     var entry: PlanEntryModel?
@@ -59,7 +60,8 @@ struct PickBody: View {
     private var ranked: [Scored] {
         suggest(SuggestInput(recipes: recipes.map(\.value), pantry: pantry.map(\.value), tastes: settingsRows.first?.tastes ?? [],
                              weatherLean: ctxProvider.context.weatherLean, isWeekend: DateKey.isWeekend(date), today: today,
-                             recent: cooked.prefix(60).map(\.recipeId)))
+                             recent: cooked.prefix(60).map(\.recipeId),
+                             avoid: Diet.householdAvoid(settingsAvoid: settingsRows.first?.avoid ?? [], members: members.map(\.value))))
     }
 
     private var leftovers: [RecipeModel] {
@@ -146,8 +148,10 @@ struct PickBody: View {
 struct MenuBody: View {
     @Environment(Store.self) private var store
     @Environment(ContextProvider.self) private var ctxProvider
+    @Environment(Toaster.self) private var toaster
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var t
+    @Query private var settingsRows: [SettingsModel]
     var date: String
     var entry: PlanEntryModel?
     var onCooked: (String) -> Void
@@ -157,6 +161,15 @@ struct MenuBody: View {
         let hasMeal = entry?.hasMeal ?? false
         let hasContent = entry?.isDecided ?? false
         VStack(spacing: 2) {
+            if entry?.recipeId != nil {
+                HStack {
+                    Label("Cooking for", systemImage: "person.2").font(Type.label).foregroundStyle(t.ink)
+                    Spacer()
+                    Stepper(value: Binding(get: { entry?.servings ?? settingsRows.first?.cookingFor ?? 2 }, set: { store.setServings(date, $0) }), range: 1...24, label: "people")
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 52)
+            }
             row("pencil", hasContent ? "Change" : "Pick something") { setKind(.pick) }
             if hasMeal, entry?.done != true {
                 row("checkmark", "Mark cooked") { onCooked(date); dismiss() }
@@ -164,7 +177,12 @@ struct MenuBody: View {
             row("person", "Claim night") { setKind(.claim) }
             if hasContent { row("arrow.left.arrow.right", "Move to...") { setKind(.move) } }
             if entry != nil {
-                row("trash", "Remove", danger: true) { store.clearDinner(date); ctxProvider.refresh(); dismiss() }
+                row("trash", "Remove", danger: true) {
+                    let undo = store.undoable { store.clearDinner(date) }
+                    ctxProvider.refresh()
+                    toaster.show("Night cleared") { undo(); ctxProvider.refresh() }
+                    dismiss()
+                }
             }
         }
     }

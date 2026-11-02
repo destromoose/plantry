@@ -241,6 +241,7 @@ struct ProgressRing<Content: View>: View {
     var size: CGFloat = 48
     var stroke: CGFloat = 5
     var tone: RingTone = .accent
+    var label: String? = nil
     @ViewBuilder var content: Content
 
     private var color: Color {
@@ -262,7 +263,7 @@ struct ProgressRing<Content: View>: View {
             content
         }
         .frame(width: size, height: size)
-        .accessibilityLabel("\(Int(value * 100)) percent")
+        .accessibilityLabel(label ?? "\(Int(value * 100)) percent")
     }
 }
 
@@ -335,7 +336,7 @@ struct Stepper: View {
     var label: String
     var body: some View {
         HStack(spacing: 0) {
-            Button { value = max(range.lowerBound, value - 1) } label: { Image(systemName: "minus") }
+            Button { value = max(range.lowerBound, value - 1) } label: { Image(systemName: "minus").frame(width: 44, height: 44) }
                 .disabled(value <= range.lowerBound)
                 .accessibilityLabel("Fewer \(label)")
             Text("\(value)")
@@ -343,17 +344,18 @@ struct Stepper: View {
                 .frame(minWidth: 36)
                 .contentTransition(.numericText())
                 .motion(Motion.settle, value: value)
-            Button { value = min(range.upperBound, value + 1) } label: { Image(systemName: "plus") }
+            Button { value = min(range.upperBound, value + 1) } label: { Image(systemName: "plus").frame(width: 44, height: 44) }
                 .disabled(value >= range.upperBound)
                 .accessibilityLabel("More \(label)")
         }
-        .font(.system(size: 14, weight: .semibold))
+        .font(.system(size: 15, weight: .semibold))
         .foregroundStyle(t.ink)
         .buttonStyle(.plain)
-        .frame(height: 36)
-        .padding(.horizontal, 4)
+        .frame(height: 44)
+        .padding(.horizontal, 2)
         .background(t.surface2, in: Capsule())
         .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(label): \(value)")
     }
 }
 
@@ -402,17 +404,30 @@ struct EmptyState<Action: View>: View {
 @MainActor
 @Observable
 final class Toaster {
-    var message: String?
+    struct Toast: Equatable {
+        var text: String
+        var undo: (() -> Void)?
+        static func == (a: Toast, b: Toast) -> Bool { a.text == b.text && (a.undo == nil) == (b.undo == nil) }
+    }
+    var toast: Toast?
+    var message: String? { toast?.text }
     private var task: Task<Void, Never>?
 
-    func show(_ text: String) {
+    func show(_ text: String) { present(Toast(text: text, undo: nil), for: 2.2) }
+
+    /// A toast with an Undo button, for every action that takes something away.
+    func show(_ text: String, undo: @escaping () -> Void) { present(Toast(text: text, undo: undo), for: 8) }
+
+    private func present(_ t: Toast, for seconds: Double) {
         task?.cancel()
-        message = text
+        toast = t
         task = Task {
-            try? await Task.sleep(for: .seconds(2.2))
-            if !Task.isCancelled { message = nil }
+            try? await Task.sleep(for: .seconds(seconds))
+            if !Task.isCancelled { toast = nil }
         }
     }
+
+    func dismiss() { task?.cancel(); toast = nil }
 }
 
 struct ToastHost: ViewModifier {
@@ -421,21 +436,40 @@ struct ToastHost: ViewModifier {
 
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottom) {
-            if let message = toaster.message {
-                Text(message)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(t.ink)
-                    .padding(.horizontal, 16)
-                    .frame(height: 42)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay(Capsule().strokeBorder(t.line.opacity(0.6), lineWidth: 1))
-                    .shadow(color: .black.opacity(0.15), radius: 14, y: 8)
-                    .padding(.bottom, 70)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .accessibilityAddTraits(.updatesFrequently)
+            if let toast = toaster.toast {
+                HStack(spacing: 12) {
+                    Text(toast.text).font(.system(size: 14, weight: .medium)).foregroundStyle(t.ink).lineLimit(2)
+                    if let undo = toast.undo {
+                        Button("Undo") { undo(); toaster.dismiss(); Haptic.tap() }
+                            .font(.system(size: 14, weight: .semibold)).foregroundStyle(t.accent)
+                            .frame(minHeight: 44)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 44)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(t.line.opacity(0.6), lineWidth: 1))
+                .shadow(color: .black.opacity(0.15), radius: 14, y: 8)
+                .padding(.bottom, 70)
+                .padding(.horizontal, 20)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .accessibilityElement(children: .contain)
+                .accessibilityAddTraits(.updatesFrequently)
             }
         }
-        .motion(Motion.settle, value: toaster.message)
+        .motion(Motion.settle, value: toaster.toast)
+    }
+}
+
+/// Ignores a repeat tap within 300 ms, so a double tap can't save twice or skip a step.
+@MainActor
+enum TapGuard {
+    private static var last: [String: Date] = [:]
+    static func allow(_ key: String, within seconds: Double = 0.3) -> Bool {
+        let now = Date()
+        if let l = last[key], now.timeIntervalSince(l) < seconds { return false }
+        last[key] = now
+        return true
     }
 }
 

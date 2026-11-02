@@ -98,6 +98,7 @@ struct RecipeTile: View {
     @Environment(Store.self) private var store
     @Environment(Navigator.self) private var nav
     @Environment(\.theme) private var t
+    var reader = AvoidReader()
     var recipe: RecipeModel
     var cov: Coverage
 
@@ -114,8 +115,10 @@ struct RecipeTile: View {
                         Text("\(cov.have) of \(cov.total)")
                     }
                     .font(.system(size: 12)).foregroundStyle(t.ink2)
-                    if !recipe.tastes.isEmpty {
+                    if Diet.conflicts(recipe.value, avoid: reader.avoid).blocking.isEmpty {
                         HStack(spacing: 6) { ForEach(recipe.tastes.prefix(2)) { Tag(text: $0.label) } }
+                    } else {
+                        AvoidBadge(recipe: recipe.value)
                     }
                 }
                 .padding(12)
@@ -131,10 +134,11 @@ struct RecipeTile: View {
                 Image(systemName: recipe.isFavorite ? "heart.fill" : "heart")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(recipe.isFavorite ? t.accent : t.ink)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
                     .background(.ultraThinMaterial, in: Circle())
+                    .frame(width: 44, height: 44)
             }
-            .padding(8)
+            .padding(6)
             .accessibilityLabel(recipe.isFavorite ? "Remove \(recipe.title) from favorites" : "Add \(recipe.title) to favorites")
         }
         .accessibilityElement(children: .contain)
