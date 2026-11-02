@@ -4,8 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
-import { ArrowLeft, ArrowRight, Check, ListChecks, Timer, UtensilsCrossed, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ListChecks,
+  ShieldAlert,
+  Timer,
+  UtensilsCrossed,
+  X,
+} from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { addDays, toDateKey } from '@/lib/utils'
+import { clearCookSession, loadCookSession, saveCookSession } from '@/lib/cookSession'
+import { cautionsFor, needsGrownUp, withFahrenheit } from '@/lib/safety'
 import { withUndo } from '@/lib/undo'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { Stepper } from '@/components/ui/Stepper'
@@ -20,6 +32,56 @@ import { toast } from '@/components/ui/Toast'
 import { StepTimer, formatClock } from './StepTimer'
 import { Toggle } from './Toggle'
 import { remainingOf, useTimers } from './useTimers'
+
+/** A short name for a step's timer: "Simmer the sauce" rather than "Step 3". */
+function stepName(text: string) {
+  const skip = new Set([
+    'the',
+    'a',
+    'an',
+    'some',
+    'your',
+    'in',
+    'of',
+    'and',
+    'with',
+    'to',
+    'chopped',
+    'sliced',
+    'diced',
+    'grated',
+    'minced',
+    'large',
+    'small',
+    'all',
+  ])
+  const words = text
+    .replace(/[.,;:!].*$/, '')
+    .split(/\s+/)
+    .filter((w) => w && !skip.has(w.toLowerCase()))
+  const name = words.slice(0, 2).join(' ')
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : 'Timer'
+}
+
+function StepCautions({ text, own, kids }: { text: string; own?: string; kids: boolean }) {
+  const list = cautionsFor(text, own)
+  if (!list.length) return null
+  return (
+    <ul className="space-y-1.5 pt-1">
+      {list.map((c) => (
+        <li key={c.kind} className="flex items-start gap-2 text-[15px] text-ink-2">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
+          <span>{c.note}</span>
+        </li>
+      ))}
+      {kids && needsGrownUp(list) && (
+        <li className="pl-6 text-[15px] font-medium text-ink">
+          New to this? Ask a grown-up to help with this step.
+        </li>
+      )}
+    </ul>
+  )
+}
 
 const slide = {
   enter: (dir: number) => ({ x: dir * 48, opacity: 0 }),
@@ -44,9 +106,26 @@ export function CookMode({
   const markCooked = useStore((s) => s.markCooked)
   const cookingFor = useStore((s) => s.settings.cookingFor)
   const setPlanServings = useStore((s) => s.setServings)
-  const [people, setPeople] = useState<number | null>(null)
+  const setPlanEntry = useStore((s) => s.setPlanEntry)
+  const kids = useStore((s) => s.settings.cookingWithKids)
+  const tomorrowEntry = useStore((s) =>
+    s.plan.find((p) => p.date === addDays(date ?? toDateKey(new Date()), 1) && p.slot === 'dinner')
+  )
+  const tomorrowTitle = useStore((s) =>
+    tomorrowEntry?.recipeId
+      ? s.recipes.find((r) => r.id === tomorrowEntry.recipeId)?.title
+      : tomorrowEntry?.note
+  )
+  // Pick up where you left off: same recipe and same night, within 12 hours.
+  const [saved] = useState(() => {
+    const s = loadCookSession(id)
+    return s && s.date === date ? s : undefined
+  })
+  const [people, setPeople] = useState<number | null>(saved?.servings ?? null)
+  const [leaveOpen, setLeaveOpen] = useState(false)
+  const [awake, setAwake] = useState(false)
 
-  const [index, setIndex] = useState(0)
+  const [index, setIndex] = useState(saved?.index ?? 0)
   const [dir, setDir] = useState(1)
   const [ingOpen, setIngOpen] = useState(false)
   const [finishOpen, setFinishOpen] = useState(false)
@@ -54,9 +133,10 @@ export function CookMode({
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [usePantry, setUsePantry] = useState(true)
   const [leftovers, setLeftovers] = useState(recipe?.leftovers ?? false)
-  const { timers, now, start, pause, reset } = useTimers()
-
   const steps = useMemo(() => recipe?.steps ?? [], [recipe])
+  const { timers, now, start, pause, reset, announce } = useTimers(saved?.timers ?? {}, (sid) =>
+    stepName(steps.find((s) => s.id === sid)?.text ?? '')
+  )
   const last = steps.length - 1
   const step = steps[index]
   // One servings number, in order: changed here, passed from the recipe page, the plan, the household.
@@ -116,7 +196,11 @@ export function CookMode({
         const l = await navigator.wakeLock?.request('screen')
         if (!l) return
         if (cancelled) void l.release().catch(() => {})
-        else lock = l
+        else {
+          lock = l
+          setAwake(true)
+          l.addEventListener?.('release', () => setAwake(false))
+        }
       } catch {
         /* not supported or denied */
       }
@@ -137,10 +221,27 @@ export function CookMode({
     }
   }, [])
 
+  const anyRunning = Object.values(timers).some((t) => t.endsAt !== null)
+
+  // Save the place and timers so a reload, a locked phone or a closed tab can resume.
+  useEffect(() => {
+    if (!recipe || finishing.current) return
+    saveCookSession({ recipeId: recipe.id, date, index, servings: people ?? undefined, timers })
+  }, [recipe, date, index, people, timers])
+
+  // Warn before closing the tab while a timer runs.
+  useEffect(() => {
+    if (!anyRunning) return
+    const onLeave = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onLeave)
+    return () => window.removeEventListener('beforeunload', onLeave)
+  }, [anyRunning])
+
   const activeTimers = useMemo(() => {
-    return steps
-      .map((s, i) => ({ s, i, t: timers[s.id] }))
-      .filter((x) => x.t && (x.t.endsAt !== null || x.t.finished))
+    return steps.map((s, i) => ({ s, i, t: timers[s.id] })).filter((x) => !!x.t)
   }, [steps, timers])
 
   if (!recipe || steps.length === 0) {
@@ -172,12 +273,38 @@ export function CookMode({
     else if (info.offset.x > 80 || info.velocity.x > 500) prev()
   }
 
+  const alreadyDone = !!entry?.done
+  const swapTomorrow = leftovers && !!tomorrowTitle
+
+  function close() {
+    // Go back to where you came from; the recipe page if there is nowhere to go back to.
+    if (window.history.length > 1) router.back()
+    else router.push(date ? `/` : `/recipes/${recipe!.id}`)
+  }
+
   function finish() {
     if (!recipe || finishing.current) return
     finishing.current = true
+    clearCookSession()
+    if (alreadyDone) {
+      router.push('/')
+      return
+    }
+    if (!date || !entry) {
+      // Cooked without a plan: log it as tonight's dinner so history and the pantry stay right.
+      const today = toDateKey(new Date())
+      withUndo("Logged as tonight's dinner. Nice work.", () => {
+        setPlanEntry({ date: today, slot: 'dinner', recipeId: recipe.id, servings: count })
+        markCooked(today, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
+      })
+      router.push('/')
+      return
+    }
     if (date && entry) {
       const before = useStore.getState().pantry.length
-      withUndo('Nice work.', () => markCooked(date, { usePantry, leftovers }))
+      withUndo('Nice work.', () =>
+        markCooked(date, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
+      )
       const used = before - useStore.getState().pantry.length
       if (used > 0) toast(`${pluralize(used, 'thing')} used up from your pantry.`)
       router.push('/')
@@ -196,7 +323,7 @@ export function CookMode({
             variant="ghost"
             size="icon"
             aria-label="Close cook mode"
-            onClick={() => router.push(`/recipes/${recipe.id}`)}
+            onClick={() => (anyRunning ? setLeaveOpen(true) : close())}
           >
             <X className="h-5 w-5" aria-hidden />
           </Button>
@@ -205,6 +332,10 @@ export function CookMode({
           </p>
           <div className="w-11" aria-hidden />
         </div>
+        {awake && <p className="mt-1 text-center text-xs text-ink-3">Screen stays on</p>}
+        <p className="sr-only" role="status" aria-live="polite">
+          {announce}
+        </p>
         <div
           className="mt-3 flex gap-1.5"
           role="progressbar"
@@ -225,7 +356,7 @@ export function CookMode({
             </div>
           ))}
         </div>
-        <div className="mt-3 flex min-h-9 flex-wrap justify-center gap-2" aria-live="polite">
+        <div className="mt-3 flex min-h-9 flex-wrap justify-center gap-2">
           <AnimatePresence initial={false}>
             {activeTimers.map(({ s, i, t }) => (
               <motion.button
@@ -236,19 +367,29 @@ export function CookMode({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={settle}
-                onClick={() => go(i)}
+                onClick={() => {
+                  if (t.finished) reset(s.id)
+                  go(i)
+                }}
                 aria-label={
                   t.finished
-                    ? `Step ${i + 1} timer finished. Go to step.`
-                    : `Step ${i + 1} timer ${formatClock(remainingOf(t, now))} left. Go to step.`
+                    ? `${stepName(s.text)} timer done. Stop the alarm and go to step ${i + 1}.`
+                    : `${stepName(s.text)} timer, ${formatClock(remainingOf(t, now))} left${t.endsAt === null ? ', paused' : ''}. Go to step ${i + 1}.`
                 }
                 className={cn(
                   'inline-flex h-9 items-center gap-1.5 rounded-pill px-3 text-[13px] font-medium tabular-nums',
-                  t.finished ? 'bg-danger text-cream' : 'bg-accent text-accent-ink'
+                  t.finished
+                    ? 'animate-pulse bg-danger text-cream'
+                    : t.endsAt === null
+                      ? 'bg-surface-2 text-ink-2'
+                      : 'bg-accent text-accent-ink'
                 )}
               >
                 <Timer className="h-3.5 w-3.5" aria-hidden />
-                Step {i + 1} · {t.finished ? 'done' : formatClock(remainingOf(t, now))}
+                {stepName(s.text)} ·{' '}
+                {t.finished
+                  ? 'done, tap to stop'
+                  : `${formatClock(remainingOf(t, now))}${t.endsAt === null ? ' paused' : ''}`}
               </motion.button>
             ))}
           </AnimatePresence>
@@ -278,8 +419,9 @@ export function CookMode({
                 Step {index + 1} of {steps.length}
               </Eyebrow>
               <p className="font-display text-fluid-step font-medium leading-tight tracking-tight">
-                {step.text}
+                {withFahrenheit(step.text)}
               </p>
+              <StepCautions text={step.text} own={step.caution} kids={kids} />
             </div>
             {step.timerMinutes ? (
               <StepTimer
@@ -404,19 +546,49 @@ export function CookMode({
           </h2>
           <p className="mt-1 text-[15px] text-ink-2">{recipe.title}</p>
         </div>
-        {date && entry && (
+        {alreadyDone ? (
+          <p className="mb-4 text-center text-[15px] text-ink-2">
+            Already marked as cooked, so it won&apos;t be counted twice.
+          </p>
+        ) : (
           <div className="mb-4 space-y-2">
             <Toggle
               checked={usePantry}
               onChange={setUsePantry}
               label="Take what I used out of my pantry"
             />
-            <Toggle checked={leftovers} onChange={setLeftovers} label="There are leftovers" />
+            <Toggle
+              checked={leftovers}
+              onChange={setLeftovers}
+              label={
+                tomorrowTitle && leftovers
+                  ? `There are leftovers: have them tomorrow instead of ${tomorrowTitle}`
+                  : 'There are leftovers'
+              }
+            />
+            {!(date && entry) && (
+              <p className="px-1 text-sm text-ink-3">
+                This will be logged as tonight&apos;s dinner.
+              </p>
+            )}
           </div>
         )}
         <Button size="lg" className="w-full" onClick={finish}>
-          {date && entry ? 'Finish' : 'Back to the recipe'}
+          {alreadyDone ? 'Back to Tonight' : 'Finish'}
         </Button>
+      </Sheet>
+
+      <Sheet open={leaveOpen} onClose={() => setLeaveOpen(false)} title="A timer is still running">
+        <p className="mb-5 text-ink-2">
+          If you leave, it keeps counting and your place is saved. Come back to this recipe to pick
+          up where you were.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button onClick={() => setLeaveOpen(false)}>Keep cooking</Button>
+          <Button variant="ghost" onClick={close}>
+            Leave for now
+          </Button>
+        </div>
       </Sheet>
     </div>
   )

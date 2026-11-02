@@ -43,11 +43,31 @@ const STEP_HEADING =
   /^\s*(?:#+\s*)?(?:method|instructions?|directions?|steps?|preparation)\b\s*:?\s*$/i
 
 /** Finds a timer in step text: "12 minutes", "10-12 min" (takes the upper bound). */
+/**
+ * Minutes for a step's timer: "12 minutes", "10-12 mins", "1 hour 10 minutes",
+ * "1½ hours", "90 seconds". Whole words only, so "2 minced garlic" is not a timer.
+ */
 export function detectTimer(text: string): number | undefined {
-  const m = text.match(/(\d+)\s*(?:-|–|to)?\s*(\d+)?\s*(?:min|minute)/i)
-  if (!m) return undefined
-  const n = Number(m[2] ?? m[1])
-  return n > 0 && n < 600 ? n : undefined
+  const num = String.raw`(\d+(?:[.,]\d+)?|\d*[½¼¾⅓⅔])`
+  const range = String.raw`${num}(?:\s*(?:-|–|to)\s*${num})?`
+  const read = (a?: string, b?: string) => toNumber(b ?? a ?? '')
+  let total = 0
+  const hours = text.match(new RegExp(`${range}\\s*(?:hours?|hrs?)\\b`, 'i'))
+  if (hours) total += read(hours[1], hours[2]) * 60
+  const mins = text.match(new RegExp(`${range}\\s*(?:minutes?|mins?)\\b`, 'i'))
+  if (mins) total += read(mins[1], mins[2])
+  if (!hours && !mins) {
+    const secs = text.match(new RegExp(`${range}\\s*(?:seconds?|secs?)\\b`, 'i'))
+    if (secs) total += read(secs[1], secs[2]) / 60
+  }
+  return total > 0 && total < 600 ? Math.round(total * 100) / 100 : undefined
+}
+
+function toNumber(s: string): number {
+  const t = s.replace(',', '.')
+  const m = t.match(/^(\d*)([½¼¾⅓⅔])$/)
+  if (m) return Number(m[1] || 0) + (VULGAR[m[2]] ?? 0)
+  return Number(t) || 0
 }
 
 function parseQuantityToken(tok: string): number | undefined {

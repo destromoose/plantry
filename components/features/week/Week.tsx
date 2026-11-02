@@ -8,7 +8,7 @@ import { Check, ChevronLeft, ChevronRight, MoreHorizontal, Plus, Sparkles } from
 import { useStore } from '@/lib/store'
 import { householdAvoid } from '@/lib/diet'
 import { useAppContext } from '@/components/shell/Providers'
-import { suggest } from '@/lib/suggest'
+import { pickNext, suggest } from '@/lib/suggest'
 import { addDays, cn, formatMinutes, fromDateKey, shortDay, toDateKey, weekOf } from '@/lib/utils'
 import { reveal, staggerContainer, checkPop } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
@@ -58,9 +58,16 @@ export function Week() {
     const before = useStore.getState().plan
     const s = useStore.getState()
     const avoid = householdAvoid(s.settings, s.members)
+    // Skip what's already this week and what was on last week, so next week isn't a copy.
+    const lastWeek = weekDates.map((d) => addDays(d, -7))
     const used = new Set<string>(
       s.plan
-        .filter((p) => weekDates.includes(p.date) && p.slot === 'dinner' && p.recipeId)
+        .filter(
+          (p) =>
+            (weekDates.includes(p.date) || lastWeek.includes(p.date)) &&
+            p.slot === 'dinner' &&
+            p.recipeId
+        )
         .map((p) => p.recipeId as string)
     )
     let filled = 0
@@ -95,8 +102,9 @@ export function Week() {
         exclude: [...used],
         avoid,
       })
+      // A weighted pick from the top few, so filling twice doesn't give the same week.
       const pick =
-        ranked[0] ??
+        pickNext(ranked, []) ??
         suggest({
           recipes: s.recipes,
           pantry: s.pantry,

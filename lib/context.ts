@@ -59,7 +59,10 @@ export function buildContext({
   const todayEntry = plan.find((p) => p.date === today && p.slot === 'dinner')
   const tonightOpen =
     !!todayEntry && !todayEntry.done && !!(todayEntry.recipeId || todayEntry.leftoversOf)
-  const lateNight = hour >= TOMORROW_FROM_HOUR && !tonightOpen && !stillTonight
+  // Once tonight's dinner is cooked, move on to tomorrow.
+  const tonightDone = !!todayEntry?.done
+  const lateNight =
+    !stillTonight && ((hour >= TOMORROW_FROM_HOUR && !tonightOpen) || tonightDone)
   const targetDate = lateNight ? addDays(today, 1) : today
   const targetLabel = lateNight ? 'Tomorrow' : 'Tonight'
   const mood = settings.mood === 'auto' ? moodForHour(hour) : settings.mood
@@ -90,7 +93,7 @@ export function buildContext({
   else if ((hour >= 20 || lateNight) && yesterdayBigBatch) nudge = 'leftovers'
 
   const reason = describe({ mood, isWeekend, lean, weather, hour, lateNight })
-  const canStayTonight = lateNight
+  const canStayTonight = lateNight && !tonightDone
 
   return {
     now: now.toISOString(),

@@ -41,24 +41,73 @@ function beep() {
   }
 }
 
-/** Timers keyed by step id. Accurate via Date.now() deltas, independent of render rate. */
-export function useTimers() {
-  const [timers, setTimers] = useState<Record<string, TimerState>>({})
+function vibrate() {
+  try {
+    navigator.vibrate?.([400, 200, 400, 200, 400])
+  } catch {
+    /* not supported */
+  }
+}
+
+/** Ask once, the first time someone starts a timer, so a locked phone can still alert. */
+function askToNotify() {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'default') return
+    if (window.localStorage.getItem('plantry-asked-notify')) return
+    window.localStorage.setItem('plantry-asked-notify', '1')
+    void Notification.requestPermission()
+  } catch {
+    /* ignore */
+  }
+}
+
+function notify(body: string) {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    if (document.visibilityState === 'visible') return
+    new Notification('Timer done', { body, tag: 'plantry-timer', requireInteraction: true })
+  } catch {
+    /* some browsers only allow notifications from a service worker */
+  }
+}
+
+const RING_EVERY_MS = 4000
+const RING_FOR_MS = 3 * 60 * 1000
+
+/**
+ * Timers keyed by step id. Accurate via Date.now() deltas, independent of render rate.
+ * A finished timer keeps ringing until someone dismisses it (or for three minutes).
+ */
+export function useTimers(
+  initial: Record<string, TimerState> = {},
+  labelOf: (id: string) => string = () => 'Your timer'
+) {
+  const [timers, setTimers] = useState<Record<string, TimerState>>(initial)
   const [now, setNow] = useState(() => Date.now())
+  const [announce, setAnnounce] = useState('')
   const timersRef = useRef(timers)
   timersRef.current = timers
+  const labelRef = useRef(labelOf)
+  labelRef.current = labelOf
+  const ringStarted = useRef<number | null>(null)
 
   const anyRunning = Object.values(timers).some((t) => t.endsAt !== null)
+  const anyRinging = Object.values(timers).some((t) => t.finished)
 
   useEffect(() => {
     if (!anyRunning) return
     const iv = setInterval(() => {
       const n = Date.now()
       setNow(n)
-      const cur = timersRef.current
-      const done = Object.entries(cur).filter(([, t]) => t.endsAt !== null && t.endsAt <= n)
+      const done = Object.entries(timersRef.current).filter(
+        ([, t]) => t.endsAt !== null && t.endsAt <= n
+      )
       if (done.length) {
+        const names = done.map(([id]) => labelRef.current(id)).join(', ')
         beep()
+        vibrate()
+        notify(names)
+        setAnnounce(`Timer done: ${names}`)
         setTimers((prev) => {
           const next = { ...prev }
           for (const [id] of done) {
@@ -73,9 +122,28 @@ export function useTimers() {
     return () => clearInterval(iv)
   }, [anyRunning])
 
+  // Keep ringing until dismissed, so a timer is not missed while hands are busy.
+  useEffect(() => {
+    if (!anyRinging) {
+      ringStarted.current = null
+      return
+    }
+    ringStarted.current ??= Date.now()
+    const iv = setInterval(() => {
+      if (Date.now() - (ringStarted.current ?? 0) > RING_FOR_MS) return
+      beep()
+      vibrate()
+    }, RING_EVERY_MS)
+    return () => clearInterval(iv)
+  }, [anyRinging])
+
   const start = useCallback((id: string, minutes: number) => {
+    askToNotify()
     const n = Date.now()
     setNow(n)
+    const t0 = timersRef.current[id]
+    const rem0 = t0 && !t0.finished && t0.remainingMs > 0 ? t0.remainingMs : minutes * 60_000
+    setAnnounce(`Timer started: ${Math.max(1, Math.round(rem0 / 60_000))} minutes`)
     setTimers((prev) => {
       const t = prev[id] ?? {
         durationMs: minutes * 60_000,
@@ -91,6 +159,7 @@ export function useTimers() {
 
   const pause = useCallback((id: string) => {
     const n = Date.now()
+    setAnnounce('Timer paused')
     setTimers((prev) => {
       const t = prev[id]
       if (!t || t.endsAt === null) return prev
@@ -98,13 +167,16 @@ export function useTimers() {
     })
   }, [])
 
+  /** Back to the full time. Also how a ringing timer is dismissed. */
   const reset = useCallback((id: string) => {
     setTimers((prev) => {
       const t = prev[id]
       if (!t) return prev
-      return { ...prev, [id]: { ...t, remainingMs: t.durationMs, endsAt: null, finished: false } }
+      const next = { ...prev }
+      delete next[id]
+      return next
     })
   }, [])
 
-  return { timers, now, start, pause, reset }
+  return { timers, now, start, pause, reset, announce }
 }

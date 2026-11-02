@@ -217,3 +217,28 @@ describe('shopping list rules', () => {
     expect(s().shop).toHaveLength(0)
   })
 })
+
+describe('week and leftovers', () => {
+  it('removes a leftovers night when its cook night is removed', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'lime' }], true)],
+      plan: [
+        { id: 'a', date: '2026-11-03', slot: 'dinner', recipeId: 'r1' },
+        { id: 'b', date: '2026-11-04', slot: 'dinner', leftoversOf: 'r1' },
+      ],
+    })
+    s().clearPlanEntry('2026-11-03', 'dinner')
+    expect(s().plan).toHaveLength(0)
+  })
+  it('can swap a planned tomorrow for leftovers', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'lime' }], true), recipe('r2', [{ key: 'mint' }])],
+      plan: [
+        { id: 'a', date: '2026-11-03', slot: 'dinner', recipeId: 'r1' },
+        { id: 'b', date: '2026-11-04', slot: 'dinner', recipeId: 'r2' },
+      ],
+    })
+    s().markCooked('2026-11-03', { leftovers: true, replaceTomorrow: true })
+    expect(s().plan.find((p) => p.date === '2026-11-04')?.leftoversOf).toBe('r1')
+  })
+})

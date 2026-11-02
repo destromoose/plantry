@@ -85,3 +85,15 @@ Squeeze over the lemon and serve.`)
     expect(parseRecipe('  \n ')).toEqual({ ingredients: [], steps: [] })
   })
 })
+
+describe('detectTimer, more shapes', () => {
+  it('reads hours, seconds and ranges', () => {
+    expect(detectTimer('Roast for 1 hour 10 minutes')).toBe(70)
+    expect(detectTimer('Braise 1½ hours')).toBe(90)
+    expect(detectTimer('Microwave 90 seconds')).toBe(1.5)
+    expect(detectTimer('Cook 10-12 mins until golden')).toBe(12)
+  })
+  it('ignores words that only start like a unit', () => {
+    expect(detectTimer('Add 2 minced garlic cloves')).toBeUndefined()
+  })
+})

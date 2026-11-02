@@ -16,6 +16,7 @@ import { Chip } from '@/components/ui/Chip'
 import { Sheet } from '@/components/ui/Sheet'
 import { AvoidPicker } from '@/components/features/household/AvoidPicker'
 import { Stepper } from '@/components/ui/Stepper'
+import { Toggle } from '@/components/features/cook/Toggle'
 import { toast } from '@/components/ui/Toast'
 import { settle } from '@/lib/motion'
 import { cn, toDateKey } from '@/lib/utils'
@@ -225,6 +226,13 @@ export function Settings() {
             min={1}
             max={24}
             label="Cooking for"
+          />
+        </div>
+        <div className="mt-4 border-t border-line pt-3">
+          <Toggle
+            checked={settings.cookingWithKids}
+            onChange={(v) => update({ cookingWithKids: v })}
+            label="Kids cook too: add ask-a-grown-up notes on hot and sharp steps"
           />
         </div>
       </Card>

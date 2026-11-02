@@ -18,6 +18,7 @@ export type AvoidId =
   | 'vegan'
   | 'no-pork'
   | 'no-beef'
+  | 'mild'
 
 export const allergenOptions: { id: AvoidId; label: string }[] = [
   { id: 'peanut', label: 'Peanuts' },
@@ -36,6 +37,7 @@ export const dietOptions: { id: AvoidId; label: string }[] = [
   { id: 'vegan', label: 'Vegan' },
   { id: 'no-pork', label: 'No pork' },
   { id: 'no-beef', label: 'No beef' },
+  { id: 'mild', label: 'Not spicy' },
 ]
 
 export const avoidLabel = (id: string) =>
@@ -262,6 +264,8 @@ function blockedBy(rule: string): Tag[] {
       return ['pork']
     case 'no-beef':
       return ['beef']
+    case 'mild':
+      return []
     default:
       return [rule as Tag]
   }
@@ -276,11 +280,18 @@ export interface Conflict {
   culprits: string[]
 }
 
-export function conflicts(recipe: Pick<Recipe, 'ingredients'>, avoid: string[]): Conflict {
+export function conflicts(
+  recipe: Pick<Recipe, 'ingredients'> & { tastes?: Recipe['tastes'] },
+  avoid: string[]
+): Conflict {
   const blocking = new Set<string>()
   const leaveOut = new Set<string>()
   const culprits = new Set<string>()
   if (!avoid.length) return { blocking: [], leaveOut: [], culprits: [] }
+  if (avoid.includes('mild') && recipe.tastes?.includes('spicy')) {
+    blocking.add('mild')
+    culprits.add('chili heat')
+  }
   for (const ing of recipe.ingredients) {
     const tags = ingredientTags(ing)
     for (const rule of avoid) {
@@ -295,8 +306,10 @@ export function conflicts(recipe: Pick<Recipe, 'ingredients'>, avoid: string[]):
   return { blocking: [...blocking], leaveOut: [...leaveOut], culprits: [...culprits] }
 }
 
-export const isSafe = (recipe: Pick<Recipe, 'ingredients'>, avoid: string[]) =>
-  conflicts(recipe, avoid).blocking.length === 0
+export const isSafe = (
+  recipe: Pick<Recipe, 'ingredients'> & { tastes?: Recipe['tastes'] },
+  avoid: string[]
+) => conflicts(recipe, avoid).blocking.length === 0
 
 /** Everything the household avoids: the shared list plus every person's. */
 export function householdAvoid(settings: Pick<Settings, 'avoid'>, members: Member[]): string[] {
@@ -311,8 +324,11 @@ export function householdAvoid(settings: Pick<Settings, 'avoid'>, members: Membe
 /** A short warning like "Has peanuts and dairy". */
 export function conflictText(c: Conflict) {
   if (!c.blocking.length) return ''
-  const labels = c.blocking.map((b) => avoidLabel(b).toLowerCase())
   const isDiet = (b: string) => dietOptions.some((d) => d.id === b)
-  if (c.blocking.every(isDiet)) return `Not ${labels.join(' or ')}`
-  return `Has ${labels.join(' and ')}`
+  const allergens = c.blocking.filter((b) => !isDiet(b)).map((b) => avoidLabel(b).toLowerCase())
+  const parts: string[] = []
+  if (allergens.length) parts.push(`Has ${allergens.join(' and ')}`)
+  for (const d of c.blocking.filter(isDiet))
+    parts.push(d === 'mild' ? 'Spicy' : `Not ${avoidLabel(d).toLowerCase()}`)
+  return parts.join(' · ')
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { CloudSun, X } from 'lucide-react'
+import { Check, CloudSun, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { useAvoid } from '@/lib/useAvoid'
 import { useAppContext, useStayTonight } from '@/components/shell/Providers'
@@ -37,6 +37,12 @@ export function Tonight() {
 
   const avoid = useAvoid()
   const stayTonight = useStayTonight()
+  const todayEntry = plan.find((p) => p.date === today && p.slot === 'dinner')
+  const doneTonight =
+    todayEntry?.done && target !== today
+      ? (recipes.find((r) => r.id === (todayEntry.recipeId ?? todayEntry.leftoversOf))?.title ??
+        'dinner')
+      : undefined
   const ranked = useMemo(
     () =>
       suggest({
@@ -80,6 +86,12 @@ export function Tonight() {
         <p className="mt-2 text-[15px] text-ink-2">
           {me ? `${greeting}, ${me.name}.` : `${greeting}.`}
         </p>
+        {doneTonight && (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-pill bg-secondary/15 px-3 py-1 text-sm font-medium text-ink">
+            <Check className="h-4 w-4 text-secondary" aria-hidden /> Tonight&apos;s {doneTonight}{' '}
+            is done. Here&apos;s tomorrow.
+          </p>
+        )}
         {ctx.canStayTonight && (
           <Button
             variant="ghost"

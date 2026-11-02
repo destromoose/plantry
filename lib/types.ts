@@ -129,6 +129,8 @@ export interface Settings {
   cookingFor: number
   /** Allergens and diets the whole household avoids (see lib/diet.ts). */
   avoid: string[]
+  /** Show ask-a-grown-up notes on hot and sharp steps. */
+  cookingWithKids: boolean
 }
 
 export interface Weather {

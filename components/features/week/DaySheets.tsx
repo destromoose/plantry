@@ -1,14 +1,24 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, CalendarDays, Trash2, UserRound, Repeat, Pencil } from 'lucide-react'
+import { Check, CalendarDays, Moon, Pencil, Repeat, Shuffle, Trash2, UserRound } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { Stepper } from '@/components/ui/Stepper'
 import { useAvoid } from '@/lib/useAvoid'
 import { withUndo } from '@/lib/undo'
-import { coverage, suggest } from '@/lib/suggest'
+import { coverage, pickNext, suggest } from '@/lib/suggest'
+import { useAppContext } from '@/components/shell/Providers'
 import type { Context, PlanEntry, Taste } from '@/lib/types'
-import { cn, daysBetween, formatMinutes, fromDateKey, dayLabel, shortDay } from '@/lib/utils'
+import {
+  addDays,
+  cn,
+  daysBetween,
+  formatMinutes,
+  fromDateKey,
+  dayLabel,
+  shortDay,
+  weekOf,
+} from '@/lib/utils'
 import { Sheet } from '@/components/ui/Sheet'
 import { Chip } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
@@ -63,7 +73,7 @@ export function DaySheets({
         : kind === 'claim'
           ? 'Who is cooking?'
           : kind === 'move'
-            ? 'Move to which night?'
+            ? 'Move or swap with which night?'
             : `${dayLabel(date, today)}, ${fromDateKey(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
 
   return (
@@ -311,7 +321,41 @@ function MenuBody({
 }) {
   const clearPlanEntry = useStore((s) => s.clearPlanEntry)
   const setServings = useStore((s) => s.setServings)
+  const setPlanEntry = useStore((s) => s.setPlanEntry)
   const cookingFor = useStore((s) => s.settings.cookingFor)
+  const avoid = useAvoid()
+  const ctx = useAppContext()
+
+  // Re-roll just this night, avoiding what else is planned this week.
+  function somethingElse() {
+    const s = useStore.getState()
+    const week = new Set(weekOf(date))
+    const taken = s.plan.filter((p) => week.has(p.date) && p.recipeId).map((p) => p.recipeId!)
+    const ranked = suggest({
+      recipes: s.recipes,
+      pantry: s.pantry,
+      tastes: s.settings.tastes,
+      context: ctx,
+      recent: s.cooked.map((c) => c.recipeId),
+      exclude: taken,
+      avoid,
+    })
+    const pick = pickNext(ranked, [])
+    if (!pick) {
+      toast('No other dinners fit. Add a recipe or loosen a filter.')
+      return
+    }
+    setPlanEntry({
+      date,
+      slot: 'dinner',
+      recipeId: pick.recipe.id,
+      cookId: entry?.cookId,
+      servings: entry?.servings,
+    })
+    toast(`${pick.recipe.title} instead`)
+    onClose()
+  }
+
   const hasMeal = !!entry && !!(entry.recipeId || entry.leftoversOf)
   const hasContent = !!entry && !!(entry.recipeId || entry.leftoversOf || entry.note)
   return (
@@ -344,7 +388,22 @@ function MenuBody({
         />
       )}
       <Row icon={UserRound} label="Claim night" onClick={() => setKind('claim')} />
-      {hasContent && <Row icon={Repeat} label="Move to..." onClick={() => setKind('move')} />}
+      {entry?.recipeId && !entry.done && (
+        <Row icon={Shuffle} label="Something else" onClick={somethingElse} />
+      )}
+      {hasContent && <Row icon={Repeat} label="Move or swap..." onClick={() => setKind('move')} />}
+      {entry?.note !== 'Not cooking' && (
+        <Row
+          icon={Moon}
+          label="Not cooking this night"
+          onClick={() => {
+            withUndo('Marked as not cooking', () =>
+              setPlanEntry({ date, slot: 'dinner', note: 'Not cooking', cookId: entry?.cookId })
+            )
+            onClose()
+          }}
+        />
+      )}
       {entry && (
         <Row
           icon={Trash2}
@@ -428,17 +487,45 @@ function MoveBody({
   const plan = useStore((s) => s.plan)
   const recipes = useStore((s) => s.recipes)
   const days = weekDates.filter((d) => d !== date)
+  const dinnerOn = (d: string) => plan.find((p) => p.date === d && p.slot === 'dinner')
+  // Leftovers must come after the night they're cooked, in either direction of a swap.
+  const cookDateOf = (e?: PlanEntry) =>
+    e?.leftoversOf
+      ? plan
+          .filter((p) => p.recipeId === e.leftoversOf && p.date < e.date)
+          .map((p) => p.date)
+          .sort()
+          .pop()
+      : undefined
+  const leftoversDateOf = (e?: PlanEntry) =>
+    e?.recipeId
+      ? plan.find((p) => p.leftoversOf === e.recipeId && p.date === addDays(e.date, 1))?.date
+      : undefined
+  function problem(d: string): string | undefined {
+    const other = dinnerOn(d)
+    const cook = cookDateOf(entry)
+    if (cook && d <= cook) return 'Before it is cooked'
+    const left = leftoversDateOf(entry)
+    if (left && d >= left) return 'After its leftovers night'
+    const otherCook = cookDateOf(other)
+    if (otherCook && date <= otherCook) return 'Would put leftovers first'
+    return undefined
+  }
   return (
     <ul className="space-y-2">
       {days.map((d) => {
-        const other = plan.find((p) => p.date === d && p.slot === 'dinner')
+        const other = dinnerOn(d)
         const label = other?.recipeId
           ? recipes.find((r) => r.id === other.recipeId)?.title
-          : other?.note
+          : other?.leftoversOf
+            ? 'Leftovers'
+            : other?.note
+        const why = problem(d)
         return (
           <li key={d}>
             <button
               type="button"
+              disabled={!!why}
               onClick={() => {
                 movePlanEntry(entry.id, d)
                 toast(
@@ -446,16 +533,18 @@ function MoveBody({
                 )
                 onClose()
               }}
-              className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 text-left hover:border-ink-3"
+              className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 text-left hover:border-ink-3 disabled:opacity-50"
             >
               <CalendarDays className="h-5 w-5 text-ink-3" aria-hidden />
               <span className="flex-1">
                 <span className="block font-medium">
                   {shortDay(d)} {fromDateKey(d).getDate()}
                 </span>
-                {label && (
+                {why ? (
+                  <span className="block truncate text-sm text-ink-3">{why}</span>
+                ) : label ? (
                   <span className="block truncate text-sm text-ink-2">Swaps with {label}</span>
-                )}
+                ) : null}
               </span>
             </button>
           </li>

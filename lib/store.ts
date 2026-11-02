@@ -86,7 +86,10 @@ export interface PlantryState {
   clearPlanEntry: (date: string, slot: PlanEntry['slot']) => void
   movePlanEntry: (id: string, toDate: string) => void
   claimNight: (date: string, cookId?: string) => void
-  markCooked: (date: string, opts?: { leftovers?: boolean; usePantry?: boolean }) => void
+  markCooked: (
+    date: string,
+    opts?: { leftovers?: boolean; usePantry?: boolean; replaceTomorrow?: boolean }
+  ) => void
   setEnergy: (date: string, energy: Energy) => void
   setShuffleSeen: (ids: string[]) => void
 
@@ -291,7 +294,17 @@ export const useStore = create<PlantryState>()(
           return { plan: [...rest, { ...entry, id: entry.id ?? uid('pl') }] }
         }),
       clearPlanEntry: (date, slot) =>
-        set((s) => ({ plan: s.plan.filter((p) => !(p.date === date && p.slot === slot)) })),
+        set((s) => {
+          const gone = s.plan.find((p) => p.date === date && p.slot === slot)
+          // Its leftovers night the day after has nothing to be left over from any more.
+          const orphan = gone?.recipeId
+            ? s.plan.find(
+                (p) =>
+                  p.date === addDays(date, 1) && p.slot === slot && p.leftoversOf === gone.recipeId
+              )
+            : undefined
+          return { plan: s.plan.filter((p) => p !== gone && p !== orphan) }
+        }),
       movePlanEntry: (id, toDate) =>
         set((s) => {
           const moving = s.plan.find((p) => p.id === id)
@@ -359,7 +372,7 @@ export const useStore = create<PlantryState>()(
           const taken = plan.find(
             (p) => p.date === next && p.slot === 'dinner' && (p.recipeId || p.note)
           )
-          if (!taken) {
+          if (!taken || opts.replaceTomorrow) {
             plan = plan.filter((p) => !(p.date === next && p.slot === 'dinner'))
             plan.push({ id: uid('pl'), date: next, slot: 'dinner', leftoversOf: recipe.id })
           }

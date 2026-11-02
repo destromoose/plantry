@@ -134,4 +134,16 @@ describe('weatherLean', () => {
     expect(weatherLean({ tempC: 18, precipitation: false, ...base })).toBe('any')
     expect(weatherLean(undefined)).toBe('any')
   })
+
+  it('moves on to tomorrow once tonight is cooked', () => {
+    const plan = [{ ...dinner('2026-11-03', 'r1'), done: true }]
+    const c = buildContext({
+      now: new Date(2026, 10, 3, 19, 0),
+      settings,
+      plan,
+      recipes: [recipe('r1')],
+    })
+    expect(c.targetDate).toBe('2026-11-04')
+    expect(c.canStayTonight).toBe(false)
+  })
 })

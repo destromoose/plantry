@@ -19,6 +19,8 @@ import {
   CalendarPlus,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { loadCookSession } from '@/lib/cookSession'
+import { withFahrenheit } from '@/lib/safety'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
 import {
@@ -52,6 +54,12 @@ export function RecipeDetail({ id }: { id: string }) {
   const cookingFor = useStore((s) => s.settings.cookingFor)
 
   const [servings, setServings] = useState<number | null>(null)
+  // A cook session for this recipe that was left part-way.
+  const [resume] = useState(() => {
+    if (typeof window === 'undefined') return undefined
+    const s = loadCookSession(id)
+    return s && (s.index > 0 || Object.keys(s.timers).length > 0) ? s : undefined
+  })
   const [planOpen, setPlanOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -260,7 +268,7 @@ export function RecipeDetail({ id }: { id: string }) {
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[16px] leading-relaxed">{step.text}</p>
+                  <p className="text-[16px] leading-relaxed">{withFahrenheit(step.text)}</p>
                   {step.timerMinutes && (
                     <Tag className="mt-2 gap-1">
                       <Timer className="h-3 w-3" aria-hidden /> {step.timerMinutes} min
@@ -286,9 +294,15 @@ export function RecipeDetail({ id }: { id: string }) {
           <Button
             size="lg"
             className="flex-1"
-            onClick={() => router.push(`/cook/${recipe.id}?servings=${current}`)}
+            onClick={() =>
+              router.push(
+                resume?.date
+                  ? `/cook/${recipe.id}?date=${resume.date}`
+                  : `/cook/${recipe.id}?servings=${current}`
+              )
+            }
           >
-            Cook
+            {resume ? `Resume at step ${resume.index + 1}` : 'Cook'}
           </Button>
         </div>
       </div>

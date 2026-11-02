@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Pause, Play, RotateCcw } from 'lucide-react'
+import { BellOff, Pause, Play, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ProgressRing } from '@/components/ui/ProgressRing'
 import { settle } from '@/lib/motion'
@@ -64,25 +64,30 @@ export function StepTimer({
           </div>
         </ProgressRing>
       </motion.div>
-      <div className="flex items-center gap-2">
-        {running ? (
-          <Button variant="secondary" onClick={pause}>
-            <Pause className="h-4 w-4" aria-hidden /> Pause
-          </Button>
-        ) : (
-          <Button variant="secondary" onClick={start}>
-            <Play className="h-4 w-4" aria-hidden />{' '}
-            {state && !finished && remaining < durationMs ? 'Resume' : 'Start'}
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          onClick={onReset}
-          disabled={!state || (!running && !finished && remaining === durationMs)}
-        >
-          <RotateCcw className="h-4 w-4" aria-hidden /> Reset
+      {finished ? (
+        <Button size="lg" variant="danger" onClick={onReset}>
+          <BellOff className="h-5 w-5" aria-hidden /> Stop the alarm
         </Button>
-      </div>
+      ) : (
+        <div className="flex flex-col items-center gap-1">
+          {running ? (
+            <Button variant="secondary" onClick={pause}>
+              <Pause className="h-4 w-4" aria-hidden /> Pause
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={start}>
+              <Play className="h-4 w-4" aria-hidden />{' '}
+              {state && remaining < durationMs ? 'Resume' : 'Start'}
+            </Button>
+          )}
+          {/* Reset only while paused, and away from Pause, so it can't be hit by accident. */}
+          {state && !running && remaining < durationMs && (
+            <Button variant="ghost" size="sm" className="mt-2 text-ink-3" onClick={onReset}>
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Reset to {minutes} min
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
