@@ -1,9 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useIsPresent } from 'framer-motion'
 import {
   ArrowRight,
   Clock,
@@ -31,6 +30,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { toast } from '@/components/ui/Toast'
 import { Thumb } from '@/components/features/week/Thumb'
 import { HandoffSheet, SaveSheet } from './TonightSheets'
+import { RecipeImage } from '@/components/features/recipes/RecipeImage'
 
 interface HeroProps {
   ranked: Scored[]
@@ -173,9 +173,14 @@ function Deck(props: HeroProps) {
           key={scored.recipe.id}
           custom={dir}
           variants={{
-            enter: { opacity: 0, scale: 0.96, y: 10 },
-            center: { opacity: 1, scale: 1, y: 0, x: 0, rotate: 0, transition: drift },
-            exit: (d: number) => ({ x: d * 380, rotate: d * 10, opacity: 0, transition: drift }),
+            enter: { opacity: 0, scale: 0.97, y: 8 },
+            center: { opacity: 1, scale: 1, y: 0, x: 0, rotate: 0, transition: quickDeal },
+            exit: (d: number) => ({
+              x: d * 320,
+              rotate: d * 8,
+              opacity: 0,
+              transition: { duration: 0.18, ease: 'easeIn' },
+            }),
           }}
           initial="enter"
           animate="center"
@@ -199,12 +204,14 @@ function Deck(props: HeroProps) {
             }
           }}
         >
-          <PlannedOrSuggested
-            recipe={scored.recipe}
-            scored={scored}
-            onShuffle={() => shuffle(1)}
-            {...props}
-          />
+          <WhilePresent>
+            <PlannedOrSuggested
+              recipe={scored.recipe}
+              scored={scored}
+              onShuffle={() => shuffle(1)}
+              {...props}
+            />
+          </WhilePresent>
         </motion.div>
       </AnimatePresence>
       <p className="mt-3 text-center text-sm text-ink-2">Swipe the card sideways to shuffle</p>
@@ -215,6 +222,22 @@ function Deck(props: HeroProps) {
     </div>
   )
 }
+
+/** The card leaving the screen can't be tapped or read out, so there is only ever one set of buttons. */
+function WhilePresent({ children }: { children: React.ReactNode }) {
+  const present = useIsPresent()
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    ref.current?.toggleAttribute('inert', !present)
+  }, [present])
+  return (
+    <div ref={ref} aria-hidden={present ? undefined : true}>
+      {children}
+    </div>
+  )
+}
+
+const quickDeal = { type: 'spring', stiffness: 380, damping: 32 } as const
 
 /* ------------------------------------------------------------------ */
 
@@ -267,18 +290,22 @@ function PlannedOrSuggested({
   )
   const cook = members.find((m) => m.id === entry?.cookId)
   const cookingFor = useStore((s) => s.settings.cookingFor)
+  const handoffs = useStore((s) => s.handoffs)
+  const note = handoffs.find((h) => h.date === targetDate)
+  const memberName = (id: string) => members.find((m) => m.id === id)?.name ?? 'Someone'
+  const canHandOff = members.filter((m) => m.cooks !== false).length > 1
 
   function lockIn() {
     setPlanEntry({ date: targetDate, slot: 'dinner', recipeId: recipe.id, cookId: entry?.cookId })
     setSeen([])
-    toast("Tonight's handled.")
+    toast(targetDate === today ? 'Planned for tonight' : 'Planned for tomorrow')
   }
 
   return (
-    <article className="card overflow-hidden">
+    <article className="card overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <Link
         href={`/recipes/${recipe.id}`}
-        className="relative block aspect-[16/9] max-h-[32vh] w-full bg-surface-2 sm:max-h-[420px]"
+        className="relative block aspect-[16/9] max-h-[32vh] w-full bg-surface-2 sm:max-h-[420px] lg:aspect-auto lg:h-full lg:max-h-none lg:min-h-[340px]"
         aria-hidden
         tabIndex={-1}
         draggable={false}
@@ -288,20 +315,15 @@ function PlannedOrSuggested({
           transition={settle}
           className="absolute inset-0"
         >
-          {recipe.imageUrl && (
-            <Image
-              src={recipe.imageUrl}
-              alt=""
-              fill
-              priority
-              sizes="(min-width: 768px) 700px, 100vw"
-              className="object-cover"
-              draggable={false}
-            />
-          )}
+          <RecipeImage
+            url={recipe.imageUrl}
+            seed={recipe.title}
+            priority
+            sizes="(min-width: 1024px) 560px, (min-width: 768px) 700px, 100vw"
+          />
         </motion.div>
       </Link>
-      <div className="p-5 sm:p-6">
+      <div className="p-5 sm:p-6 lg:flex lg:flex-col lg:justify-center lg:p-8">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <Link href={`/recipes/${recipe.id}`} draggable={false}>
@@ -356,7 +378,20 @@ function PlannedOrSuggested({
           </ul>
         )}
 
-        {planned && cook && <p className="mt-2 text-sm text-ink-3">{cook.name} is cooking.</p>}
+        {note ? (
+          <div className="mt-3 rounded-2xl bg-surface-2 px-4 py-3 text-[0.9375rem]">
+            <p className="font-medium">
+              {memberName(note.toId)} is cooking{note.recipeId ? '' : ' and picks what to make'}.
+            </p>
+            {note.message && (
+              <p className="mt-0.5 text-ink-2">
+                {memberName(note.fromId)} says: &ldquo;{note.message}&rdquo;
+              </p>
+            )}
+          </div>
+        ) : (
+          planned && cook && <p className="mt-2 text-sm text-ink-3">{cook.name} is cooking.</p>
+        )}
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {planned ? (
@@ -364,11 +399,12 @@ function PlannedOrSuggested({
               href={`/cook/${recipe.id}?date=${targetDate}`}
               className={buttonVariants({ variant: 'primary', size: 'lg' })}
             >
-              Cook <ArrowRight className="h-4 w-4" aria-hidden />
+              Start cooking <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           ) : (
             <Button size="lg" onClick={lockIn}>
-              <Lock className="h-4 w-4" aria-hidden /> Lock it in
+              <Lock className="h-4 w-4" aria-hidden /> Cook this{' '}
+              {targetDate === today ? 'tonight' : 'tomorrow'}
             </Button>
           )}
           {!planned && (
@@ -390,15 +426,17 @@ function PlannedOrSuggested({
 
       <Sheet open={more} onClose={() => setMore(false)} title={recipe.title}>
         <div className="flex flex-col gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setMore(false)
-              setHandoff(true)
-            }}
-          >
-            <HandHeart className="h-4 w-4" aria-hidden /> Hand off to someone
-          </Button>
+          {canHandOff && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setMore(false)
+                setHandoff(true)
+              }}
+            >
+              <HandHeart className="h-4 w-4" aria-hidden /> Ask someone else to cook
+            </Button>
+          )}
           {planned ? (
             <Button
               variant="secondary"
@@ -439,9 +477,8 @@ function PlannedOrSuggested({
         onClose={() => setHandoff(false)}
         recipe={recipe}
         date={targetDate}
-        onBeforeHandoff={() => {
-          if (!planned) lockIn()
-        }}
+        planned={planned}
+        when={targetDate === today ? 'tonight' : 'tomorrow'}
       />
       {!planned && (
         <SaveSheet
@@ -512,7 +549,7 @@ function CantTonight({
                   type="button"
                   onClick={() => {
                     setPlanEntry({ date: targetDate, slot: 'dinner', recipeId: recipe.id })
-                    toast("Tonight's handled.")
+                    toast('Planned')
                   }}
                   className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-line bg-surface p-3 text-left hover:border-ink-3"
                 >
@@ -543,7 +580,7 @@ function CantTonight({
             <UtensilsCrossed className="h-5 w-5 text-ink-2" aria-hidden />
           </span>
           <span>
-            <span className="block font-medium">Order in, no guilt</span>
+            <span className="block font-medium">Order in tonight</span>
             <span className="block text-sm text-ink-2">We&apos;ll mark tonight as takeout.</span>
           </span>
         </button>

@@ -33,6 +33,8 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
+const prePaint = `try{var d=document.documentElement,m=localStorage.getItem('plantry-mood');if(m&&/^(dawn|day|dusk|night)$/.test(m))d.dataset.mood=m;var s=JSON.parse(localStorage.getItem('plantry-v1')||'{}').state;s=s&&s.settings;if(s){if(s.highContrast)d.dataset.contrast='more';if(s.textSize&&s.textSize!=='normal')d.dataset.text=s.textSize}}catch(e){}`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -41,6 +43,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${display.variable} ${sans.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Paint in the last mood before the app loads, so night mode doesn't flash cream. */}
+        <script dangerouslySetInnerHTML={{ __html: prePaint }} />
+      </head>
       <body className="grain font-sans">
         <div className="ambient" aria-hidden>
           <i />

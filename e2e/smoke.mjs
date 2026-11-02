@@ -132,13 +132,16 @@ try {
       await page.waitForTimeout(400)
       await page.getByRole('button', { name: 'Shuffle' }).click()
       await page.waitForTimeout(1500)
-      await page.getByRole('button', { name: 'Lock it in' }).last().click()
+      await page
+        .getByRole('button', { name: /^Cook this (tonight|tomorrow)$/ })
+        .last()
+        .click()
       await page.waitForTimeout(500)
       await page.screenshot({
         path: `e2e/screenshots/${name}-14-tonight-locked.png`,
         fullPage: true,
       })
-      if (!(await page.getByRole('link', { name: /^Cook/ }).count()))
+      if (!(await page.getByRole('link', { name: /^Start cooking/ }).count()))
         throw new Error('Cook link missing after lock in')
 
       await page.goto(`${BASE}/week`)
@@ -158,7 +161,7 @@ try {
       await page.waitForTimeout(500)
 
       await page.goto(`${BASE}/`)
-      await page.getByRole('link', { name: /^Cook/ }).click()
+      await page.getByRole('link', { name: /^Start cooking/ }).click()
       await page.waitForURL('**/cook/**')
       await page.waitForTimeout(600)
       await page.keyboard.press('ArrowRight')

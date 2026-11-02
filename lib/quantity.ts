@@ -167,3 +167,29 @@ export const formatAmounts = (list: Amount[], opts?: { forShopping?: boolean }) 
     .map((a) => formatAmount(a.quantity, a.unit, opts))
     .filter(Boolean)
     .join(' + ')
+
+const VULGAR: Record<string, number> = {
+  '½': 0.5,
+  '¼': 0.25,
+  '¾': 0.75,
+  '⅓': 1 / 3,
+  '⅔': 2 / 3,
+  '⅛': 0.125,
+}
+
+/**
+ * Read an amount someone typed: "2", "1.5", "1,5", "3/4", "1 1/2", "1½", "½".
+ * Returns undefined for anything else (negative numbers, "1e3", words).
+ */
+export function parseAmount(input: string): number | undefined {
+  const s = input.trim().replace(/\s+/g, ' ')
+  if (!s) return undefined
+  const v = s.match(/^(\d+)? ?([½¼¾⅓⅔⅛])$/)
+  if (v) return Number(v[1] ?? 0) + VULGAR[v[2]]
+  const mixed = s.match(/^(\d+) (\d+)\/(\d+)$/)
+  if (mixed && Number(mixed[3])) return Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3])
+  const frac = s.match(/^(\d+)\/(\d+)$/)
+  if (frac) return Number(frac[2]) ? Number(frac[1]) / Number(frac[2]) : undefined
+  if (/^\d+(?:[.,]\d+)?$/.test(s) || /^[.,]\d+$/.test(s)) return Number(s.replace(',', '.'))
+  return undefined
+}

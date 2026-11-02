@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store'
 import { buildContext, fetchWeather, msUntilNextChange } from '@/lib/context'
 import { toDateKey } from '@/lib/utils'
 import type { Context } from '@/lib/types'
+import { toast } from '@/components/ui/Toast'
 
 const ContextCtx = createContext<Context | null>(null)
 const StayCtx = createContext<(on: boolean) => void>(() => {})
@@ -29,6 +30,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [tick, setTick] = useState(0)
   // "Still tonight" is remembered for the day it was asked on.
   const [stayDate, setStayDate] = useState<string | null>(null)
+  const [prefersDark, setPrefersDark] = useState(false)
+  const updateSettings = useStore((s) => s.updateSettings)
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
+    if (!mq) return
+    setPrefersDark(mq.matches)
+    const on = (e: MediaQueryListEvent) => setPrefersDark(e.matches)
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
 
   // Re-run the engine on a clear change only: exactly when the next mood band, the
   // late-evening cutoff or midnight arrives, and when the tab becomes visible again.
@@ -52,10 +64,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
     if (!stale) return
     navigator.geolocation.getCurrentPosition(
       async (pos) => setWeather(await fetchWeather(pos.coords.latitude, pos.coords.longitude)),
-      () => setWeather(undefined),
+      (err) => {
+        setWeather(undefined)
+        // Location was refused: turn the setting off rather than leave it on and silent.
+        if (err.code === err.PERMISSION_DENIED) {
+          updateSettings({ weatherEnabled: false })
+          toast('Weather is off because location was not allowed.')
+        }
+      },
       { maximumAge: 30 * 60 * 1000, timeout: 8000 }
     )
-  }, [settings.weatherEnabled, weather, setWeather])
+  }, [settings.weatherEnabled, weather, setWeather, updateSettings])
 
   const context = useMemo(
     () => {
@@ -67,10 +86,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         plan,
         recipes,
         stillTonight: stayDate === toDateKey(now),
+        prefersDark,
       })
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [settings.mood, settings.weatherEnabled, weather, plan, recipes, tick, stayDate]
+    [settings.mood, settings.weatherEnabled, weather, plan, recipes, tick, stayDate, prefersDark]
   )
 
   // Contrast and text size live on <html> too.
@@ -86,6 +106,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // Apply the mood to <html> so CSS tokens switch, with a soft crossfade.
   useEffect(() => {
     document.documentElement.dataset.mood = context.mood
+    try {
+      // Remembered so the next load paints in the right colours before the app starts.
+      localStorage.setItem('plantry-mood', context.mood)
+    } catch {
+      /* not essential */
+    }
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', context.mood === 'night' ? '#1E1620' : '#FAF4EA')
   }, [context.mood])

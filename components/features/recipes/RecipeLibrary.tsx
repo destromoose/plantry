@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -16,8 +16,12 @@ import { Chip, Tag } from '@/components/ui/Chip'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { RecipeImage } from './RecipeImage'
 import { allTastes, tasteLabels } from './tastes'
+
+/** How many recipes to show at a time. */
+const PAGE = 24
 
 export function RecipeLibrary() {
   const router = useRouter()
@@ -31,6 +35,24 @@ export function RecipeLibrary() {
   const [favOnly, setFavOnly] = useState(false)
   const [canMake, setCanMake] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [shown, setShown] = useState(PAGE)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  // A new search or filter starts from the top of the list again.
+  useEffect(() => setShown(PAGE), [debounced, tastes, favOnly, canMake])
+
+  // "/" jumps to search, as on many sites.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      if (t.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
+      e.preventDefault()
+      searchRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim().toLowerCase()), 180)
@@ -65,17 +87,16 @@ export function RecipeLibrary() {
 
   return (
     <div className="pb-6">
-      <header className="flex items-end justify-between gap-4 pt-2">
-        <div>
-          <h1 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">
-            Recipes
-          </h1>
-          <p className="text-sm text-ink-3">{recipes.length} saved</p>
-        </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="h-4 w-4" aria-hidden /> Add
-        </Button>
-      </header>
+      <PageHeader
+        className="mb-0"
+        title="Recipes"
+        subtitle={`${recipes.length} saved`}
+        actions={
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden /> Add
+          </Button>
+        }
+      />
 
       <div className="relative mt-5">
         <Search
@@ -88,12 +109,13 @@ export function RecipeLibrary() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search recipes or ingredients"
           aria-label="Search recipes"
+          ref={searchRef}
           className="pl-11"
         />
       </div>
 
       <div
-        className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0"
+        className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:px-0"
         role="group"
         aria-label="Filters"
       >
@@ -160,15 +182,16 @@ export function RecipeLibrary() {
             className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4"
           >
             <AnimatePresence mode="popLayout" initial>
-              {filtered.map(({ recipe, cov }, i) => (
+              {filtered.slice(0, shown).map(({ recipe, cov }, i) => (
                 <motion.li
                   key={recipe.id}
-                  layout
-                  variants={reveal}
+                  // Only the first page animates in. Long lists appear at once and stay quick.
+                  layout={filtered.length <= PAGE}
+                  variants={i < PAGE ? reveal : undefined}
                   custom={i}
-                  initial="hidden"
+                  initial={i < PAGE ? 'hidden' : false}
                   animate="show"
-                  exit="exit"
+                  exit={i < PAGE ? 'exit' : undefined}
                   className="card group relative overflow-hidden"
                 >
                   <Link
@@ -202,7 +225,7 @@ export function RecipeLibrary() {
                               cov.missing.length === 0 ? 'bg-secondary' : 'bg-ink-3/60'
                             )}
                           />
-                          {cov.have} of {cov.total}
+                          {cov.have} of {cov.total} at home
                         </span>
                       </p>
                       <AvoidBadge recipe={recipe} />
@@ -241,6 +264,16 @@ export function RecipeLibrary() {
             </AnimatePresence>
           </motion.ul>
         )}
+        {filtered.length > shown && (
+          <div className="mt-6 flex flex-col items-center gap-1">
+            <Button variant="secondary" onClick={() => setShown((n) => n + PAGE)}>
+              Show more
+            </Button>
+            <p className="text-sm text-ink-3">
+              Showing {shown} of {filtered.length}
+            </p>
+          </div>
+        )}
       </div>
 
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="Add a recipe">
@@ -251,7 +284,7 @@ export function RecipeLibrary() {
             className="w-full justify-start"
             onClick={() => router.push('/recipes/new')}
           >
-            <PencilLine className="h-5 w-5" aria-hidden /> Paste or type
+            <PencilLine className="h-5 w-5" aria-hidden /> Type it in
           </Button>
           <Button
             variant="secondary"
@@ -259,7 +292,7 @@ export function RecipeLibrary() {
             className="w-full justify-start"
             onClick={() => router.push('/recipes/new?tab=link')}
           >
-            <Link2 className="h-5 w-5" aria-hidden /> Import from a link
+            <Link2 className="h-5 w-5" aria-hidden /> Paste recipe text
           </Button>
         </div>
       </Sheet>

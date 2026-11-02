@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Copy, ListChecks, Plus, ShoppingBasket, X } from 'lucide-react'
+import { Copy, ListChecks, Pencil, Plus, Share2, ShoppingBasket, Trash2, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { formatAmounts } from '@/lib/quantity'
+import { formatAmounts, niceNumber, parseAmount } from '@/lib/quantity'
 import { useTapGuard } from '@/lib/useTapGuard'
 import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
@@ -13,7 +13,9 @@ import { checkPop, reveal } from '@/lib/motion'
 import type { Aisle, ShopItem } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Input } from '@/components/ui/Field'
+import { Input, Label, Textarea } from '@/components/ui/Field'
+import { Sheet } from '@/components/ui/Sheet'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 
 const aisles: { id: Aisle; label: string }[] = [
@@ -37,8 +39,10 @@ export function Shop() {
   const clearChecked = useStore((s) => s.clearChecked)
   const dismissed = useStore((s) => s.shopDismissed)
   const restoreDismissed = useStore((s) => s.restoreDismissed)
+  const clearShop = useStore((s) => s.clearShop)
   const { targetDate } = useAppContext()
-  const [name, setName] = useState('')
+  const [copyFallback, setCopyFallback] = useState<string | null>(null)
+  const [editing, setEditing] = useState<ShopItem | null>(null)
 
   const titles = useMemo(() => new Map(recipes.map((r) => [r.id, r.title])), [recipes])
   const unchecked = shop.filter((i) => !i.checked).length
@@ -66,86 +70,96 @@ export function Shop() {
     else toast(`${pluralize(res.fromPlan, 'item')} for this week's dinners`)
   }
 
-  async function copyText() {
-    const text = groups
-      .map(
-        (g) =>
-          `${g.label}\n${g.items.map((i) => `- ${i.name}${amountText(i) ? ` (${amountText(i)})` : ''}`).join('\n')}`
-      )
+  function listText() {
+    return groups
+      .map((g) => {
+        const left = g.items.filter((i) => !i.checked)
+        if (!left.length) return ''
+        return `${g.label}\n${left.map((i) => `- ${i.name}${amountText(i) ? ` (${amountText(i)})` : ''}`).join('\n')}`
+      })
+      .filter(Boolean)
       .join('\n\n')
+  }
+
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+  async function shareList() {
+    const text = listText()
+    if (canShare) {
+      try {
+        await navigator.share({ title: 'Shopping list', text })
+        return
+      } catch (e) {
+        if ((e as Error)?.name === 'AbortError') return
+      }
+    }
     try {
       await navigator.clipboard.writeText(text)
-      toast('Copied')
+      toast('Copied. Paste it into a message or a note.')
     } catch {
-      toast('Could not copy that')
+      // Some browsers block the clipboard. Show the list so it can be copied by hand.
+      setCopyFallback(text)
     }
   }
 
-  function add() {
-    if (!name.trim()) return
+  function add(name: string) {
     if (addShopItem(name) === 'exists') toast(`${name.trim()} is already on your list`)
-    setName('')
   }
 
   const planButton = (
     <Button variant="secondary" onClick={fromPlan}>
-      <ListChecks className="h-4 w-4" aria-hidden /> From this week&apos;s plan
+      <ListChecks className="h-4 w-4" aria-hidden /> Add from this week&apos;s plan
     </Button>
   )
 
   return (
     <div className="pb-32">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
-            Shop
-          </h1>
-          <p className="mt-1 text-ink-2">{unchecked} to get</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {shop.length > 0 && (
-            <Button variant="ghost" onClick={copyText}>
-              <Copy className="h-4 w-4" aria-hidden /> Copy as text
-            </Button>
-          )}
-          {shop.length > 0 && planButton}
-        </div>
-      </header>
+      <PageHeader
+        title="Shop"
+        subtitle={
+          shop.length === 0
+            ? 'Your list is empty'
+            : unchecked === 0
+              ? 'Everything is in the basket'
+              : `${pluralize(unchecked, 'thing')} to get`
+        }
+        actions={
+          <>
+            {unchecked > 0 && (
+              <Button variant="ghost" onClick={shareList}>
+                {canShare ? (
+                  <Share2 className="h-4 w-4" aria-hidden />
+                ) : (
+                  <Copy className="h-4 w-4" aria-hidden />
+                )}{' '}
+                {canShare ? 'Share list' : 'Copy list'}
+              </Button>
+            )}
+            {shop.length > 0 && (
+              <Button
+                variant="ghost"
+                onClick={() => withUndo('List cleared', clearShop)}
+                className="text-ink-2"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden /> Clear list
+              </Button>
+            )}
+            {shop.length > 0 && planButton}
+          </>
+        }
+      />
 
-      <form
-        className="mb-8 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          add()
-        }}
-      >
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Add something"
-          aria-label="Add a shopping item"
-          autoComplete="off"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          aria-label="Add to list"
-          disabled={!name.trim()}
-          className="shrink-0"
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
-      </form>
+      <AddForm onAdd={add} />
 
       {shop.length === 0 ? (
         <EmptyState
           icon={ShoppingBasket}
           title="Nothing to buy"
-          body="Plan a few dinners and the list writes itself."
+          body="Plan a few dinners on Week, then add what they need here in one tap."
           action={planButton}
         />
       ) : (
-        <div className="space-y-8">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
           {groups.map((g) => (
             <section key={g.id} aria-labelledby={`aisle-${g.id}`}>
               <h2
@@ -160,6 +174,7 @@ export function Shop() {
                     <Row
                       key={item.id}
                       item={item}
+                      onEdit={setEditing}
                       fromTitle={
                         item.fromRecipeIds
                           .map((id) => titles.get(id))
@@ -191,13 +206,28 @@ export function Shop() {
         </p>
       )}
 
+      <Sheet open={!!copyFallback} onClose={() => setCopyFallback(null)} title="Your list">
+        <p className="mb-3 text-ink-2">
+          This browser blocked copying. Select the text below and copy it yourself.
+        </p>
+        <Textarea
+          readOnly
+          rows={10}
+          value={copyFallback ?? ''}
+          aria-label="Shopping list as text"
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      </Sheet>
+
+      <EditSheet item={editing} onClose={() => setEditing(null)} />
+
       <AnimatePresence>
         {checked > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
-            className="glass fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-pill py-2 pl-5 pr-2 lg:bottom-6"
+            className="glass fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-pill py-2 pl-5 pr-2 md:bottom-6"
           >
             <span className="text-sm font-medium">{checked} in the basket</span>
             <span className="flex items-center gap-4">
@@ -234,7 +264,128 @@ function amountText(i: ShopItem) {
   return formatAmounts(list, { forShopping: true })
 }
 
-function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
+/** The add box keeps its own state, so typing doesn't redraw the whole list. */
+function AddForm({ onAdd }: { onAdd: (name: string) => void }) {
+  const [name, setName] = useState('')
+  return (
+    <form
+      className="mb-8 flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!name.trim()) return
+        onAdd(name)
+        setName('')
+      }}
+    >
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Add something"
+        aria-label="Add a shopping item"
+        autoComplete="off"
+        maxLength={60}
+      />
+      <Button
+        type="submit"
+        size="icon"
+        variant={name.trim() ? 'primary' : 'secondary'}
+        aria-label="Add to list"
+        aria-disabled={!name.trim()}
+        className="shrink-0"
+      >
+        <Plus className="h-5 w-5" />
+      </Button>
+    </form>
+  )
+}
+
+function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => void }) {
+  const update = useStore((s) => s.updateShopItem)
+  const [draft, setDraft] = useState({ id: '', name: '', qty: '', unit: '' })
+  // Load the item when the sheet opens for it.
+  if (item && draft.id !== item.id)
+    setDraft({
+      id: item.id,
+      name: item.name,
+      qty: item.quantity && !item.more?.length ? niceNumber(item.quantity) : '',
+      unit: item.more?.length ? '' : (item.unit ?? ''),
+    })
+  const qty = draft.qty.trim() ? parseAmount(draft.qty) : undefined
+  const bad = !!draft.qty.trim() && !(qty && qty > 0)
+  return (
+    <Sheet open={!!item} onClose={onClose} title="Change this item">
+      {item && (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (bad || !draft.name.trim()) return
+            update(item.id, { name: draft.name, quantity: qty, unit: draft.unit.trim() })
+            toast('Saved')
+            onClose()
+          }}
+        >
+          <div>
+            <Label htmlFor="shop-name">Name</Label>
+            <Input
+              id="shop-name"
+              value={draft.name}
+              maxLength={60}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
+          </div>
+          {item.more?.length ? (
+            <p className="text-sm text-ink-3">
+              Now {amountText(item)}. Type an amount to replace it.
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="shop-qty">Amount</Label>
+              <Input
+                id="shop-qty"
+                inputMode="decimal"
+                value={draft.qty}
+                maxLength={12}
+                aria-invalid={bad}
+                aria-describedby={bad ? 'shop-qty-err' : undefined}
+                onChange={(e) => setDraft({ ...draft, qty: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="shop-unit">Unit</Label>
+              <Input
+                id="shop-unit"
+                value={draft.unit}
+                maxLength={20}
+                placeholder="g, ml, tins"
+                onChange={(e) => setDraft({ ...draft, unit: e.target.value })}
+              />
+            </div>
+          </div>
+          {bad && (
+            <p id="shop-qty-err" className="text-sm text-danger">
+              Try a number like 2, 1.5 or ½, or leave it blank.
+            </p>
+          )}
+          <Button type="submit" className="w-full">
+            Save
+          </Button>
+        </form>
+      )}
+    </Sheet>
+  )
+}
+
+const Row = memo(function Row({
+  item,
+  fromTitle,
+  onEdit,
+}: {
+  item: ShopItem
+  fromTitle?: string
+  onEdit: (item: ShopItem) => void
+}) {
   const toggle = useStore((s) => s.toggleShopItem)
   const toggleOnce = useTapGuard(toggle)
   const remove = useStore((s) => s.removeShopItem)
@@ -309,12 +460,25 @@ function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
       <Button
         variant="ghost"
         size="icon-sm"
+        aria-label={`Change ${item.name}`}
+        onClick={() => onEdit(item)}
+        className={hoverReveal}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
         aria-label={`Remove ${item.name}`}
         onClick={() => withUndo(`${item.name} removed`, () => remove(item.id))}
-        className="shrink-0 opacity-60 hover:opacity-100 focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+        className={hoverReveal}
       >
         <X className="h-4 w-4" />
       </Button>
     </motion.li>
   )
-}
+})
+
+// Hidden until hover only where there is a mouse. Touch screens of any width always see them.
+const hoverReveal =
+  'shrink-0 opacity-70 hover:opacity-100 focus-visible:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:focus-visible:opacity-100'

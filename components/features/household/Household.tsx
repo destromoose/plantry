@@ -15,6 +15,7 @@ import { Card, SectionTitle } from '@/components/ui/Card'
 import { Tag } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { fromDateKey, pluralize, shortDay, weekOf } from '@/lib/utils'
@@ -40,6 +41,8 @@ export function Household() {
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
   const [avoidFor, setAvoidFor] = useState<string | null>(null)
   const setMemberAvoid = useStore((s) => s.setMemberAvoid)
+  const setMemberCooks = useStore((s) => s.setMemberCooks)
+  const cooks = members.filter((m) => m.cooks !== false)
   const avoidMember = members.find((m) => m.id === avoidFor)
 
   const word = settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)
@@ -68,16 +71,19 @@ export function Household() {
 
   return (
     <div className="space-y-10 pb-8">
-      <header>
-        <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
-          {word}
-        </h1>
-        <p className="mt-1 text-ink-2">The dinner load, shared.</p>
-      </header>
+      <PageHeader
+        className="mb-0"
+        title={word}
+        subtitle={
+          members.length > 1
+            ? 'Who cooks which night, and what everyone avoids.'
+            : 'Add the people you cook for, and what they avoid.'
+        }
+      />
 
       <section aria-labelledby="members-h">
         <SectionTitle>
-          <span id="members-h">Who&apos;s cooking</span>
+          <span id="members-h">Who&apos;s at the table</span>
         </SectionTitle>
         <Card className="p-2">
           <ul>
@@ -108,18 +114,21 @@ export function Household() {
                   >
                     <span className="truncate">{m.name}</span>
                     {m.isMe && <span className="ml-2 text-sm font-normal text-ink-3">you</span>}
+                    {m.cooks === false && (
+                      <span className="ml-2 text-sm font-normal text-ink-3">eats only</span>
+                    )}
                   </button>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="shrink-0 text-ink-2"
-                  aria-label={`What ${m.name} avoids`}
+                  aria-label={`${m.name}: cooking and foods to avoid`}
                   onClick={() => setAvoidFor(m.id)}
                 >
                   {m.avoid?.length
                     ? `Avoids ${m.avoid.length === 1 ? avoidLabel(m.avoid[0]).toLowerCase() : m.avoid.length}`
-                    : 'Avoids'}
+                    : 'Details'}
                 </Button>
                 {!m.isMe && (
                   <Button
@@ -217,9 +226,12 @@ export function Household() {
         <SectionTitle>
           <span id="handoffs-h">Hand-offs</span>
         </SectionTitle>
+        <p className="-mt-2 mb-3 text-sm text-ink-3">
+          These stay on this device. Nothing is sent to anyone.
+        </p>
         {handoffs.length === 0 ? (
           <p className="card p-5 text-ink-2">
-            No hand-offs yet. On the Tonight screen, tap Hand off to pass a night to someone.
+            No hand-offs yet. On Tonight, open More and pick Ask someone else to cook.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -270,7 +282,7 @@ export function Household() {
           </SectionTitle>
           <ul className="space-y-1.5 text-[0.9375rem] text-ink-2">
             <li>You decided dinner {pluralize(decided, 'time')} so far.</li>
-            {members.map((m) => (
+            {cooks.map((m) => (
               <li key={m.id}>
                 {m.name} cooked {cookedThisWeek.filter((c) => c.cookId === m.id).length}.
               </li>
@@ -290,7 +302,7 @@ export function Household() {
         title={claimDate ? `Who's cooking ${shortDay(claimDate)}?` : undefined}
       >
         <ul className="space-y-1">
-          {members.map((m) => (
+          {cooks.map((m) => (
             <li key={m.id}>
               <button
                 type="button"
@@ -324,13 +336,32 @@ export function Household() {
         </ul>
       </Sheet>
 
-      <Sheet
-        open={!!avoidMember}
-        onClose={() => setAvoidFor(null)}
-        title={avoidMember ? `What does ${avoidMember.name} avoid?` : undefined}
-      >
+      <Sheet open={!!avoidMember} onClose={() => setAvoidFor(null)} title={avoidMember?.name}>
         {avoidMember && (
           <>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={avoidMember.cooks !== false}
+              onClick={() => setMemberCooks(avoidMember.id, avoidMember.cooks === false)}
+              className="mb-6 flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-2 text-left"
+            >
+              <span>
+                <span className="block font-medium">Helps cook</span>
+                <span className="block text-sm text-ink-2">
+                  Off for someone who eats but doesn&apos;t cook, like a small child.
+                </span>
+              </span>
+              <span
+                className={`relative h-6 w-10 shrink-0 rounded-pill transition-colors ${avoidMember.cooks !== false ? 'bg-accent' : 'bg-line-strong'}`}
+                aria-hidden
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow-card transition-all ${avoidMember.cooks !== false ? 'right-0.5' : 'left-0.5'}`}
+                />
+              </span>
+            </button>
+            <h3 className="mb-1 font-semibold">Foods to avoid</h3>
             <p className="mb-4 text-ink-2">
               Dinners with these are never suggested for anyone in your {settings.householdWord}.
             </p>

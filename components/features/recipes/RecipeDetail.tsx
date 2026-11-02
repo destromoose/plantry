@@ -17,7 +17,9 @@ import {
   Timer,
   ShoppingBasket,
   CalendarPlus,
+  Copy,
 } from 'lucide-react'
+import { copyOfRecipe } from '@/lib/recipeCopy'
 import { useStore } from '@/lib/store'
 import { loadCookSession } from '@/lib/cookSession'
 import { withFahrenheit } from '@/lib/safety'
@@ -51,6 +53,7 @@ export function RecipeDetail({ id }: { id: string }) {
   const addShopItem = useStore((s) => s.addShopItem)
   const setPlanEntry = useStore((s) => s.setPlanEntry)
   const deleteRecipe = useStore((s) => s.deleteRecipe)
+  const addRecipe = useStore((s) => s.addRecipe)
   const cookingFor = useStore((s) => s.settings.cookingFor)
 
   const [servings, setServings] = useState<number | null>(null)
@@ -132,8 +135,8 @@ export function RecipeDetail({ id }: { id: string }) {
   }
 
   return (
-    <article className="pb-36 lg:pb-28">
-      <div className="relative -mx-5 aspect-[4/3] overflow-hidden lg:mx-0 lg:aspect-[16/9] lg:rounded-card">
+    <article className="pb-36 md:pb-28">
+      <div className="relative -mx-5 aspect-[4/3] overflow-hidden md:mx-0 md:aspect-[16/9] md:rounded-card">
         <motion.div layoutId={`recipe-image-${recipe.id}`} className="absolute inset-0">
           <RecipeImage
             url={recipe.imageUrl}
@@ -189,6 +192,21 @@ export function RecipeDetail({ id }: { id: string }) {
             <Stat icon={Clock} label="Total" value={formatMinutes(recipe.totalMinutes)} />
             <Stat icon={Users} label="Serves" value={String(recipe.servings)} />
           </dl>
+          {!recipe.custom && (
+            <div className="mt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const copy = addRecipe(copyOfRecipe(recipe))
+                  toast('Copy made. Change what you like.')
+                  router.push(`/recipes/new?id=${copy.id}`)
+                }}
+              >
+                <Copy className="h-4 w-4" aria-hidden /> Make my own version
+              </Button>
+            </div>
+          )}
           {recipe.custom && (
             <div className="mt-4 flex gap-2">
               <Button
@@ -229,7 +247,7 @@ export function RecipeDetail({ id }: { id: string }) {
                   >
                     {have && <Check className="h-3.5 w-3.5" aria-hidden />}
                   </span>
-                  <span className="min-w-0 flex-1">
+                  <span className="min-w-0 flex-1 break-words">
                     <span className="text-[0.9375rem]">{ing.name}</span>
                     {ing.optional && <span className="text-sm text-ink-3"> (optional)</span>}
                     <span className="sr-only">
@@ -284,7 +302,7 @@ export function RecipeDetail({ id }: { id: string }) {
       </motion.div>
 
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 lg:bottom-6"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 md:bottom-6"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
       >
         <div className="glass pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-pill p-2">

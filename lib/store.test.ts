@@ -242,3 +242,35 @@ describe('week and leftovers', () => {
     expect(s().plan.find((p) => p.date === '2026-11-04')?.leftoversOf).toBe('r1')
   })
 })
+
+describe('household and hand-offs', () => {
+  it('keeps one hand-off per night and drops it when someone stops cooking', () => {
+    useStore.setState({
+      members: [
+        { id: 'a', name: 'A', color: 'terracotta', isMe: true },
+        { id: 'b', name: 'B', color: 'sage' },
+        { id: 'c', name: 'C', color: 'plum' },
+      ],
+      handoffs: [],
+      plan: [],
+    })
+    const s = useStore.getState()
+    s.createHandoff({ date: '2026-11-03', fromId: 'a', toId: 'b' })
+    s.createHandoff({ date: '2026-11-03', fromId: 'a', toId: 'c', message: 'Rice is washed' })
+    expect(useStore.getState().handoffs).toHaveLength(1)
+    expect(useStore.getState().handoffs[0].toId).toBe('c')
+    useStore.getState().setMemberCooks('c', false)
+    expect(useStore.getState().handoffs).toHaveLength(0)
+    expect(useStore.getState().members.find((m) => m.id === 'c')?.cooks).toBe(false)
+  })
+
+  it('edits and clears the shopping list', () => {
+    useStore.setState({ shop: [], shopDismissed: [] })
+    useStore.getState().addShopItem('Eggs')
+    const id = useStore.getState().shop[0].id
+    useStore.getState().updateShopItem(id, { name: 'Free-range eggs', quantity: 6, unit: '' })
+    expect(useStore.getState().shop[0]).toMatchObject({ name: 'Free-range eggs', quantity: 6 })
+    useStore.getState().clearShop()
+    expect(useStore.getState().shop).toHaveLength(0)
+  })
+})

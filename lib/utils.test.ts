@@ -34,3 +34,27 @@ describe('keyOf synonyms', () => {
     expect(keyOf('Gluten free pasta')).toBe('gluten free pasta')
   })
 })
+
+describe('parseAmount and guessAisle', () => {
+  it('reads the ways people type amounts', async () => {
+    const { parseAmount } = await import('./quantity')
+    expect(parseAmount('2')).toBe(2)
+    expect(parseAmount('1 1/2')).toBe(1.5)
+    expect(parseAmount('1½')).toBe(1.5)
+    expect(parseAmount('½')).toBe(0.5)
+    expect(parseAmount('1,5')).toBe(1.5)
+    expect(parseAmount('3/4')).toBe(0.75)
+    expect(parseAmount('-2')).toBeUndefined()
+    expect(parseAmount('1e3')).toBeUndefined()
+    expect(parseAmount('some')).toBeUndefined()
+    expect(parseAmount('1/0')).toBeUndefined()
+  })
+  it('guesses aisles', async () => {
+    const { guessAisle } = await import('./pantryGuess')
+    expect(guessAisle('Chicken thighs')).toBe('meat-fish')
+    expect(guessAisle('Feta')).toBe('dairy')
+    expect(guessAisle('Red onion')).toBe('produce')
+    expect(guessAisle('Basmati rice')).toBe('pantry')
+    expect(guessAisle('Mystery')).toBe('other')
+  })
+})

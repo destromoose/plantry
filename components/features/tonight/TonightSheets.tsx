@@ -87,27 +87,30 @@ export function HandoffSheet({
   onClose,
   recipe,
   date,
-  onBeforeHandoff,
+  planned,
+  when = 'tonight',
 }: {
   open: boolean
   onClose: () => void
   recipe?: Recipe
   date: string
-  /** Called first so an unplanned suggestion is locked in before it is handed over. */
-  onBeforeHandoff?: () => void
+  /** Only a planned dinner is passed on. Otherwise the night is, and they choose. */
+  planned?: boolean
+  /** "tonight", "tomorrow" or a weekday. */
+  when?: string
 }) {
   const members = useStore((s) => s.members)
   const createHandoff = useStore((s) => s.createHandoff)
   const [message, setMessage] = useState('')
   const me = members.find((m) => m.isMe) ?? members[0]
-  const others = members.filter((m) => m.id !== me?.id)
+  const others = members.filter((m) => m.id !== me?.id && m.cooks !== false)
 
   return (
-    <Sheet open={open} onClose={onClose} title="Hand off dinner">
+    <Sheet open={open} onClose={onClose} title="Ask someone else to cook">
       {others.length === 0 || !me ? (
         <div>
           <p className="text-[0.9375rem] text-ink-2">
-            Add someone to your household first. Then you can pass the apron.
+            Add someone who cooks to your household first. Then you can pass the apron.
           </p>
           <Link
             href="/household"
@@ -120,7 +123,9 @@ export function HandoffSheet({
       ) : (
         <div>
           <p className="mb-4 text-[0.9375rem] text-ink-2">
-            {recipe ? `Pass ${recipe.title} to someone.` : 'Pass tonight to someone.'}
+            {planned && recipe
+              ? `Who's cooking ${recipe.title} ${when}?`
+              : `Who's cooking ${when}? They pick what to make.`}
           </p>
           <Label htmlFor="handoff-msg">Add a note (optional)</Label>
           <Input
@@ -137,15 +142,14 @@ export function HandoffSheet({
                 <button
                   type="button"
                   onClick={() => {
-                    onBeforeHandoff?.()
                     createHandoff({
                       date,
                       fromId: me.id,
                       toId: m.id,
-                      recipeId: recipe?.id,
+                      recipeId: planned ? recipe?.id : undefined,
                       message: message.trim() || undefined,
                     })
-                    toast(`Handed to ${m.name}`)
+                    toast(`${m.name} is cooking ${when}`)
                     setMessage('')
                     onClose()
                   }}
@@ -157,6 +161,10 @@ export function HandoffSheet({
               </li>
             ))}
           </ul>
+          <p className="mt-4 text-sm text-ink-3">
+            Nothing is sent to them. Plantry only lives on this device, so tell them or show them
+            this screen.
+          </p>
         </div>
       )}
     </Sheet>

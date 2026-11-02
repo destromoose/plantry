@@ -180,7 +180,10 @@ export function Week() {
             </Button>
           )}
           <div className="flex-1" />
-          <Button onClick={fillWeek}>
+          <Button
+            onClick={fillWeek}
+            variant={weekDates.some((d) => d >= today && !isDecided(d)) ? 'primary' : 'secondary'}
+          >
             <Sparkles className="h-4 w-4" aria-hidden /> Fill my week
           </Button>
         </div>
@@ -191,7 +194,7 @@ export function Week() {
         variants={staggerContainer}
         initial="hidden"
         animate="show"
-        className="space-y-3"
+        className="grid grid-cols-1 gap-3 lg:grid-cols-2"
       >
         {weekDates.map((date, i) => {
           const entry = entryFor(date)
@@ -205,7 +208,11 @@ export function Week() {
 
           const body = recipe ? (
             <>
-              <Thumb src={recipe.imageUrl} className="h-14 w-14 rounded-xl" sizes="56px" />
+              <Thumb
+                src={recipe.imageUrl}
+                className="h-14 w-14 rounded-xl max-[400px]:hidden"
+                sizes="56px"
+              />
               <span className="min-w-0 flex-1">
                 <span
                   className={cn(
@@ -222,7 +229,11 @@ export function Week() {
             </>
           ) : lo ? (
             <>
-              <Thumb src={lo.imageUrl} className="h-14 w-14 rounded-xl opacity-80" sizes="56px" />
+              <Thumb
+                src={lo.imageUrl}
+                className="h-14 w-14 rounded-xl opacity-80 max-[400px]:hidden"
+                sizes="56px"
+              />
               <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">
                   Leftovers: {lo.title}

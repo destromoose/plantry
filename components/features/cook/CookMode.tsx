@@ -145,7 +145,7 @@ export function CookMode({
     ? (people ?? servingsParam ?? entry?.servings ?? cookingFor ?? recipe.servings)
     : 1
   const scale = recipe ? count / recipe.servings : 1
-  const sheetOpen = ingOpen || finishOpen
+  const sheetOpen = ingOpen || finishOpen || leaveOpen
 
   const go = useCallback(
     (to: number) => {
@@ -166,14 +166,18 @@ export function CookMode({
   const next = useTapGuard(nextRaw)
   const prev = useTapGuard(prevRaw)
 
-  // Keyboard
+  // Keyboard. Escape leaves, asking first if a timer is running.
+  const escRef = useRef<() => void>(() => {})
   useEffect(() => {
     if (sheetOpen) return
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null
       const tag = el?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-      if (e.key === 'ArrowRight') {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        escRef.current()
+      } else if (e.key === 'ArrowRight') {
         e.preventDefault()
         next()
       } else if (e.key === 'ArrowLeft') {
@@ -299,6 +303,8 @@ export function CookMode({
     if (window.history.length > 1) router.back()
     else router.push(date ? `/` : `/recipes/${recipe!.id}`)
   }
+
+  escRef.current = () => (anyRunning ? setLeaveOpen(true) : close())
 
   function finish() {
     if (!recipe || finishing.current) return

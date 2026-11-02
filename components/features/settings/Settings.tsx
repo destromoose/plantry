@@ -1,5 +1,6 @@
 'use client'
 
+import { PageHeader } from '@/components/ui/PageHeader'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -126,12 +127,7 @@ export function Settings() {
 
   return (
     <div className="space-y-5 pb-8">
-      <header className="mb-2">
-        <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
-          Settings
-        </h1>
-        <p className="mt-1 text-ink-2">Make it yours.</p>
-      </header>
+      <PageHeader className="mb-2" title="Settings" subtitle="Make it yours." />
 
       <Card>
         <SectionTitle>Mood</SectionTitle>
@@ -141,15 +137,17 @@ export function Settings() {
           onChange={(v) => update({ mood: v })}
           options={[
             { id: 'auto', label: 'Follow the day' },
+            { id: 'system', label: 'Match my device' },
             { id: 'dawn', label: 'Dawn' },
             { id: 'day', label: 'Day' },
             { id: 'dusk', label: 'Dusk' },
             { id: 'night', label: 'Night' },
           ]}
         />
-        <div className="mt-4 flex gap-2" aria-label={`Preview of the ${mood} mood`} role="img">
+        <p className="mt-4 text-sm text-ink-3">Colours right now ({mood}):</p>
+        <div className="mt-1.5 flex gap-1.5" aria-label={`Colours of the ${mood} mood`} role="img">
           {['bg-canvas', 'bg-surface', 'bg-accent', 'bg-secondary'].map((c) => (
-            <div key={c} className={cn('h-10 flex-1 rounded-2xl border border-line', c)} />
+            <div key={c} className={cn('h-4 flex-1 rounded-full', c)} />
           ))}
         </div>
       </Card>
@@ -194,6 +192,10 @@ export function Settings() {
         <div className="flex items-center justify-between gap-4">
           <p className="text-[0.9375rem] text-ink-2">
             Let the weather nudge dinner toward cozy or light.
+            <span className="mt-1 block text-sm text-ink-3">
+              Sends your rough location (to about 10 km) to Open-Meteo, a free weather service,
+              about once an hour. Nothing else leaves this device.
+            </span>
             {settings.weatherEnabled && weather && (
               <span className="mt-1 block text-ink">
                 Right now: {Math.round(weather.tempC)}°{weather.precipitation ? ', rain' : ''}
@@ -270,19 +272,7 @@ export function Settings() {
         </p>
       </Card>
 
-      <Card>
-        <SectionTitle>Units</SectionTitle>
-        <Choice
-          label="Units"
-          value={settings.units}
-          onChange={(v) => update({ units: v })}
-          options={[
-            { id: 'metric', label: 'Metric' },
-            { id: 'imperial', label: 'Imperial' },
-          ]}
-        />
-        <p className="mt-3 text-sm text-ink-3">Saved for later. Conversion is not built yet.</p>
-      </Card>
+      {/* Units stay hidden until amounts can actually be converted. */}
 
       <Card>
         <SectionTitle>Words</SectionTitle>

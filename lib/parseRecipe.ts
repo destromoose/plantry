@@ -11,6 +11,9 @@ export interface ParsedStep {
 }
 export interface ParsedRecipe {
   title?: string
+  servings?: number
+  activeMinutes?: number
+  totalMinutes?: number
   ingredients: ParsedIngredient[]
   steps: ParsedStep[]
 }
@@ -155,13 +158,61 @@ function buildSteps(lines: string[]): ParsedStep[] {
 
 const startsLikeIngredient = (l: string) => /^\s*(?:[-*•–]|\d|[½¼¾⅓⅔])/.test(l)
 
+/** "1 hr 15 mins" -> 75. */
+function minutesIn(s: string): number | undefined {
+  const h = s.match(/(\d+(?:[.,]\d+)?)\s*(?:h|hrs?|hours?)\b/i)
+  const m = s.match(/(\d+)\s*(?:m|mins?|minutes?)\b/i)
+  if (!h && !m) return undefined
+  const total = (h ? Number(h[1].replace(',', '.')) * 60 : 0) + (m ? Number(m[1]) : 0)
+  return total > 0 && total < 48 * 60 ? Math.round(total) : undefined
+}
+
+const SERVES = /^(?:serves|servings?|makes|yield)\b\s*:?\s*(\d+)/i
+const PREP = /^(?:prep(?:aration)?|active)(?:\s*time)?\s*:?\s*(.+)$/i
+const COOK = /^cook(?:ing)?\s*time\s*:?\s*(.+)$/i
+const TOTAL = /^(?:total|ready in)(?:\s*time)?\s*:?\s*(.+)$/i
+
+/** Take "Serves 4", "Prep: 10 min" and the like out of the text, keeping what they say. */
+function takeMeta(lines: string[], out: ParsedRecipe): string[] {
+  let cook: number | undefined
+  const kept = lines.filter((l) => {
+    const sv = l.match(SERVES)
+    if (sv) {
+      const n = Number(sv[1])
+      if (n >= 1 && n <= 24) out.servings = n
+      return false
+    }
+    for (const [re, apply] of [
+      [PREP, (n: number) => (out.activeMinutes = n)],
+      [COOK, (n: number) => (cook = n)],
+      [TOTAL, (n: number) => (out.totalMinutes = n)],
+    ] as const) {
+      const m = l.match(re)
+      const n = m ? minutesIn(m[1]) : undefined
+      if (n !== undefined && l.length < 60) {
+        apply(n)
+        return false
+      }
+    }
+    return true
+  })
+  if (!out.totalMinutes && (out.activeMinutes || cook))
+    out.totalMinutes = (out.activeMinutes ?? 0) + (cook ?? 0)
+  if (!out.activeMinutes && cook && out.totalMinutes)
+    out.activeMinutes = Math.min(cook, out.totalMinutes)
+  return kept
+}
+
 export function parseRecipe(text: string): ParsedRecipe {
-  const lines = text
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((l) => l.trim())
-  const nonEmpty = lines.filter(Boolean)
   const out: ParsedRecipe = { ingredients: [], steps: [] }
+  const lines = takeMeta(
+    text
+      .replace(/\r/g, '')
+      .split('\n')
+      .map((l) => l.trim()),
+    out
+  )
+  const nonEmpty = lines.filter(Boolean)
   if (nonEmpty.length === 0) return out
 
   let title: string | undefined

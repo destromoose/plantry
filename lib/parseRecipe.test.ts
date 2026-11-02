@@ -97,3 +97,16 @@ describe('detectTimer, more shapes', () => {
     expect(detectTimer('Add 2 minced garlic cloves')).toBeUndefined()
   })
 })
+
+describe('recipe details in pasted text', () => {
+  it('reads servings and times and keeps them out of the steps', () => {
+    const r = parseRecipe(
+      'Lemon pasta\nServes 3\nPrep time: 10 mins\nCook time: 1 hr 5 mins\n\nIngredients\n200 g spaghetti\n\nMethod\n1. Boil the pasta.'
+    )
+    expect(r.servings).toBe(3)
+    expect(r.activeMinutes).toBe(10)
+    expect(r.totalMinutes).toBe(75)
+    expect(r.steps).toHaveLength(1)
+    expect(r.ingredients).toHaveLength(1)
+  })
+})

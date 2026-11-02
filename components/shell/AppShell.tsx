@@ -17,6 +17,7 @@ import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { page, settle } from '@/lib/motion'
 import { Logo } from '@/components/ui/Logo'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { Toaster } from '@/components/ui/Toast'
 import { useAppContext } from './Providers'
 import { setWriteErrorListener, useStorageStatus } from '@/lib/storage'
@@ -96,20 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t)
   }, [pathname, hydrated])
 
-  if (!hydrated) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={settle}
-          className="text-accent"
-        >
-          <Logo withWord={false} className="[&>svg]:h-10 [&>svg]:w-10" />
-        </motion.div>
-      </div>
-    )
-  }
+  if (!hydrated) return <LoadingShell />
 
   const extras = (
     <>
@@ -137,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-6xl lg:gap-8 lg:px-6">
+    <div className="mx-auto flex min-h-dvh w-full max-w-7xl md:gap-6 md:px-6 lg:gap-10">
       <a
         href="#main"
         className="sr-only z-[90] rounded-pill bg-accent px-4 py-2 font-semibold text-accent-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
@@ -147,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {extras}
       <Sidebar pathname={pathname} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between px-5 pb-1 pt-5 lg:hidden">
+        <header className="flex items-center justify-between px-5 pb-1 pt-5 md:hidden">
           <Link href="/" className="text-ink" aria-label="Plantry home">
             <Logo />
           </Link>
@@ -167,12 +155,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
         </header>
-        <p
-          className="px-5 font-display text-sm italic text-ink-3 lg:px-0 lg:pt-6"
-          aria-live="polite"
-        >
-          {ctx.reason}
-        </p>
+        {/* The day's context line belongs to Tonight only. */}
+        {pathname === '/' && (
+          <p className="px-5 font-display text-sm italic text-ink-3 md:px-0 md:pt-6">
+            {ctx.reason}
+          </p>
+        )}
         {/* Enter-only page fade. An exit animation with mode="wait" never finishes under the
             App Router and leaves the new page invisible, so pages only animate in. */}
         <motion.main
@@ -181,7 +169,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           variants={page}
           initial="hidden"
           animate="show"
-          className="flex-1 px-5 pb-28 pt-3 lg:px-0 lg:pb-12"
+          className={cn('flex-1 px-5 pb-28 pt-3 md:px-0 md:pb-12', pathname !== '/' && 'md:pt-8')}
         >
           {children}
         </motion.main>
@@ -197,7 +185,7 @@ function TabBar({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Primary"
-      className="safe-bottom fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 lg:hidden"
+      className="safe-bottom fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 md:hidden"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
       <div className="glass flex w-full max-w-md items-center justify-between rounded-pill p-1.5">
@@ -233,9 +221,11 @@ function TabBar({ pathname }: { pathname: string }) {
 function Sidebar({ pathname }: { pathname: string }) {
   const active = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href))
   return (
-    <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col py-8 lg:flex">
+    // A slim icon rail on tablets, the full list with labels on wide screens.
+    <aside className="sticky top-0 hidden h-dvh w-16 shrink-0 flex-col py-8 md:flex lg:w-56">
       <Link href="/" className="mb-8 px-3 text-ink" aria-label="Plantry home">
-        <Logo />
+        <Logo withWord={false} className="lg:hidden" />
+        <Logo className="hidden lg:flex" />
       </Link>
       <nav className="flex flex-col gap-1" aria-label="Primary">
         {[...tabs, ...secondary].map((t, i) => {
@@ -245,8 +235,9 @@ function Sidebar({ pathname }: { pathname: string }) {
               key={t.href}
               href={t.href}
               aria-current={on ? 'page' : undefined}
+              title={t.label}
               className={cn(
-                'relative flex h-11 items-center gap-3 rounded-pill px-3 text-[0.9375rem] font-medium transition-colors',
+                'relative flex h-11 items-center gap-3 rounded-pill px-3 text-[0.9375rem] font-medium transition-colors max-lg:justify-center',
                 on ? 'text-accent-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink',
                 i === tabs.length && 'mt-4'
               )}
@@ -258,13 +249,39 @@ function Sidebar({ pathname }: { pathname: string }) {
                   className="absolute inset-0 rounded-pill bg-accent shadow-card"
                 />
               )}
-              <t.icon className="relative h-5 w-5" />
-              <span className="relative">{t.label}</span>
+              <t.icon className="relative h-5 w-5 shrink-0" />
+              <span className="relative max-lg:sr-only">{t.label}</span>
             </Link>
           )
         })}
       </nav>
-      <p className="mt-auto px-3 font-display text-sm italic text-ink-3">Dinner, decided.</p>
+      <p className="mt-auto hidden px-3 font-display text-sm italic text-ink-3 lg:block">
+        Dinner, decided.
+      </p>
     </aside>
+  )
+}
+
+/** Shown for the moment before saved data is read: the page's shape, not a blank screen. */
+function LoadingShell() {
+  return (
+    <div
+      className="mx-auto flex min-h-dvh w-full max-w-7xl md:gap-6 md:px-6 lg:gap-10"
+      aria-busy="true"
+      aria-label="Loading"
+    >
+      <div className="hidden w-16 shrink-0 py-8 md:block lg:w-56">
+        <div className="px-3 text-accent">
+          <Logo withWord={false} />
+        </div>
+      </div>
+      <div className="flex-1 space-y-4 px-5 pt-16 md:px-0">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-10 w-2/3 max-w-sm" />
+        <Skeleton className="aspect-[16/9] max-h-[32vh] w-full max-w-3xl" />
+        <Skeleton className="h-6 w-1/2 max-w-xs" />
+        <Skeleton className="h-12 w-full max-w-md" />
+      </div>
+    </div>
   )
 }

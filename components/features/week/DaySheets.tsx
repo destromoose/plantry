@@ -387,7 +387,7 @@ function MenuBody({
           }}
         />
       )}
-      <Row icon={UserRound} label="Claim night" onClick={() => setKind('claim')} />
+      <Row icon={UserRound} label="Choose who cooks" onClick={() => setKind('claim')} />
       {entry?.recipeId && !entry.done && (
         <Row icon={Shuffle} label="Something else" onClick={somethingElse} />
       )}

@@ -5,7 +5,7 @@ export const tasteLabels: Record<Taste, string> = {
   fresh: 'Fresh',
   fast: 'Fast',
   'one-pan': 'One pan',
-  'veg-forward': 'Veg-forward',
+  'veg-forward': 'Mostly veg',
   spicy: 'Spicy',
   'big-batch': 'Big batch',
   'kid-friendly': 'Kid-friendly',

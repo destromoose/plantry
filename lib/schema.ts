@@ -109,6 +109,7 @@ export const memberSchema = z.object({
   isMe: z.boolean().optional(),
   avoid: z.array(z.string()).optional(),
   diet: z.string().optional(),
+  cooks: z.boolean().optional(),
 })
 
 export const handoffSchema = z.object({
@@ -151,7 +152,7 @@ export const defaultSettings: Settings = {
 
 const settingsSchema = z.object({
   onboarded: z.boolean().catch(defaultSettings.onboarded),
-  mood: z.union([mood, z.literal('auto')]).catch(defaultSettings.mood),
+  mood: z.union([mood, z.literal('auto'), z.literal('system')]).catch(defaultSettings.mood),
   reducedMotion: z.enum(['system', 'on', 'off']).catch(defaultSettings.reducedMotion),
   units: z.enum(['metric', 'imperial']).catch(defaultSettings.units),
   tastes: z.array(taste).catch([]),

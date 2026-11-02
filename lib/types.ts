@@ -110,6 +110,8 @@ export interface Member {
   avoid?: string[]
   /** Diet this person follows. */
   diet?: string
+  /** False for someone who eats but doesn't cook, like a small child. */
+  cooks?: boolean
 }
 
 export type Energy = 'up-for-it' | 'quick' | 'cant-tonight'
@@ -119,7 +121,8 @@ export type Mood = 'dawn' | 'day' | 'dusk' | 'night'
 export interface Settings {
   onboarded: boolean
   /** 'auto' follows the clock. */
-  mood: Mood | 'auto'
+  /** 'auto' follows the time of day; 'system' follows the device's light or dark setting. */
+  mood: Mood | 'auto' | 'system'
   reducedMotion: 'system' | 'on' | 'off'
   units: 'metric' | 'imperial'
   tastes: Taste[]

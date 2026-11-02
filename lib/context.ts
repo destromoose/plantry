@@ -23,6 +23,8 @@ interface BuildInput {
   recipes: Recipe[]
   /** The person said they are still eating tonight, so don't jump to tomorrow yet. */
   stillTonight?: boolean
+  /** The device is set to dark mode. Used by the 'system' mood. */
+  prefersDark?: boolean
 }
 
 /** After this hour, Tonight starts thinking about tomorrow, unless tonight is still open. */
@@ -49,6 +51,7 @@ export function buildContext({
   plan,
   recipes,
   stillTonight,
+  prefersDark,
 }: BuildInput): Context {
   const hour = now.getHours()
   const dow = now.getDay()
@@ -61,11 +64,17 @@ export function buildContext({
     !!todayEntry && !todayEntry.done && !!(todayEntry.recipeId || todayEntry.leftoversOf)
   // Once tonight's dinner is cooked, move on to tomorrow.
   const tonightDone = !!todayEntry?.done
-  const lateNight =
-    !stillTonight && ((hour >= TOMORROW_FROM_HOUR && !tonightOpen) || tonightDone)
+  const lateNight = !stillTonight && ((hour >= TOMORROW_FROM_HOUR && !tonightOpen) || tonightDone)
   const targetDate = lateNight ? addDays(today, 1) : today
   const targetLabel = lateNight ? 'Tomorrow' : 'Tonight'
-  const mood = settings.mood === 'auto' ? moodForHour(hour) : settings.mood
+  const mood =
+    settings.mood === 'auto'
+      ? moodForHour(hour)
+      : settings.mood === 'system'
+        ? prefersDark
+          ? 'night'
+          : 'day'
+        : settings.mood
   const lean = settings.weatherEnabled ? weatherLean(weather) : 'any'
 
   const tonight = plan.find((p) => p.date === targetDate && p.slot === 'dinner')
@@ -153,7 +162,9 @@ function capitalize(s: string) {
 /** Fetches weather from Open-Meteo (free, no key). Returns undefined on any failure. */
 export async function fetchWeather(lat: number, lon: number): Promise<Weather | undefined> {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation`
+    // Rounded to one decimal place, about 10 km. That is plenty for the weather.
+    const r = (n: number) => Math.round(n * 10) / 10
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${r(lat)}&longitude=${r(lon)}&current=temperature_2m,precipitation`
     const res = await fetch(url)
     if (!res.ok) return undefined
     const json = (await res.json()) as {

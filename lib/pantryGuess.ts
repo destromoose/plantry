@@ -1,4 +1,4 @@
-import type { PantryZone } from './types'
+import type { Aisle, PantryZone } from './types'
 import { staples } from './seed/pantry'
 import { keyOf } from './utils'
 
@@ -89,4 +89,147 @@ export function guessZone(name: string): PantryZone {
 /** How long something usually keeps where it lives, in days. */
 export function defaultLife(zone: PantryZone): number {
   return zone === 'fridge' ? 7 : zone === 'counter' ? 7 : zone === 'freezer' ? 90 : 180
+}
+
+const aisleWords: [Aisle, string[]][] = [
+  ['pantry', ['peanut butter', 'coconut milk', 'tomato paste', 'stock cube']],
+  ['frozen', ['frozen', 'ice cream']],
+  [
+    'meat-fish',
+    [
+      'chicken',
+      'beef',
+      'pork',
+      'lamb',
+      'mince',
+      'bacon',
+      'ham',
+      'sausage',
+      'fish',
+      'salmon',
+      'cod',
+      'tuna',
+      'prawn',
+      'shrimp',
+      'turkey',
+    ],
+  ],
+  [
+    'dairy',
+    [
+      'milk',
+      'cheese',
+      'cheddar',
+      'feta',
+      'parmesan',
+      'mozzarella',
+      'yogurt',
+      'yoghurt',
+      'butter',
+      'cream',
+      'egg',
+    ],
+  ],
+  [
+    'bakery',
+    ['bread', 'bun', 'roll', 'bagel', 'pitta', 'pita', 'naan', 'tortilla', 'wrap', 'baguette'],
+  ],
+  [
+    'spices',
+    [
+      'cumin',
+      'paprika',
+      'chili flake',
+      'chilli flake',
+      'turmeric',
+      'oregano',
+      'cinnamon',
+      'pepper flake',
+      'curry powder',
+      'garam masala',
+      'thyme',
+      'salt',
+      'black pepper',
+    ],
+  ],
+  ['drinks', ['juice', 'wine', 'beer', 'soda', 'coffee', 'tea']],
+  [
+    'pantry',
+    [
+      'rice',
+      'pasta',
+      'spaghetti',
+      'noodle',
+      'flour',
+      'sugar',
+      'oil',
+      'vinegar',
+      'stock',
+      'broth',
+      'tin',
+      'can',
+      'bean',
+      'lentil',
+      'chickpea',
+      'oat',
+      'sauce',
+      'honey',
+      'peanut butter',
+      'coconut milk',
+      'tomato paste',
+      'passata',
+    ],
+  ],
+  [
+    'produce',
+    [
+      'onion',
+      'garlic',
+      'tomato',
+      'potato',
+      'carrot',
+      'celery',
+      'lemon',
+      'lime',
+      'apple',
+      'banana',
+      'spinach',
+      'kale',
+      'lettuce',
+      'herb',
+      'parsley',
+      'cilantro',
+      'coriander',
+      'basil',
+      'mint',
+      'ginger',
+      'pepper',
+      'chili',
+      'chilli',
+      'mushroom',
+      'courgette',
+      'zucchini',
+      'broccoli',
+      'cabbage',
+      'avocado',
+      'cucumber',
+      'squash',
+      'leek',
+      'scallion',
+      'spring onion',
+      'berry',
+      'orange',
+      'pea',
+    ],
+  ],
+]
+
+/** A best guess at which aisle an ingredient is in, so the shopping list sorts well. */
+export function guessAisle(name: string): Aisle {
+  const key = keyOf(name)
+  if (!key) return 'other'
+  const staple = staples.find((s) => s.key === key)
+  if (staple) return staple.aisle
+  for (const [aisle, words] of aisleWords) if (words.some((w) => key.includes(w))) return aisle
+  return 'other'
 }

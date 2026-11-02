@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
-import Image from 'next/image'
+import { memo, useMemo, useRef, useState } from 'react'
+import { Thumb } from '@/components/features/week/Thumb'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChefHat, Plus, Refrigerator, Sprout } from 'lucide-react'
@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Input, Select } from '@/components/ui/Field'
 import { ProgressRing } from '@/components/ui/ProgressRing'
 import { Sheet } from '@/components/ui/Sheet'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 
 const zones: { id: PantryZone; label: string }[] = [
@@ -116,19 +117,24 @@ export function Pantry() {
 
   return (
     <div className="pb-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
-            Pantry
-          </h1>
-          <p className="mt-1 text-ink-2">
-            {pluralize(pantry.length, 'thing')}, {soon} should be used soon
-          </p>
-        </div>
-        <Button onClick={() => setCookOpen(true)} disabled={pantry.length === 0}>
-          <ChefHat className="h-4 w-4" aria-hidden /> Cook from what I have
-        </Button>
-      </header>
+      <PageHeader
+        title="Pantry"
+        subtitle={
+          <>
+            {pluralize(pantry.length, 'thing')}
+            {soon > 0 ? `, ${soon} to use soon` : ''}
+          </>
+        }
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => setCookOpen(true)}
+            disabled={pantry.length === 0}
+          >
+            <ChefHat className="h-4 w-4" aria-hidden /> Cook from what I have
+          </Button>
+        }
+      />
 
       <form
         className="mb-8 flex items-start gap-2"
@@ -178,7 +184,13 @@ export function Pantry() {
             </option>
           ))}
         </Select>
-        <Button type="submit" size="icon" aria-label="Add to pantry" disabled={!name.trim()}>
+        <Button
+          type="submit"
+          size="icon"
+          aria-label="Add to pantry"
+          aria-disabled={!name.trim()}
+          variant={name.trim() ? 'primary' : 'secondary'}
+        >
           <Plus className="h-5 w-5" />
         </Button>
       </form>
@@ -232,13 +244,7 @@ export function Pantry() {
               >
                 <AnimatePresence mode="popLayout">
                   {z.items.map((item, i) => (
-                    <Tile
-                      key={item.id}
-                      item={item}
-                      index={i}
-                      today={today}
-                      onOpen={() => setActive(item)}
-                    />
+                    <Tile key={item.id} item={item} index={i} today={today} onOpen={setActive} />
                   ))}
                 </AnimatePresence>
               </motion.ul>
@@ -264,7 +270,7 @@ export function Pantry() {
   )
 }
 
-function Tile({
+const Tile = memo(function Tile({
   item,
   index,
   today,
@@ -273,7 +279,7 @@ function Tile({
   item: PantryItem
   index: number
   today: string
-  onOpen: () => void
+  onOpen: (item: PantryItem) => void
 }) {
   const restock = useStore((s) => s.restockPantryItem)
   const usedUp = useStore((s) => s.useUpPantryItem)
@@ -306,7 +312,7 @@ function Tile({
     >
       <button
         type="button"
-        onClick={() => !dragged.current && onOpen()}
+        onClick={() => !dragged.current && onOpen(item)}
         aria-label={`${item.name}, options`}
         className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-card p-3.5 text-left"
       >
@@ -325,7 +331,7 @@ function Tile({
       </button>
     </motion.li>
   )
-}
+})
 
 /** Used it up: staples go back on the list so you can buy more. Undo puts both back. */
 function markUsedUp(item: PantryItem, usedUp: (id: string) => boolean) {
@@ -487,11 +493,7 @@ function CookList({
             onClick={onPick}
             className="flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-surface-2"
           >
-            <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-surface-2">
-              {s.recipe.imageUrl && (
-                <Image src={s.recipe.imageUrl} alt="" fill sizes="64px" className="object-cover" />
-              )}
-            </span>
+            <Thumb src={s.recipe.imageUrl} sizes="64px" className="h-16 w-16 rounded-2xl" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-display text-lg font-semibold leading-tight">
                 {s.recipe.title}

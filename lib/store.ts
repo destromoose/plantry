@@ -52,6 +52,7 @@ export interface PlantryState {
     avoid?: string[]
   }) => void
   setMemberAvoid: (id: string, avoid: string[]) => void
+  setMemberCooks: (id: string, cooks: boolean) => void
   setServings: (date: string, servings: number) => void
   addMember: (name: string) => void
   removeMember: (id: string) => void
@@ -106,6 +107,8 @@ export interface PlantryState {
   toggleShopItem: (id: string) => void
   removeShopItem: (id: string) => void
   clearChecked: () => void
+  clearShop: () => void
+  updateShopItem: (id: string, patch: { name?: string; quantity?: number; unit?: string }) => void
   finishShopping: () => void
 
   // household
@@ -211,6 +214,15 @@ export const useStore = create<PlantryState>()(
           members: s.members.filter((m) => m.id !== id),
           plan: s.plan.map((p) => (p.cookId === id ? { ...p, cookId: undefined } : p)),
           handoffs: s.handoffs.filter((h) => h.fromId !== id && h.toId !== id),
+        })),
+      setMemberCooks: (id, cooks) =>
+        set((s) => ({
+          members: s.members.map((m) => (m.id === id ? { ...m, cooks } : m)),
+          // Someone who doesn't cook can't be down to cook a night.
+          plan: cooks
+            ? s.plan
+            : s.plan.map((p) => (p.cookId === id ? { ...p, cookId: undefined } : p)),
+          handoffs: cooks ? s.handoffs : s.handoffs.filter((h) => h.toId !== id),
         })),
       setMemberAvoid: (id, avoid) =>
         set((s) => ({ members: s.members.map((m) => (m.id === id ? { ...m, avoid } : m)) })),
@@ -531,6 +543,23 @@ export const useStore = create<PlantryState>()(
         }),
       restoreDismissed: () => set({ shopDismissed: [] }),
       clearChecked: () => set((s) => ({ shop: s.shop.filter((i) => !i.checked) })),
+      clearShop: () => set({ shop: [] }),
+      updateShopItem: (id, patch) =>
+        set((s) => ({
+          shop: s.shop.map((i) => {
+            if (i.id !== id) return i
+            const name = patch.name?.trim() || i.name
+            // A typed amount replaces any amounts that were added up from recipes.
+            return {
+              ...i,
+              name,
+              key: keyOf(name),
+              quantity: patch.quantity,
+              unit: patch.unit,
+              more: undefined,
+            }
+          }),
+        })),
       finishShopping: () => {
         const s = get()
         const now = new Date().toISOString()
@@ -553,7 +582,11 @@ export const useStore = create<PlantryState>()(
 
       createHandoff: (h) =>
         set((s) => ({
-          handoffs: [{ ...h, id: uid('h'), createdAt: new Date().toISOString() }, ...s.handoffs],
+          // One hand-off per night: a new one replaces the old.
+          handoffs: [
+            { ...h, id: uid('h'), createdAt: new Date().toISOString() },
+            ...s.handoffs.filter((x) => x.date !== h.date),
+          ],
           plan: s.plan.map((p) =>
             p.date === h.date && p.slot === 'dinner' ? { ...p, cookId: h.toId } : p
           ),

@@ -258,7 +258,7 @@ function NextDays({ target }: { target: string }) {
   const days = [1, 2, 3].map((n) => addDays(target, n))
 
   return (
-    <ul className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-1">
+    <ul className="-mx-5 flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 after:w-2 after:shrink-0 after:content-[''] sm:after:hidden md:mx-0 md:px-0">
       {days.map((d) => {
         const e = plan.find((p) => p.date === d && p.slot === 'dinner')
         const r = recipes.find((x) => x.id === (e?.recipeId ?? e?.leftoversOf))
@@ -315,7 +315,8 @@ function WeatherOptIn() {
     <div className="card flex items-center gap-3 p-4">
       <CloudSun className="h-5 w-5 shrink-0 text-ink-2" aria-hidden />
       <p className="flex-1 text-sm text-ink-2">
-        Let Plantry peek at the weather? Rainy nights lean cozy.
+        Let Plantry check the weather? Rainy nights lean cozy. It sends your rough location to a
+        weather service.
       </p>
       <Button
         size="sm"
