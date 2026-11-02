@@ -20,6 +20,10 @@ export async function GET(req: Request) {
 
 /** Pack up this phone's saved data for collection at the new address. */
 export async function POST(req: Request) {
+  // Packages are only made by Plantry's old address, never by another site's page.
+  const origin = req.headers.get('origin')
+  if (origin && !isLegacyOrigin(origin))
+    return NextResponse.json({ error: 'wrong-origin' }, { status: 403 })
   const store = getMoveStore()
   if (!store) return NextResponse.json({ error: 'not-configured' }, { status: 503 })
   const text = await req.text()

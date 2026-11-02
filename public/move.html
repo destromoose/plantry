@@ -45,6 +45,14 @@
     <p data-t="moving.body" aria-live="polite">Your plan, pantry, recipes and history are on their way.</p>
     <div class="spin" aria-hidden="true"></div>
   </section>
+  <section id="confirm" hidden>
+    <h1 data-t="confirm.title">Bring your kitchen over?</h1>
+    <p data-t="confirm.body">This brings your Plantry data, and household sharing if it's on, from plantry-pi.vercel.app to this address. Only continue if you just tapped Open the new Plantry there.</p>
+    <div class="actions">
+      <button id="bring" class="primary" data-t="confirm.yes">Bring it over</button>
+      <button id="notNow" class="secondary" data-t="confirm.no">Not now</button>
+    </div>
+  </section>
   <section id="choose" hidden>
     <h1 data-t="choose.title">You have Plantry here already</h1>
     <p data-t="choose.body">This phone already has a kitchen saved at the new address. Which one do you want to keep?</p>
@@ -67,6 +75,8 @@
   var es = /^es\b/i.test((function () { try { var l = localStorage.getItem('plantry-lang'); if (l === 'en' || l === 'es') return l } catch (e) {} return navigator.language || 'en' })())
   var T = es ? {
     'moving.title': 'Trayendo tu cocina', 'moving.body': 'Tu plan, despensa, recetas e historial ya vienen en camino.',
+    'confirm.title': '¿Traer tu cocina?', 'confirm.body': 'Esto trae tus datos de Plantry, y el hogar compartido si está activo, desde plantry-pi.vercel.app a esta dirección. Sigue solo si acabas de tocar Abrir el nuevo Plantry allí.',
+    'confirm.yes': 'Traerla', 'confirm.no': 'Ahora no',
     'choose.title': 'Ya tienes Plantry aquí', 'choose.body': 'Este teléfono ya tiene una cocina guardada en la dirección nueva. ¿Cuál quieres conservar?',
     'choose.old': 'Usar mi cocina de la dirección anterior', 'choose.new': 'Conservar lo que hay aquí',
     'failed.title': 'Tu cocina no se trajo', 'failed.retry': 'Intentar de nuevo', 'failed.skip': 'Seguir a Plantry',
@@ -82,11 +92,17 @@
   }
 
   var q = new URLSearchParams(location.search)
-  var next = q.get('next') || '/'
-  if (next.charAt(0) !== '/' || next.charAt(1) === '/' || next.charAt(1) === '\\') next = '/'
+  // Only ever continue to a page on this address.
+  var next = (function (v) {
+    try { var u = new URL(v || '/', location.origin); return u.origin === location.origin ? u.pathname + u.search + u.hash : '/' } catch (e) { return '/' }
+  })(q.get('next'))
   var from = q.get('from') === 'app' ? 'app' : 'web'
   var h = new URLSearchParams(location.hash.slice(1))
-  var token = h.get('t'), packed = h.get('d')
+  var token = h.get('t')
+  if (token && !/^[a-f0-9]{32}$/.test(token)) token = null
+  // Moves start on the old address. Arriving from anywhere else, ask before bringing data in.
+  var LEGACY = ['https://plantry-pi.vercel.app']
+  var cameFromOld = (function () { try { return LEGACY.indexOf(new URL(document.referrer).origin) !== -1 } catch (e) { return false } })()
   // The handover details never stay in the address bar or history.
   history.replaceState(null, '', location.pathname + location.search)
 
@@ -94,7 +110,7 @@
   var ls; try { ls = window.localStorage; ls.setItem('__plantry_probe__', '1'); ls.removeItem('__plantry_probe__') } catch (e) { ls = null }
 
   function go() { location.replace(next) }
-  function show(id) { ['moving', 'choose', 'failed'].forEach(function (s) { document.getElementById(s).hidden = s !== id }) }
+  function show(id) { ['moving', 'confirm', 'choose', 'failed'].forEach(function (s) { document.getElementById(s).hidden = s !== id }) }
   function fail(kind) {
     document.getElementById('failedBody').textContent = T['failed.' + kind]
     document.getElementById('retry').hidden = kind !== 'net'
@@ -129,18 +145,8 @@
     apply(items, fp)
   }
 
-  function fromLink(text) {
-    var b64 = text.replace(/-/g, '+').replace(/_/g, '/')
-    while (b64.length % 4) b64 += '='
-    var bin = atob(b64), bytes = new Uint8Array(bin.length)
-    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-    var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))
-    return new Response(stream).text().then(JSON.parse)
-  }
-
   function collect() {
     show('moving')
-    if (packed) return fromLink(packed).then(receive, function () { fail('gone') })
     fetch('/api/move/' + encodeURIComponent(token), { method: 'POST', cache: 'no-store' })
       .then(function (r) {
         if (r.status === 404 || r.status === 400) return fail('gone')
@@ -152,10 +158,14 @@
   document.getElementById('retry').onclick = collect
   document.getElementById('skip').onclick = go
 
-  if (!token && !packed) {
+  document.getElementById('bring').onclick = collect
+  document.getElementById('notNow').onclick = go
+
+  if (!token) {
     if (from === 'app' && ls) ls.setItem(WELCOME, from)
     go()
-  } else collect()
+  } else if (cameFromOld) collect()
+  else show('confirm')
 })()
 </script>
 </body>

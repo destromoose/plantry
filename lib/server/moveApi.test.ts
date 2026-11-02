@@ -36,6 +36,12 @@ describe('move API (memory store)', () => {
     expect((await pack(post({ items: { other: 'x' } }))).status).toBe(400)
     expect((await pack(post({ items: { 'plantry-v1': 5 } }))).status).toBe(400)
     expect((await pack(post({ items: [] }))).status).toBe(400)
+    const elsewhere = new Request('http://x/api/move', {
+      method: 'POST',
+      headers: { origin: 'https://evil.example' },
+      body: JSON.stringify({ items: { 'plantry-v1': '{}' } }),
+    })
+    expect((await pack(elsewhere)).status).toBe(403)
     const bad = await collect(new Request('http://x', { method: 'POST' }), params('../nope'))
     expect(bad.status).toBe(400)
   })

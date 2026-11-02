@@ -49,25 +49,6 @@ function collect(): Record<string, string> {
   return items
 }
 
-const toBase64Url = (bytes: Uint8Array) => {
-  let s = ''
-  for (let i = 0; i < bytes.length; i += 0x8000)
-    s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
-/** Without server storage, the data can ride in the link itself (never sent to a server). */
-async function inLink(text: string): Promise<string | null> {
-  if (typeof CompressionStream === 'undefined') return null
-  try {
-    const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))
-    const packed = toBase64Url(new Uint8Array(await new Response(stream).arrayBuffer()))
-    return packed.length < 1_500_000 ? packed : null
-  } catch {
-    return null
-  }
-}
-
 /** Builds the link that opens the new address with this phone's data. */
 async function handover(from: 'web' | 'app'): Promise<string | null> {
   const here = window.location
@@ -89,10 +70,9 @@ async function handover(from: 'web' | 'app'): Promise<string | null> {
       if (token) return `${base}#t=${token}`
     }
   } catch {
-    /* try the link instead */
+    /* stay here and try again next time */
   }
-  const packed = await inLink(text)
-  return packed ? `${base}#d=${packed}` : null
+  return null
 }
 
 export function SiteMove() {
