@@ -144,6 +144,8 @@ export interface Settings {
   priceLevel: 'low' | 'average' | 'high'
   /** Dinner budget for a week, in `currency`. 0 means no budget. */
   weeklyBudget: number
+  /** Which starter recipes this kitchen has been given (see SEED_VERSION). */
+  seedVersion: number
 }
 
 export interface Weather {

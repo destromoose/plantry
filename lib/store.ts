@@ -20,7 +20,13 @@ import type {
 import { addDays, keyOf, toDateKey, uid } from './utils'
 import { addAmount, compatible, subtract, type Amount } from './quantity'
 import { defaultLife, guessZone } from './pantryGuess'
-import { canonicalRecipes, localSeedRecipes, localizeRecipes } from './seed/localize'
+import {
+  canonicalRecipes,
+  localSeedRecipes,
+  localizeRecipes,
+  newSeedRecipes,
+} from './seed/localize'
+import { SEED_VERSION } from './seed/recipes'
 import { staples } from './seed/pantry'
 import { checkImport, cleanData, defaultSettings } from './schema'
 import { createSafeStorage, useStorageStatus } from './storage'
@@ -732,13 +738,15 @@ export const useStore = create<PlantryState>()(
         // Keys are recomputed on load so matching rules can improve over time.
         if (data.pantry) data.pantry = data.pantry.map((p) => ({ ...p, key: keyOf(p.name) }))
         if (data.shop) data.shop = data.shop.map((i) => ({ ...i, key: keyOf(i.name) }))
-        return {
-          ...current,
-          ...data,
-          settings: { ...current.settings, ...(data.settings ?? {}) },
-          recipes:
-            data.recipes && data.recipes.length ? localizeRecipes(data.recipes) : current.recipes,
-        } as PlantryState
+        let recipes =
+          data.recipes && data.recipes.length ? localizeRecipes(data.recipes) : current.recipes
+        const settings = { ...current.settings, ...(data.settings ?? {}) }
+        // Kitchens saved before newer starter recipes shipped get them once.
+        if (data.recipes?.length && settings.seedVersion < SEED_VERSION) {
+          recipes = [...recipes, ...newSeedRecipes(settings.seedVersion, recipes)]
+          settings.seedVersion = SEED_VERSION
+        }
+        return { ...current, ...data, settings, recipes } as PlantryState
       },
       onRehydrateStorage: () => () => {
         // Always leave the splash screen, even when reading failed. Deferred because the

@@ -1,6 +1,6 @@
 import type { Recipe } from '@/lib/types'
 import { getLang, type Lang } from '@/lib/i18n'
-import { seedRecipes } from './recipes'
+import { seedAdded, seedRecipes } from './recipes'
 import { seedEs, type SeedText } from './recipes.es'
 
 // The recipes that come with Plantry are shown in the phone's language. Saved data,
@@ -58,3 +58,17 @@ export function canonicalRecipes(list: Recipe[]): Recipe[] {
 }
 
 export const localSeedRecipes = () => localizeRecipes(seedRecipes)
+
+/**
+ * Starter recipes added since a kitchen was saved at `fromVersion`, minus any it
+ * already has. Lets people who started earlier get new dinners without losing theirs.
+ */
+export function newSeedRecipes(fromVersion: number, have: Recipe[]): Recipe[] {
+  const ids = new Set(have.map((r) => r.id))
+  const added = new Set(
+    Object.entries(seedAdded)
+      .filter(([v]) => Number(v) > fromVersion)
+      .flatMap(([, list]) => list)
+  )
+  return localizeRecipes(seedRecipes.filter((r) => added.has(r.id) && !ids.has(r.id)))
+}
