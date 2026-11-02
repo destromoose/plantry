@@ -1,100 +1,49 @@
 # Plantry
 
-Plantry is a modern meal planning application that simplifies recipe management, meal planning, and grocery shopping. Built with Next.js, TypeScript, and Tailwind CSS, it provides a seamless experience for users to organize their cooking process from start to finish.
+**Dinner, decided.**
 
-## Features
+Plantry is the app that answers "what's for dinner?" before you have to ask. Open it at any hour and the first thing you see is one honest answer for tonight, built from what is already in your kitchen, how much energy you have, and what the day is like outside. Everything else in the app exists to make that answer better.
 
-- **Recipe Management**: Save, organize, and discover recipes
-- **Meal Planning**: Plan meals by day or week with a drag-and-drop interface
-- **Grocery Lists**: Automatically generate shopping lists from your meal plans
-- **AI Recipe Suggestions**: Get personalized recipe ideas based on your preferences and available ingredients
+It is not a recipe library, a calendar, or a diet tool. It is a calm, adaptive companion for the person who carries the dinner decision, and it is built to spread that load across the household.
 
-## Tech Stack
+## What makes it different
 
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS + CSS Modules
-- **State Management**: Zustand for local UI state; React Query for server data
-- **Animations**: Framer Motion
-- **Forms & Validation**: React Hook Form + Zod
-- **UI Components**: Headless UI for accessible base components
-- **Icons**: Lucide React
+- **Tonight first.** The home screen is a single answer, not a grid. Cook it, shuffle it, hand it off, or save it for another night.
+- **Pantry-aware.** The pantry is a first-class screen. Items age visibly, suggestions lean toward what should be used, cooking decrements the pantry, and leftovers become tomorrow's dinner automatically.
+- **Energy, not calories.** "Up for it", "Something quick", or "Can't tonight". The last one is not a failure state.
+- **A shared load.** Everyone in the household is a person in the app, not a shared password. Nights can be claimed or handed off in one tap.
+- **Adaptive.** The palette, copy, and nudges follow the time of day, the weekday, and (if you let it) the weather. Morning says defrost. Five o'clock says start now. Sunday morning says plan the week.
+- **Yours forever.** No account. Everything lives on your device and exports as one JSON file.
 
-## Project Structure
+## Stack
 
-```
-/app
-  /api              # API routes and adapters
-  /components
-    /ui             # Reusable UI components (Button, Card, etc.)
-    /layout         # Layout components (Header, Footer, Navigation)
-    /features
-      /recipes      # Recipe-specific components
-      /grocery      # Grocery list components
-      /planner      # Meal planner components
-  /types            # TypeScript type definitions
-  /hooks            # Custom React hooks
-  /lib              # Utility functions and shared code
-  /services         # API service layer
-  /styles           # Global styles and theme
-```
+Next.js 15 (App Router), React 18, TypeScript, Tailwind CSS, Framer Motion, Zustand (persisted to localStorage), Zod, Lucide icons. No backend in this version.
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18.x or later
-- npm or yarn
-
-### Installation
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/yourusername/plantry.git
-cd plantry
-```
-
-2. Install dependencies:
+## Running it
 
 ```bash
 npm install
-# or
-yarn install
+npm run dev        # http://localhost:3000
+npm run typecheck
+npm run lint
+npm test           # vitest unit tests for the context engine, ranker, store, parser
+npm run build && npm run e2e   # Playwright smoke test with screenshots in e2e/screenshots
 ```
 
-3. Run the development server:
+## Where things live
 
-```bash
-npm run dev
-# or
-yarn dev
+```
+app/                  routes (thin server components)
+components/ui         primitives: Button, Chip, Card, Sheet, Stepper, ProgressRing, ...
+components/shell      Providers (adaptive context), AppShell (tab bar, sidebar)
+components/features   one folder per screen
+lib/context.ts        the adaptive context engine (pure, tested)
+lib/suggest.ts        the suggestion ranker (pure, tested; a model can replace it later)
+lib/store.ts          the local-first store
+lib/seed              24 weeknight recipes and 36 pantry staples
+docs/DESIGN.md        voice, visual language, motion presets, engineering rules
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+## Roadmap
 
-## Development
-
-### Key Commands
-
-- `npm run dev` - Start the development server
-- `npm run build` - Build the application for production
-- `npm run start` - Start the production server
-- `npm run lint` - Run ESLint to check for code quality issues
-
-## Architecture
-
-Plantry follows a layered architecture:
-
-1. **UI Layer**: Presentational components (stateless, themeable)
-2. **Logic Layer**: Hooks & services (custom hooks, data-fetching hooks)
-3. **API Layer**: `api/` folder with typed adapters (REST or GraphQL)
-4. **Domain Models**: Shared `types/` folder for Recipe, GroceryItem, MealPlan
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
+Accounts and sync (the store is already serializable), server-side recipe import, AI suggestions behind the ranker's interface, push notifications for defrost nudges, a premium tier.

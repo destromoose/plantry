@@ -1,38 +1,48 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Fraunces, Inter_Tight } from 'next/font/google'
 import './globals.css'
-import Providers from './providers'
-import Navigation from './components/layout/Navigation'
-import Footer from './components/layout/Footer'
+import { Providers } from '@/components/shell/Providers'
+import { AppShell } from '@/components/shell/AppShell'
 
-const inter = Inter({
+const display = Fraunces({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-display',
+  axes: ['opsz', 'SOFT'],
+  display: 'swap',
+})
+
+const sans = Inter_Tight({
+  subsets: ['latin'],
+  variable: '--font-sans',
   display: 'swap',
 })
 
 export const metadata: Metadata = {
-  title: 'Plantry - Meal Planning Made Simple',
-  description: 'Your personal meal planner and recipe keeper with smart grocery list generator',
-  keywords: ['meal planning', 'recipe organizer', 'grocery list', 'food planning'],
+  title: 'Plantry. Dinner, decided.',
+  description:
+    'The app that answers "what\'s for dinner?" before you ask. Built from your pantry, your energy, and the day outside.',
+  applicationName: 'Plantry',
+  appleWebApp: { capable: true, title: 'Plantry', statusBarStyle: 'default' },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export const viewport: Viewport = {
+  themeColor: '#FAF4EA',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
+    <html lang="en" data-mood="day" className={`${display.variable} ${sans.variable}`} suppressHydrationWarning>
+      <body className="grain font-sans">
+        <div className="ambient" aria-hidden>
+          <i />
+        </div>
         <Providers>
-          <div className="flex min-h-screen flex-col">
-            <Navigation />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
   )
-} 
+}

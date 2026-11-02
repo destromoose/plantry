@@ -1,0 +1,158 @@
+// Domain types for Plantry. Everything here is serializable (no Date objects)
+// so the whole store can be persisted and exported as JSON.
+
+export type Taste = 'cozy' | 'fresh' | 'fast' | 'one-pan' | 'veg-forward' | 'spicy' | 'big-batch' | 'kid-friendly'
+
+export type PantryZone = 'fridge' | 'freezer' | 'cupboard' | 'counter'
+
+export type Aisle =
+  | 'produce'
+  | 'dairy'
+  | 'meat-fish'
+  | 'bakery'
+  | 'pantry'
+  | 'frozen'
+  | 'spices'
+  | 'drinks'
+  | 'other'
+
+export interface Ingredient {
+  id: string
+  name: string
+  /** Normalized lowercase key used to match against pantry items, e.g. "lime". */
+  key: string
+  quantity: number
+  unit: string
+  aisle: Aisle
+  optional?: boolean
+}
+
+export interface Step {
+  id: string
+  text: string
+  /** Minutes, when the step contains a timer ("simmer 12 minutes"). */
+  timerMinutes?: number
+}
+
+export interface Recipe {
+  id: string
+  title: string
+  description: string
+  imageUrl?: string
+  /** Hands-on minutes. */
+  activeMinutes: number
+  /** Total minutes including passive time. */
+  totalMinutes: number
+  servings: number
+  ingredients: Ingredient[]
+  steps: Step[]
+  tastes: Taste[]
+  /** Weather leaning: warm food for cold days, light food for hot days. */
+  weather?: 'warm' | 'light' | 'any'
+  /** Makes leftovers worth planning the next day. */
+  leftovers?: boolean
+  source?: string
+  sourceUrl?: string
+  isFavorite: boolean
+  createdAt: string
+  custom?: boolean
+}
+
+export interface PantryItem {
+  id: string
+  name: string
+  key: string
+  zone: PantryZone
+  aisle: Aisle
+  quantity?: number
+  unit?: string
+  /** ISO date the item was added or last restocked. */
+  addedAt: string
+  /** Days before the item should be used. Fresh produce ~5, dairy ~10, cupboard ~180. */
+  softLifeDays: number
+  staple?: boolean
+}
+
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner'
+
+export interface PlanEntry {
+  id: string
+  /** ISO date, YYYY-MM-DD. */
+  date: string
+  slot: MealSlot
+  recipeId?: string
+  /** A leftovers entry points at the recipe it came from. */
+  leftoversOf?: string
+  /** Free text when there is no recipe ("Takeout", "Out with friends"). */
+  note?: string
+  servings?: number
+  /** Household member id who claimed the night. */
+  cookId?: string
+  done?: boolean
+}
+
+export interface ShopItem {
+  id: string
+  name: string
+  key: string
+  quantity?: number
+  unit?: string
+  aisle: Aisle
+  checked: boolean
+  /** Recipe ids this item was generated from; empty for loose items. */
+  fromRecipeIds: string[]
+}
+
+export interface Member {
+  id: string
+  name: string
+  /** One of the member color tokens. */
+  color: 'terracotta' | 'saffron' | 'sage' | 'plum'
+  isMe?: boolean
+}
+
+export type Energy = 'up-for-it' | 'quick' | 'cant-tonight'
+
+export type Mood = 'dawn' | 'day' | 'dusk' | 'night'
+
+export interface Settings {
+  onboarded: boolean
+  /** 'auto' follows the clock. */
+  mood: Mood | 'auto'
+  reducedMotion: 'system' | 'on' | 'off'
+  units: 'metric' | 'imperial'
+  tastes: Taste[]
+  weatherEnabled: boolean
+  householdWord: 'household' | 'family' | 'home'
+}
+
+export interface Weather {
+  tempC: number
+  precipitation: boolean
+  fetchedAt: string
+}
+
+export interface Context {
+  now: string
+  mood: Mood
+  hour: number
+  isWeekend: boolean
+  /** The date whose dinner the Tonight screen is about. After 9 pm this is tomorrow. */
+  targetDate: string
+  targetLabel: 'Tonight' | 'Tomorrow'
+  weather?: Weather
+  weatherLean: 'warm' | 'light' | 'any'
+  nudge: 'plan-week' | 'defrost' | 'start-now' | 'leftovers' | 'none'
+  reason: string
+}
+
+export interface Handoff {
+  id: string
+  date: string
+  fromId: string
+  toId: string
+  recipeId?: string
+  message?: string
+  createdAt: string
+  accepted?: boolean
+}

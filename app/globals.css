@@ -2,153 +2,218 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Plantry color system. Four moods follow the clock (dawn, day, dusk, night) and
+  are set as RGB triplets on <html data-mood>. Components only ever use the
+  semantic tokens (canvas, surface, ink, accent, ...), never raw colors.
+*/
 @layer base {
-  :root {
-    --background: 210 20% 98%;
-    --foreground: 210 40% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 210 40% 15%;
-    --primary: 33 100% 50%;
-    --primary-foreground: 210 40% 98%;
-    --muted: 210 10% 90%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 33 100% 50%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 33 100% 50%;
-    --radius: 1rem;
+  :root,
+  [data-mood='day'] {
+    --canvas: 250 244 234; /* cream */
+    --surface: 255 252 247;
+    --surface-2: 243 235 221;
+    --ink: 42 31 26; /* espresso */
+    --ink-2: 94 78 70;
+    --ink-3: 150 134 124;
+    --line: 226 214 196;
+    --accent: 200 85 47; /* terracotta */
+    --accent-ink: 255 250 244;
+    --secondary: 122 158 126; /* sage */
+    --secondary-ink: 255 255 255;
+    --glow-a: 255 214 170;
+    --glow-b: 250 244 234;
+    --glow-c: 214 232 214;
+    --glass: 255 252 247;
+    color-scheme: light;
+  }
+  [data-mood='dawn'] {
+    --canvas: 252 241 230;
+    --surface: 255 251 246;
+    --surface-2: 247 230 214;
+    --accent: 214 101 62;
+    --glow-a: 255 196 160;
+    --glow-b: 255 236 214;
+    --glow-c: 246 214 190;
+  }
+  [data-mood='dusk'] {
+    --canvas: 247 236 222;
+    --surface: 255 250 242;
+    --surface-2: 240 224 204;
+    --accent: 221 146 44; /* saffron */
+    --accent-ink: 42 31 26;
+    --secondary: 110 70 112; /* plum */
+    --glow-a: 255 190 110;
+    --glow-b: 247 236 222;
+    --glow-c: 196 160 196;
+  }
+  [data-mood='night'] {
+    --canvas: 30 22 32; /* plum charcoal */
+    --surface: 42 32 44;
+    --surface-2: 56 44 58;
+    --ink: 250 244 234;
+    --ink-2: 214 202 196;
+    --ink-3: 156 142 148;
+    --line: 70 56 72;
+    --accent: 233 162 59; /* saffron */
+    --accent-ink: 30 22 32;
+    --secondary: 140 176 144;
+    --secondary-ink: 30 22 32;
+    --glow-a: 90 50 80;
+    --glow-b: 30 22 32;
+    --glow-c: 40 60 60;
+    --glass: 42 32 44;
+    color-scheme: dark;
   }
 
-  .dark {
-    --background: 210 30% 9%;
-    --foreground: 210 40% 98%;
-    --card: 210 25% 12%;
-    --card-foreground: 210 40% 98%;
-    --primary: 33 100% 50%;
-    --primary-foreground: 210 40% 10%;
-    --muted: 210 25% 16%;
-    --muted-foreground: 215 16% 65%;
-    --accent: 33 100% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 210 25% 16%;
-    --input: 210 25% 16%;
-    --ring: 33 100% 50%;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    border-color: rgb(var(--line));
   }
-  
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--ink));
+    font-feature-settings: 'ss01', 'cv11', 'calt';
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight;
+
+  ::selection {
+    background: rgb(var(--accent) / 0.25);
   }
-  
-  h1 {
-    @apply text-4xl md:text-5xl;
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 6px;
   }
-  
-  h2 {
-    @apply text-3xl md:text-4xl;
-  }
-  
-  h3 {
-    @apply text-2xl md:text-3xl;
-  }
-  
-  h4 {
-    @apply text-xl md:text-2xl;
-  }
-  
-  h5 {
-    @apply text-lg md:text-xl;
-  }
-  
-  h6 {
-    @apply text-base md:text-lg;
+
+  input,
+  textarea,
+  select {
+    font: inherit;
   }
 }
 
 @layer components {
+  /* The ambient kitchen light. Three blurred radial glows that shift with the mood. */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+    background-color: rgb(var(--canvas));
+    transition: background-color 800ms ease;
+  }
+  .ambient::before,
+  .ambient::after,
+  .ambient > i {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(80px);
+    opacity: 0.9;
+    transition: background 800ms ease, transform 1200ms ease;
+    will-change: transform;
+  }
+  .ambient::before {
+    width: 60vw;
+    height: 60vw;
+    left: -15vw;
+    top: -20vw;
+    background: rgb(var(--glow-a));
+  }
+  .ambient::after {
+    width: 55vw;
+    height: 55vw;
+    right: -20vw;
+    bottom: -15vw;
+    background: rgb(var(--glow-c));
+  }
+  .ambient > i {
+    width: 40vw;
+    height: 40vw;
+    right: 10vw;
+    top: 10vh;
+    background: rgb(var(--glow-b));
+    opacity: 0.6;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ambient::before {
+      animation: driftA 24s ease-in-out infinite alternate;
+    }
+    .ambient::after {
+      animation: driftB 30s ease-in-out infinite alternate;
+    }
+  }
+  @keyframes driftA {
+    to {
+      transform: translate3d(8vw, 6vh, 0) scale(1.08);
+    }
+  }
+  @keyframes driftB {
+    to {
+      transform: translate3d(-6vw, -8vh, 0) scale(1.05);
+    }
+  }
+
+  /* Film grain so flat surfaces feel like paper, not plastic. */
+  .grain::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.045;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  [data-mood='night'] .grain::after {
+    mix-blend-mode: screen;
+    opacity: 0.035;
+  }
+
+  .glass {
+    background-color: rgb(var(--glass) / 0.72);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    backdrop-filter: blur(18px) saturate(1.3);
+    border: 1px solid rgb(var(--line) / 0.6);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.3) inset, 0 12px 32px -14px rgb(42 31 26 / 0.35);
+  }
+
   .card {
-    @apply rounded-2xl border bg-card text-card-foreground shadow;
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--line) / 0.7);
+    border-radius: 20px;
+    box-shadow: 0 1px 2px rgb(42 31 26 / 0.04), 0 8px 24px -14px rgb(42 31 26 / 0.18);
   }
-  
-  .btn {
-    @apply inline-flex items-center justify-center rounded-md font-medium transition-colors 
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-           disabled:opacity-50 disabled:pointer-events-none;
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
-  
-  .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  .no-scrollbar {
+    scrollbar-width: none;
   }
-  
-  .btn-secondary {
-    @apply bg-neutral-200 text-neutral-900 hover:bg-neutral-300;
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
-  
-  .btn-ghost {
-    @apply hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  
-  .btn-destructive {
-    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
-  }
-  
-  .btn-link {
-    @apply text-primary underline-offset-4 hover:underline;
-  }
-  
-  .btn-sm {
-    @apply h-8 rounded-md px-3 text-xs;
-  }
-  
-  .btn-md {
-    @apply h-10 px-4 py-2;
-  }
-  
-  .btn-lg {
-    @apply h-12 rounded-md px-8 text-base;
-  }
-  
-  .input {
-    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm
-           file:border-0 file:bg-transparent file:text-sm file:font-medium 
-           placeholder:text-muted-foreground
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring 
-           disabled:cursor-not-allowed disabled:opacity-50;
-  }
-  
-  .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors
-           focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
-  }
-  
-  .badge-primary {
-    @apply bg-primary/10 text-primary hover:bg-primary/20;
-  }
-  
-  .badge-secondary {
-    @apply bg-neutral-100 text-neutral-800 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700;
-  }
-  
-  .badge-destructive {
-    @apply bg-destructive/10 text-destructive hover:bg-destructive/20;
-  }
-  
-  .badge-outline {
-    @apply border border-border bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800;
-  }
-} 
+}
