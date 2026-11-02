@@ -891,4 +891,23 @@ export const es: Record<string, string> = {
     'Abre Plantry desde su nuevo icono. Funciona a pantalla completa y sin conexión.',
   'In your browser menu, choose Install app or Add to Home screen. Plantry then opens full screen and works offline.':
     'En el menú del navegador, elige Instalar app o Añadir a pantalla de inicio. Plantry se abrirá a pantalla completa y funcionará sin conexión.',
+  // Moving to Plantry's own domain.
+  'Plantry has a new home': 'Plantry tiene casa nueva',
+  'Bringing your kitchen over to {v0}…': 'Llevando tu cocina a {v0}…',
+  'Plantry now lives at {v0}. Your plan, pantry, recipes and history are packed and ready to come with you.':
+    'Plantry ahora vive en {v0}. Tu plan, despensa, recetas e historial están listos para venir contigo.',
+  'Open the new Plantry': 'Abrir el nuevo Plantry',
+  'Then swap the icon': 'Después, cambia el ícono',
+  'In Safari, tap Share': 'En Safari, toca Compartir',
+  'and choose Add to Home Screen': 'y elige Agregar a inicio',
+  'In your browser menu, choose Install app or Add to Home screen.':
+    'En el menú del navegador, elige Instalar app o Agregar a la pantalla principal.',
+  'Delete this old Plantry icon. Everything is in the new one.':
+    'Borra este ícono viejo de Plantry. Todo está en el nuevo.',
+  'Welcome to Plantry’s new home': 'Bienvenido a la casa nueva de Plantry',
+  'Plantry now lives at {v0}. Your plan, pantry, recipes and history came with you.':
+    'Plantry ahora vive en {v0}. Tu plan, despensa, recetas e historial vinieron contigo.',
+  'Once the new icon is on your home screen, you can delete the old one.':
+    'Cuando el ícono nuevo esté en tu pantalla de inicio, puedes borrar el viejo.',
+  'Got it': 'Entendido',
 }

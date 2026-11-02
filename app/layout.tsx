@@ -5,6 +5,8 @@ import { Providers } from '@/components/shell/Providers'
 import { AppShell } from '@/components/shell/AppShell'
 import { ErrorBoundary } from '@/components/shell/ErrorBoundary'
 import { ServiceWorker } from '@/components/shell/ServiceWorker'
+import { SiteMove } from '@/components/shell/SiteMove'
+import { SITE_ORIGIN } from '@/lib/site'
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -20,6 +22,7 @@ const sans = Inter_Tight({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
   title: { default: 'Plantry. Dinner, decided.', template: '%s · Plantry' },
   description:
     'The app that answers "what\'s for dinner?" before you ask. Built from your pantry, your energy, and the day outside.',
@@ -65,6 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </Providers>
         </ErrorBoundary>
         <ServiceWorker />
+        <SiteMove />
       </body>
     </html>
   )
