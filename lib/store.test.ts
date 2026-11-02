@@ -123,3 +123,20 @@ describe('importData', () => {
     expect(s().shop).toHaveLength(1)
   })
 })
+
+describe('double taps', () => {
+  it('logs a dinner once even if Finish is tapped twice', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'tomato' }])],
+      plan: [{ id: 'a', date: '2026-11-03', slot: 'dinner', recipeId: 'r1' }],
+      cooked: [],
+    })
+    s().markCooked('2026-11-03')
+    s().markCooked('2026-11-03')
+    expect(s().cooked).toHaveLength(1)
+  })
+  it('says when an item is already on the list', () => {
+    expect(s().addShopItem('Lime')).toBe('added')
+    expect(s().addShopItem('limes')).toBe('exists')
+  })
+})

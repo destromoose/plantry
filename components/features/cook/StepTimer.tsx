@@ -5,6 +5,7 @@ import { Pause, Play, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ProgressRing } from '@/components/ui/ProgressRing'
 import { settle } from '@/lib/motion'
+import { useTapGuard } from '@/lib/useTapGuard'
 import { remainingOf, type TimerState } from './useTimers'
 
 export function formatClock(ms: number): string {
@@ -34,6 +35,10 @@ export function StepTimer({
   const running = !!state && state.endsAt !== null
   const finished = !!state?.finished
   const progress = finished ? 1 : 1 - remaining / durationMs
+  // Start and Pause swap places, so one shared guard stops a double tap undoing itself.
+  const tap = useTapGuard((f: () => void) => f(), 400)
+  const start = () => tap(onStart)
+  const pause = () => tap(onPause)
 
   return (
     <div className="flex flex-col items-center gap-4" role="group" aria-label="Step timer">
@@ -61,11 +66,11 @@ export function StepTimer({
       </motion.div>
       <div className="flex items-center gap-2">
         {running ? (
-          <Button variant="secondary" onClick={onPause}>
+          <Button variant="secondary" onClick={pause}>
             <Pause className="h-4 w-4" aria-hidden /> Pause
           </Button>
         ) : (
-          <Button variant="secondary" onClick={onStart}>
+          <Button variant="secondary" onClick={start}>
             <Play className="h-4 w-4" aria-hidden />{' '}
             {state && !finished && remaining < durationMs ? 'Resume' : 'Start'}
           </Button>

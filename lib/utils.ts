@@ -14,12 +14,18 @@ export function uid(prefix = 'id'): string {
 
 /** Lowercase, singularized-ish key for matching ingredients to pantry items. */
 export function keyOf(name: string): string {
-  const k = name
-    .toLowerCase()
+  const lower = name.toLowerCase().trim()
+  // Strip accents (jalapeño -> jalapeno) but keep letters and digits from any script,
+  // so "2% milk", "豆腐" and "🍋" each get their own key instead of an empty one.
+  const k = lower
     .replace(/\(.*?\)/g, '')
-    .replace(/[^a-z\s]/g, '')
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
     .trim()
     .replace(/\s+/g, ' ')
+  if (!k) return lower.replace(/\s+/g, ' ')
+  if (!/^[a-z ]+$/.test(k)) return k
   if (k.endsWith('oes')) return k.slice(0, -2)
   if (k.endsWith('ies')) return k.slice(0, -3) + 'y'
   if (k.endsWith('s') && !k.endsWith('ss')) return k.slice(0, -1)

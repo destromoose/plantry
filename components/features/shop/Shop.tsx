@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Copy, ListChecks, Plus, ShoppingBasket, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { useTapGuard } from '@/lib/useTapGuard'
 import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { addDays, cn, formatQuantity } from '@/lib/utils'
@@ -79,7 +80,7 @@ export function Shop() {
 
   function add() {
     if (!name.trim()) return
-    addShopItem(name)
+    if (addShopItem(name) === 'exists') toast(`${name.trim()} is already on your list`)
     setName('')
   }
 
@@ -202,6 +203,7 @@ export function Shop() {
 
 function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
   const toggle = useStore((s) => s.toggleShopItem)
+  const toggleOnce = useTapGuard(toggle)
   const remove = useStore((s) => s.removeShopItem)
   const dragged = useRef(false)
   const qty = formatQuantity(item.quantity, item.unit)
@@ -230,7 +232,7 @@ function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
         role="checkbox"
         aria-checked={item.checked}
         aria-label={item.name}
-        onClick={() => !dragged.current && toggle(item.id)}
+        onClick={() => !dragged.current && toggleOnce(item.id)}
         className="flex h-14 min-w-0 flex-1 items-center gap-3 pl-3 text-left"
       >
         <span

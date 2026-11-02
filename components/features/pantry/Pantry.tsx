@@ -80,8 +80,10 @@ export function Pantry() {
   function add(n = name, z = zone) {
     const clean = n.trim()
     if (!clean) return
-    addPantryItem({ name: clean, zone: z })
-    toast(`${clean} is in the pantry`)
+    const res = addPantryItem({ name: clean, zone: z })
+    toast(
+      res === 'added' ? `${clean} is in the pantry` : `${clean} was already there. Marked as fresh.`
+    )
     setName('')
   }
 
@@ -97,8 +99,9 @@ export function Pantry() {
   }
 
   function addStarter() {
-    for (const n of quickPicks.slice(0, 12)) addPantryItem({ name: n })
-    toast('Twelve staples added')
+    let added = 0
+    for (const n of quickPicks.slice(0, 12)) if (addPantryItem({ name: n }) === 'added') added++
+    toast(added ? `${added} staples added` : 'You already have these staples')
   }
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -98,6 +98,8 @@ export function RecipeEditor({
   )
   const [tried, setTried] = useState(false)
 
+  const saving = useRef(false)
+
   if (editId && (!existing || !existing.custom)) {
     return (
       <EmptyState
@@ -161,7 +163,8 @@ export function RecipeEditor({
 
   function save() {
     setTried(true)
-    if (hasErrors) return
+    if (hasErrors || saving.current) return
+    saving.current = true
     const data: Omit<Recipe, 'id' | 'createdAt' | 'isFavorite' | 'custom'> = {
       title: title.trim(),
       description: description.trim(),

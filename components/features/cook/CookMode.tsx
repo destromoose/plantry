@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, ListChecks, Timer, UtensilsCrossed, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { useTapGuard } from '@/lib/useTapGuard'
 import { cn, formatQuantity } from '@/lib/utils'
 import { checkPop, settle } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
@@ -35,6 +36,7 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
   const [dir, setDir] = useState(1)
   const [ingOpen, setIngOpen] = useState(false)
   const [finishOpen, setFinishOpen] = useState(false)
+  const finishing = useRef(false)
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [usePantry, setUsePantry] = useState(true)
   const [leftovers, setLeftovers] = useState(recipe?.leftovers ?? false)
@@ -56,11 +58,14 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
     },
     [last]
   )
-  const next = useCallback(() => {
+  const nextRaw = useCallback(() => {
     if (index >= last) setFinishOpen(true)
     else go(index + 1)
   }, [index, last, go])
-  const prev = useCallback(() => go(index - 1), [index, go])
+  const prevRaw = useCallback(() => go(index - 1), [index, go])
+  // A quick double tap moves one step, not two.
+  const next = useTapGuard(nextRaw)
+  const prev = useTapGuard(prevRaw)
 
   // Keyboard
   useEffect(() => {
@@ -150,7 +155,8 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
   }
 
   function finish() {
-    if (!recipe) return
+    if (!recipe || finishing.current) return
+    finishing.current = true
     if (date && entry) {
       markCooked(date, { usePantry, leftovers })
       toast('Nice work.')

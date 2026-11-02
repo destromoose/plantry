@@ -67,7 +67,7 @@ export interface PlantryState {
     quantity?: number
     unit?: string
     softLifeDays?: number
-  }) => void
+  }) => 'added' | 'restocked'
   removePantryItem: (id: string) => void
   restockPantryItem: (id: string) => void
   useUpPantryItem: (id: string) => void
@@ -83,7 +83,7 @@ export interface PlantryState {
 
   // shop
   generateShop: (dates: string[]) => void
-  addShopItem: (name: string, aisle?: Aisle) => void
+  addShopItem: (name: string, aisle?: Aisle) => 'added' | 'exists'
   toggleShopItem: (id: string) => void
   removeShopItem: (id: string) => void
   clearChecked: () => void
@@ -216,7 +216,7 @@ export const useStore = create<PlantryState>()(
         const existing = get().pantry.find((p) => p.key === key)
         if (existing) {
           get().restockPantryItem(existing.id)
-          return
+          return 'restocked'
         }
         const item = makePantryItem(name, now, {
           ...(zone ? { zone } : {}),
@@ -226,6 +226,7 @@ export const useStore = create<PlantryState>()(
           ...(softLifeDays ? { softLifeDays } : {}),
         })
         set((s) => ({ pantry: [item, ...s.pantry] }))
+        return 'added'
       },
       removePantryItem: (id) => set((s) => ({ pantry: s.pantry.filter((p) => p.id !== id) })),
       restockPantryItem: (id) =>
@@ -268,7 +269,8 @@ export const useStore = create<PlantryState>()(
       markCooked: (date, opts = {}) => {
         const s = get()
         const entry = s.plan.find((p) => p.date === date && p.slot === 'dinner')
-        if (!entry) return
+        // Already marked done: a second tap must not log it twice.
+        if (!entry || entry.done) return
         const recipe = s.recipes.find((r) => r.id === entry.recipeId)
         let pantry = s.pantry
         if (opts.usePantry !== false && recipe) {
@@ -350,7 +352,7 @@ export const useStore = create<PlantryState>()(
       },
       addShopItem: (name, aisle) => {
         const key = keyOf(name)
-        if (get().shop.some((i) => i.key === key)) return
+        if (get().shop.some((i) => i.key === key)) return 'exists'
         const staple = staples.find((st) => st.key === key)
         set((s) => ({
           shop: [
@@ -365,6 +367,7 @@ export const useStore = create<PlantryState>()(
             },
           ],
         }))
+        return 'added'
       },
       toggleShopItem: (id) =>
         set((s) => ({
