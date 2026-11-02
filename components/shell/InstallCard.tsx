@@ -4,14 +4,17 @@ import { useEffect, useState } from 'react'
 import { Share, SquarePlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, SectionTitle } from '@/components/ui/Card'
-
-type PromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<unknown> }
+import {
+  clearInstallPrompt,
+  getInstallPrompt,
+  onInstallPrompt,
+} from '@/components/shell/ServiceWorker'
 
 /** Shows how to put Plantry on the home screen. Hidden once it is already installed. */
 export function InstallCard() {
   const [installed, setInstalled] = useState(true)
   const [ios, setIos] = useState(false)
-  const [prompt, setPrompt] = useState<PromptEvent | null>(null)
+  const [prompt, setPrompt] = useState<ReturnType<typeof getInstallPrompt>>(null)
 
   useEffect(() => {
     const standalone =
@@ -22,15 +25,15 @@ export function InstallCard() {
     setIos(
       /iPhone|iPad|iPod/.test(ua) || (ua.includes('Macintosh') && navigator.maxTouchPoints > 1)
     )
-    const onPrompt = (e: Event) => {
-      e.preventDefault()
-      setPrompt(e as PromptEvent)
-    }
+    setPrompt(getInstallPrompt())
+    const off = onInstallPrompt((e) => {
+      setPrompt(e)
+      if (!e && window.matchMedia?.('(display-mode: standalone)').matches) setInstalled(true)
+    })
     const onInstalled = () => setInstalled(true)
-    window.addEventListener('beforeinstallprompt', onPrompt)
     window.addEventListener('appinstalled', onInstalled)
     return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt)
+      off()
       window.removeEventListener('appinstalled', onInstalled)
     }
   }, [])
@@ -47,7 +50,7 @@ export function InstallCard() {
             className="mt-3"
             onClick={async () => {
               await prompt.prompt()
-              setPrompt(null)
+              clearInstallPrompt()
             }}
           >
             Install Plantry
