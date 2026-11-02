@@ -39,7 +39,10 @@ export function JoinHousehold() {
     setBusy(true)
     setError(null)
     try {
-      setPeek(await peekHousehold(input))
+      const found = await peekHousehold(input)
+      setPeek(found)
+      // A household with nobody named yet: this phone's person is the first.
+      setNewName(found.doc.members.length ? null : '')
     } catch (e) {
       setError((e as Error).message)
     } finally {
