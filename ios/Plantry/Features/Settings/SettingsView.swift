@@ -43,6 +43,7 @@ struct SettingsView: View {
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Let the weather nudge dinner toward cozy or light.").font(Type.body).foregroundStyle(t.ink2)
+                        Text("Sends your rough location (to about 10 km) to Open-Meteo, a free weather service, about every half hour. Nothing else leaves your phone.").font(Type.small).foregroundStyle(t.ink3)
                         if s?.weatherEnabled == true, let w = s?.weather {
                             Text("Right now: \(Int(w.tempC.rounded()))°\(w.precipitation ? ", rain" : "")").font(Type.small).foregroundStyle(t.ink3)
                         }

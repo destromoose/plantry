@@ -292,7 +292,7 @@ struct WeatherOptIn: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "cloud.sun").foregroundStyle(t.ink2)
-            Text("Let Plantry peek at the weather? Rainy nights lean cozy.").font(Type.small).foregroundStyle(t.ink2)
+            Text("Let Plantry peek at the weather? Rainy nights lean cozy. Sends your rough location to Open-Meteo.").font(Type.small).foregroundStyle(t.ink2)
             Spacer(minLength: 0)
             Button("Sure") { store.update { $0.weatherEnabled = true } }.pbutton(.secondary, .sm).fixedSize()
             Button { store.update { $0.weatherDismissed = true } } label: { Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).iconButton() }

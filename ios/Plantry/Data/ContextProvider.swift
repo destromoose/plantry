@@ -77,6 +77,7 @@ final class ContextProvider {
 }
 
 /// One-shot location plus Open-Meteo (free, no key). Returns nil on any failure.
+/// Coordinates are rounded to one decimal (about 10 km) before they leave the phone.
 final class WeatherService: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation?, Never>?
@@ -89,7 +90,9 @@ final class WeatherService: NSObject, CLLocationManagerDelegate, @unchecked Send
 
     func fetch() async -> Weather? {
         guard let loc = await location() else { return nil }
-        let url = URL(string: "https://api.open-meteo.com/v1/forecast?latitude=\(loc.coordinate.latitude)&longitude=\(loc.coordinate.longitude)&current=temperature_2m,precipitation")!
+        let lat = String(format: "%.1f", loc.coordinate.latitude)
+        let lon = String(format: "%.1f", loc.coordinate.longitude)
+        let url = URL(string: "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&current=temperature_2m,precipitation")!
         struct Reply: Decodable { struct Current: Decodable { var temperature_2m: Double?; var precipitation: Double? }; var current: Current? }
         guard let (data, response) = try? await URLSession.shared.data(from: url),
               (response as? HTTPURLResponse)?.statusCode == 200,
