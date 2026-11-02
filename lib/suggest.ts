@@ -1,4 +1,4 @@
-import type { Context, Energy, PantryItem, Recipe, Taste } from './types'
+import type { Context, Energy, PantryItem, Rating, Recipe, Taste } from './types'
 import { isSafe } from './diet'
 import { isUseSoon, toDateKey } from './utils'
 
@@ -19,6 +19,8 @@ export interface SuggestInput {
   /** Recipe ids cooked recently, most recent first. Penalized so dinner does not repeat. */
   recent?: string[]
   exclude?: string[]
+  /** The latest rating for each recipe: loved ones come back sooner, "not again" ones rarely. */
+  ratings?: Record<string, Rating>
   /** Allergens and diets to respect. Recipes that break one are never suggested. */
   avoid?: string[]
 }
@@ -36,7 +38,17 @@ export function coverage(recipe: Recipe, pantry: PantryItem[]) {
  * can later replace it behind the same interface.
  */
 export function suggest(input: SuggestInput): Scored[] {
-  const { recipes, pantry, tastes, energy, context, recent = [], exclude = [], avoid = [] } = input
+  const {
+    recipes,
+    pantry,
+    tastes,
+    energy,
+    context,
+    recent = [],
+    exclude = [],
+    avoid = [],
+    ratings = {},
+  } = input
   const today = toDateKey(new Date(context.now))
   const aging = new Set(pantry.filter((p) => isUseSoon(p, today)).map((p) => p.key))
 
@@ -96,6 +108,12 @@ export function suggest(input: SuggestInput): Scored[] {
     if (recentIdx !== -1) score -= Math.max(0, 25 - recentIdx * 5)
 
     if (recipe.isFavorite) score += 3
+
+    const rating = ratings[recipe.id]
+    if (rating === 'loved') {
+      score += 8
+      if (recentIdx === -1) reasons.push('You loved it last time')
+    } else if (rating === 'not-again') score -= 40
 
     out.push({ recipe, score, have: cov.have, missing: cov.missing, reasons: reasons.slice(0, 2) })
   }

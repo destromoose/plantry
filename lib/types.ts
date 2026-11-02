@@ -160,6 +160,20 @@ export interface Context {
   reason: string
 }
 
+/** How a cooked dinner went, so the good ones come back and the bad ones don't. */
+export type Rating = 'loved' | 'fine' | 'not-again'
+
+/** One dinner in the cooking history. */
+export interface CookedEntry {
+  recipeId: string
+  /** ISO date, YYYY-MM-DD. */
+  date: string
+  cookId?: string
+  rating?: Rating
+  /** A note for next time, like "less chili" or "double the sauce". */
+  note?: string
+}
+
 export interface Handoff {
   id: string
   date: string

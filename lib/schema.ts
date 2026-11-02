@@ -127,6 +127,8 @@ export const cookedSchema = z.object({
   recipeId: z.string(),
   date: z.string(),
   cookId: z.string().optional(),
+  rating: z.enum(['loved', 'fine', 'not-again']).optional().catch(undefined),
+  note: z.string().max(500).optional().catch(undefined),
 })
 
 export const weatherSchema = z.object({

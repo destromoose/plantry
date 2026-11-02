@@ -1,5 +1,6 @@
 'use client'
 
+import { ratingsOf } from '@/lib/history'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -118,6 +119,7 @@ export function Week() {
         tastes: s.settings.tastes,
         context: { ...ctx, isWeekend: dow === 0 || dow === 6 },
         recent: s.cooked.map((c) => c.recipeId),
+      ratings: ratingsOf(s.cooked),
         exclude: [...used],
         avoid,
       })

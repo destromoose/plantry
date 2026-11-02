@@ -1,5 +1,6 @@
 'use client'
 
+import { agoLabel, historyFor, ratingLabels } from '@/lib/history'
 import { formatAmount, withTemperatures } from '@/lib/quantity'
 import { useUnits } from '@/lib/useUnits'
 import { useEffect, useMemo, useState } from 'react'
@@ -188,6 +189,7 @@ export function RecipeDetail({ id }: { id: string }) {
             {recipe.leftovers && <Tag>Leftovers</Tag>}
           </div>
           <AvoidWarning recipe={recipe} className="mt-4" />
+          <CookedLine recipeId={recipe.id} />
           <dl className="mt-4 grid grid-cols-3 gap-3">
             <Stat icon={Flame} label="Active" value={formatMinutes(recipe.activeMinutes)} />
             <Stat icon={Clock} label="Total" value={formatMinutes(recipe.totalMinutes)} />
@@ -372,6 +374,26 @@ function Stat({ icon: Icon, label, value }: { icon: typeof Clock; label: string;
         <Icon className="h-3.5 w-3.5" aria-hidden /> {label}
       </dt>
       <dd className="mt-1 font-display text-lg font-semibold">{value}</dd>
+    </div>
+  )
+}
+
+/** "Cooked 3 times, last 5 days ago · Loved it", plus the latest note. */
+function CookedLine({ recipeId }: { recipeId: string }) {
+  const cooked = useStore((s) => s.cooked)
+  const h = useMemo(() => historyFor(recipeId, cooked), [recipeId, cooked])
+  if (!h.times || !h.lastDate) return null
+  const today = toDateKey(new Date())
+  return (
+    <div className="mt-4 rounded-2xl bg-surface-2 px-4 py-3 text-[0.9375rem]">
+      <p className="text-ink-2">
+        Cooked {h.times === 1 ? 'once' : `${h.times} times`}, last {agoLabel(h.lastDate, today)}
+        {h.rating ? ` · ${ratingLabels[h.rating]}` : ''}.{' '}
+        <Link href="/history" className="font-medium text-ink underline underline-offset-2">
+          History
+        </Link>
+      </p>
+      {h.note && <p className="mt-1 italic text-ink">“{h.note}”</p>}
     </div>
   )
 }

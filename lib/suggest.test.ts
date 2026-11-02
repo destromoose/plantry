@@ -96,3 +96,22 @@ describe('pickNext', () => {
     }
   })
 })
+
+describe('ratings', () => {
+  it('rarely suggests a dinner rated "not again"', async () => {
+    const { suggest } = await import('./suggest')
+    const { seedRecipes } = await import('./seed/recipes')
+    const ctx = { weatherLean: 'any' as const, isWeekend: false, now: new Date().toISOString() }
+    const base = suggest({ recipes: seedRecipes, pantry: [], tastes: [], context: ctx })
+    const top = base[0].recipe.id
+    const rated = suggest({
+      recipes: seedRecipes,
+      pantry: [],
+      tastes: [],
+      context: ctx,
+      ratings: { [top]: 'not-again' },
+    })
+    expect(rated[0].recipe.id).not.toBe(top)
+    expect(rated.findIndex((s) => s.recipe.id === top)).toBeGreaterThan(5)
+  })
+})

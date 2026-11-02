@@ -34,6 +34,9 @@ import { Sheet } from '@/components/ui/Sheet'
 import { toast } from '@/components/ui/Toast'
 import { StepTimer, formatClock } from './StepTimer'
 import { Toggle } from './Toggle'
+import { RatingPicker } from '@/components/features/history/RatingPicker'
+import { Input } from '@/components/ui/Field'
+import type { Rating } from '@/lib/types'
 import { remainingOf, useTimers } from './useTimers'
 
 /** A short name for a step's timer: "Simmer the sauce" rather than "Step 3". */
@@ -140,6 +143,8 @@ export function CookMode({
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [usePantry, setUsePantry] = useState(true)
   const [leftovers, setLeftovers] = useState(recipe?.leftovers ?? false)
+  const [rating, setRating] = useState<Rating | undefined>()
+  const [note, setNote] = useState('')
   const steps = useMemo(() => recipe?.steps ?? [], [recipe])
   const { timers, now, start, pause, reset, announce } = useTimers(saved?.timers ?? {}, (sid) =>
     stepName(steps.find((s) => s.id === sid)?.text ?? '')
@@ -347,7 +352,13 @@ export function CookMode({
               servings: count,
               cookId: tonight?.cookId,
             })
-          markCooked(today, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
+          markCooked(today, {
+            usePantry,
+            leftovers,
+            replaceTomorrow: swapTomorrow,
+            rating,
+            note,
+          })
         }
       )
       router.push('/')
@@ -356,7 +367,7 @@ export function CookMode({
     if (date && entry) {
       const before = useStore.getState().pantry.length
       withUndo('Nice work.', () =>
-        markCooked(date, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
+        markCooked(date, { usePantry, leftovers, replaceTomorrow: swapTomorrow, rating, note })
       )
       const used = before - useStore.getState().pantry.length
       if (used > 0) toast(`${pluralize(used, 'thing')} used up from your pantry.`)
@@ -605,6 +616,19 @@ export function CookMode({
           </p>
         ) : (
           <div className="mb-4 space-y-2">
+            <div className="mb-3 space-y-2">
+              <p className="text-sm font-medium text-ink-2">How was it?</p>
+              <RatingPicker value={rating} onChange={setRating} />
+              <label className="block">
+                <span className="sr-only">A note for next time</span>
+                <Input
+                  value={note}
+                  maxLength={500}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="A note for next time (optional)"
+                />
+              </label>
+            </div>
             <Toggle
               checked={usePantry}
               onChange={setUsePantry}
