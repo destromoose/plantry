@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { Check, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { withUndo } from '@/lib/undo'
+import { avoidLabel } from '@/lib/diet'
+import { AvoidPicker } from './AvoidPicker'
 import { useAppContext } from '@/components/shell/Providers'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -35,6 +37,9 @@ export function Household() {
   const [editing, setEditing] = useState<string | null>(null)
   const [claimDate, setClaimDate] = useState<string | null>(null)
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
+  const [avoidFor, setAvoidFor] = useState<string | null>(null)
+  const setMemberAvoid = useStore((s) => s.setMemberAvoid)
+  const avoidMember = members.find((m) => m.id === avoidFor)
 
   const word = settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)
   const week = weekOf(today)
@@ -104,6 +109,17 @@ export function Household() {
                     {m.isMe && <span className="ml-2 text-sm font-normal text-ink-3">you</span>}
                   </button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-ink-2"
+                  aria-label={`What ${m.name} avoids`}
+                  onClick={() => setAvoidFor(m.id)}
+                >
+                  {m.avoid?.length
+                    ? `Avoids ${m.avoid.length === 1 ? avoidLabel(m.avoid[0]).toLowerCase() : m.avoid.length}`
+                    : 'Avoids'}
+                </Button>
                 {!m.isMe && (
                   <Button
                     variant="ghost"
@@ -300,6 +316,27 @@ export function Household() {
             </button>
           </li>
         </ul>
+      </Sheet>
+
+      <Sheet
+        open={!!avoidMember}
+        onClose={() => setAvoidFor(null)}
+        title={avoidMember ? `What does ${avoidMember.name} avoid?` : undefined}
+      >
+        {avoidMember && (
+          <>
+            <p className="mb-4 text-ink-2">
+              Dinners with these are never suggested for anyone in your {settings.householdWord}.
+            </p>
+            <AvoidPicker
+              value={avoidMember.avoid ?? []}
+              onChange={(v) => setMemberAvoid(avoidMember.id, v)}
+            />
+            <Button className="mt-6 w-full" onClick={() => setAvoidFor(null)}>
+              Done
+            </Button>
+          </>
+        )}
       </Sheet>
 
       <Sheet

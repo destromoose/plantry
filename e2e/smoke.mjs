@@ -64,10 +64,14 @@ try {
     await page.waitForTimeout(400)
     await page.screenshot({ path: `e2e/screenshots/${name}-02-onboarding-taste.png` })
     await page.getByRole('button', { name: 'Next' }).click()
+    await page.getByRole('button', { name: 'Peanuts' }).click()
+    await page.getByRole('button', { name: 'Next' }).click()
     await page.screenshot({ path: `e2e/screenshots/${name}-03-onboarding-pantry.png` })
     await page.getByRole('button', { name: 'Show me tonight' }).click()
     await page.waitForURL(`${BASE}/`)
     await page.waitForTimeout(900)
+    if (/peanut/i.test(await page.locator('main').innerText()))
+      throw new Error(`${name}: a peanut dish was suggested to a peanut-free household`)
     await page.screenshot({ path: `e2e/screenshots/${name}-04-tonight.png`, fullPage: true })
 
     // Navigate by clicking, the way people do. page.goto hides transition bugs.

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChefHat, Plus, Refrigerator, Sprout } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { useAvoid } from '@/lib/useAvoid'
 import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { suggest, coverage } from '@/lib/suggest'
@@ -346,13 +347,14 @@ function CookList({
   recent: string[]
   onPick: () => void
 }) {
+  const avoid = useAvoid()
   const results = useMemo(() => {
     if (!open) return []
-    return suggest({ recipes, pantry, tastes, context: ctx, recent })
+    return suggest({ recipes, pantry, tastes, context: ctx, recent, avoid })
       .map((s) => ({ ...s, total: coverage(s.recipe, pantry).total }))
       .sort((a, b) => b.have / (b.total || 1) - a.have / (a.total || 1) || b.score - a.score)
       .slice(0, 6)
-  }, [open, recipes, pantry, tastes, ctx, recent])
+  }, [open, recipes, pantry, tastes, ctx, recent, avoid])
 
   if (results.length === 0)
     return <p className="text-ink-2">Nothing to cook from yet. Add a few things first.</p>

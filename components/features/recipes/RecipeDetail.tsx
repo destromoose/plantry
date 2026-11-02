@@ -19,6 +19,7 @@ import {
   CalendarPlus,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
 import { cn, addDays, dayLabel, formatMinutes, formatQuantity, toDateKey } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
@@ -40,6 +41,7 @@ export function RecipeDetail({ id }: { id: string }) {
   const addShopItem = useStore((s) => s.addShopItem)
   const setPlanEntry = useStore((s) => s.setPlanEntry)
   const deleteRecipe = useStore((s) => s.deleteRecipe)
+  const cookingFor = useStore((s) => s.settings.cookingFor)
 
   const [servings, setServings] = useState<number | null>(null)
   const [planOpen, setPlanOpen] = useState(false)
@@ -72,7 +74,7 @@ export function RecipeDetail({ id }: { id: string }) {
     )
   }
 
-  const current = servings ?? recipe.servings
+  const current = servings ?? cookingFor ?? recipe.servings
   const scale = current / recipe.servings
   const missing = recipe.ingredients.filter((i) => !i.optional && !pantryKeys.has(i.key))
 
@@ -150,6 +152,7 @@ export function RecipeDetail({ id }: { id: string }) {
             ))}
             {recipe.leftovers && <Tag>Leftovers</Tag>}
           </div>
+          <AvoidWarning recipe={recipe} className="mt-4" />
           <dl className="mt-4 grid grid-cols-3 gap-3">
             <Stat icon={Flame} label="Active" value={formatMinutes(recipe.activeMinutes)} />
             <Stat icon={Clock} label="Total" value={formatMinutes(recipe.totalMinutes)} />
@@ -259,7 +262,11 @@ export function RecipeDetail({ id }: { id: string }) {
           >
             <CalendarPlus className="h-5 w-5" aria-hidden /> Plan it
           </Button>
-          <Button size="lg" className="flex-1" onClick={() => router.push(`/cook/${recipe.id}`)}>
+          <Button
+            size="lg"
+            className="flex-1"
+            onClick={() => router.push(`/cook/${recipe.id}?servings=${current}`)}
+          >
             Cook
           </Button>
         </div>

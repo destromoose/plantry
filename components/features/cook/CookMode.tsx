@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, ListChecks, Timer, UtensilsCrossed, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { AvoidWarning } from '@/components/features/household/AvoidWarning'
+import { Stepper } from '@/components/ui/Stepper'
 import { useTapGuard } from '@/lib/useTapGuard'
 import { cn, formatQuantity } from '@/lib/utils'
 import { checkPop, settle } from '@/lib/motion'
@@ -24,13 +26,24 @@ const slide = {
   exit: (dir: number) => ({ x: dir * -48, opacity: 0 }),
 }
 
-export function CookMode({ id, date }: { id: string; date?: string }) {
+export function CookMode({
+  id,
+  date,
+  servings: servingsParam,
+}: {
+  id: string
+  date?: string
+  servings?: number
+}) {
   const router = useRouter()
   const recipe = useStore((s) => s.recipes.find((r) => r.id === id))
   const entry = useStore((s) =>
     date ? s.plan.find((p) => p.date === date && p.slot === 'dinner') : undefined
   )
   const markCooked = useStore((s) => s.markCooked)
+  const cookingFor = useStore((s) => s.settings.cookingFor)
+  const setPlanServings = useStore((s) => s.setServings)
+  const [people, setPeople] = useState<number | null>(null)
 
   const [index, setIndex] = useState(0)
   const [dir, setDir] = useState(1)
@@ -45,7 +58,11 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
   const steps = useMemo(() => recipe?.steps ?? [], [recipe])
   const last = steps.length - 1
   const step = steps[index]
-  const scale = recipe ? (entry?.servings ?? recipe.servings) / recipe.servings : 1
+  // One servings number, in order: changed here, passed from the recipe page, the plan, the household.
+  const count = recipe
+    ? (people ?? servingsParam ?? entry?.servings ?? cookingFor ?? recipe.servings)
+    : 1
+  const scale = recipe ? count / recipe.servings : 1
   const sheetOpen = ingOpen || finishOpen
 
   const go = useCallback(
@@ -252,6 +269,7 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
             className="mx-auto w-full max-w-2xl space-y-8"
             aria-label={`Step ${index + 1} of ${steps.length}`}
           >
+            {index === 0 && <AvoidWarning recipe={recipe} />}
             <div className="space-y-3">
               <Eyebrow>
                 Step {index + 1} of {steps.length}
@@ -301,9 +319,22 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
       </footer>
 
       <Sheet open={ingOpen} onClose={() => setIngOpen(false)} title="Ingredients" tall>
-        <p className="mb-3 text-sm text-ink-3">
-          For {Math.round(recipe.servings * scale)} servings. Tap to check off.
-        </p>
+        <AvoidWarning recipe={recipe} className="mb-3" />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-ink-3">
+            For {count} {count === 1 ? 'person' : 'people'}. Tap to check off.
+          </p>
+          <Stepper
+            value={count}
+            onChange={(v) => {
+              setPeople(v)
+              if (date && entry) setPlanServings(date, v)
+            }}
+            min={1}
+            max={24}
+            label="Servings"
+          />
+        </div>
         <ul className="space-y-1">
           {recipe.ingredients.map((ing) => {
             const on = checked.has(ing.id)

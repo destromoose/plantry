@@ -648,7 +648,7 @@ export const seedRecipes: Recipe[] = [
       active: 25,
       total: 30,
       servings: 4,
-      tastes: ['spicy', 'fresh', 'kid-friendly'],
+      tastes: ['spicy', 'fresh', 'fast'],
       weather: 'any',
     },
     [

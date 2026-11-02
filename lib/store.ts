@@ -45,7 +45,10 @@ export interface PlantryState {
     members: { name: string }[]
     tastes: Taste[]
     pantryNames: string[]
+    avoid?: string[]
   }) => void
+  setMemberAvoid: (id: string, avoid: string[]) => void
+  setServings: (date: string, servings: number) => void
   addMember: (name: string) => void
   removeMember: (id: string) => void
   renameMember: (id: string, name: string) => void
@@ -145,7 +148,7 @@ export const useStore = create<PlantryState>()(
 
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
 
-      completeOnboarding: ({ members, tastes, pantryNames }) => {
+      completeOnboarding: ({ members, tastes, pantryNames, avoid = [] }) => {
         const now = new Date().toISOString()
         const newMembers: Member[] = members
           .filter((m) => m.name.trim())
@@ -159,7 +162,13 @@ export const useStore = create<PlantryState>()(
           newMembers.push({ id: uid('m'), name: 'Me', color: 'terracotta', isMe: true })
         set((s) => ({
           members: newMembers,
-          settings: { ...s.settings, onboarded: true, tastes },
+          settings: {
+            ...s.settings,
+            onboarded: true,
+            tastes,
+            avoid,
+            cookingFor: Math.max(1, newMembers.length),
+          },
           pantry: pantryNames.map((n) => makePantryItem(n, now)),
         }))
       },
@@ -180,6 +189,14 @@ export const useStore = create<PlantryState>()(
           members: s.members.filter((m) => m.id !== id),
           plan: s.plan.map((p) => (p.cookId === id ? { ...p, cookId: undefined } : p)),
           handoffs: s.handoffs.filter((h) => h.fromId !== id && h.toId !== id),
+        })),
+      setMemberAvoid: (id, avoid) =>
+        set((s) => ({ members: s.members.map((m) => (m.id === id ? { ...m, avoid } : m)) })),
+      setServings: (date, servings) =>
+        set((s) => ({
+          plan: s.plan.map((p) =>
+            p.date === date && p.slot === 'dinner' ? { ...p, servings } : p
+          ),
         })),
       renameMember: (id, name) =>
         set((s) => ({ members: s.members.map((m) => (m.id === id ? { ...m, name } : m)) })),
@@ -315,7 +332,8 @@ export const useStore = create<PlantryState>()(
           if (!dates.includes(entry.date) || !entry.recipeId || entry.done) continue
           const recipe = s.recipes.find((r) => r.id === entry.recipeId)
           if (!recipe) continue
-          const scale = entry.servings ? entry.servings / recipe.servings : 1
+          const scale =
+            (entry.servings ?? s.settings.cookingFor ?? recipe.servings) / recipe.servings
           for (const ing of recipe.ingredients) {
             if (ing.optional || pantryKeys.has(ing.key)) continue
             const prev = needed.get(ing.key)

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
 import { Logo } from '@/components/ui/Logo'
+import { AvoidPicker } from '@/components/features/household/AvoidPicker'
 import { cn } from '@/lib/utils'
 
 export const tasteOptions: { id: Taste; label: string; hint: string }[] = [
@@ -25,7 +26,7 @@ export const tasteOptions: { id: Taste; label: string; hint: string }[] = [
   { id: 'kid-friendly', label: 'Kid-friendly', hint: 'nobody pushes it around the plate' },
 ]
 
-const steps = ['who', 'taste', 'pantry'] as const
+const steps = ['who', 'taste', 'avoid', 'pantry'] as const
 
 export function Onboarding() {
   const router = useRouter()
@@ -33,6 +34,7 @@ export function Onboarding() {
   const [step, setStep] = useState<(typeof steps)[number]>('who')
   const [names, setNames] = useState<string[]>([''])
   const [tastes, setTastes] = useState<Taste[]>([])
+  const [avoid, setAvoid] = useState<string[]>([])
   const [picked, setPicked] = useState<Set<string>>(new Set(quickPicks.slice(0, 8)))
   const idx = steps.indexOf(step)
 
@@ -45,7 +47,12 @@ export function Onboarding() {
   function next() {
     if (idx < steps.length - 1) setStep(steps[idx + 1])
     else {
-      complete({ members: names.map((name) => ({ name })), tastes, pantryNames: [...picked] })
+      complete({
+        members: names.map((name) => ({ name })),
+        tastes,
+        avoid,
+        pantryNames: [...picked],
+      })
       router.replace('/')
     }
   }
@@ -139,7 +146,7 @@ export function Onboarding() {
               How do you like to eat?
             </h1>
             <p className="mt-3 text-[15px] text-ink-2">
-              Pick a few. These are tastes, not rules. No diets here.
+              Pick a few. These are tastes, not rules. Allergies and diets come next.
             </p>
             <motion.div
               variants={staggerContainer}
@@ -173,6 +180,22 @@ export function Onboarding() {
                 )
               })}
             </motion.div>
+          </section>
+        )}
+
+        {step === 'avoid' && (
+          <section>
+            <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+              Anything to keep off the table?
+            </h1>
+            <p className="mt-3 text-[15px] text-ink-2">
+              Plantry will never suggest a dinner with these. You can set it per person later. Skip
+              if nothing applies.
+            </p>
+            <AvoidPicker value={avoid} onChange={setAvoid} className="mt-8" />
+            <p className="mt-4 text-sm text-ink-3">
+              Plantry checks ingredient names. Always check packaging for allergens.
+            </p>
           </section>
         )}
 

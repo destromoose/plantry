@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, ChevronLeft, ChevronRight, MoreHorizontal, Plus, Sparkles } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { householdAvoid } from '@/lib/diet'
 import { useAppContext } from '@/components/shell/Providers'
 import { suggest } from '@/lib/suggest'
 import { addDays, cn, formatMinutes, fromDateKey, shortDay, toDateKey, weekOf } from '@/lib/utils'
@@ -52,6 +53,7 @@ export function Week() {
   function fillWeek() {
     const before = useStore.getState().plan
     const s = useStore.getState()
+    const avoid = householdAvoid(s.settings, s.members)
     const used = new Set<string>(
       s.plan
         .filter((p) => weekDates.includes(p.date) && p.slot === 'dinner' && p.recipeId)
@@ -87,6 +89,7 @@ export function Week() {
         context: { ...ctx, isWeekend: dow === 0 || dow === 6 },
         recent: s.cooked.map((c) => c.recipeId),
         exclude: [...used],
+        avoid,
       })
       const pick =
         ranked[0] ??
@@ -95,6 +98,7 @@ export function Week() {
           pantry: s.pantry,
           tastes: s.settings.tastes,
           context: ctx,
+          avoid,
         })[0]
       if (!pick) continue
       used.add(pick.recipe.id)

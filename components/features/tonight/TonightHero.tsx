@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Clock, HandHeart, Lock, RefreshCw, Users, UtensilsCrossed } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
 import { pickNext, coverage, type Scored } from '@/lib/suggest'
 import type { Energy, PlanEntry, Recipe } from '@/lib/types'
@@ -226,6 +227,7 @@ function PlannedOrSuggested({
     (r) => !r.startsWith('Only missing') && r !== 'You have everything'
   )
   const cook = members.find((m) => m.id === entry?.cookId)
+  const cookingFor = useStore((s) => s.settings.cookingFor)
 
   function lockIn() {
     setPlanEntry({ date: targetDate, slot: 'dinner', recipeId: recipe.id, cookId: entry?.cookId })
@@ -273,9 +275,11 @@ function PlannedOrSuggested({
                 hands-on
               </span>
               <span className="inline-flex items-center gap-1">
-                <Users className="h-4 w-4" aria-hidden /> Serves {recipe.servings}
+                <Users className="h-4 w-4" aria-hidden /> For{' '}
+                {(entry?.recipeId === recipe.id && entry.servings) || cookingFor}
               </span>
             </p>
+            <AvoidWarning recipe={recipe} className="mt-3" />
           </div>
           <ProgressRing
             value={cov.total ? cov.have / cov.total : 0}

@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react'
 import { Check, CalendarDays, Trash2, UserRound, Repeat, Pencil } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { Stepper } from '@/components/ui/Stepper'
+import { useAvoid } from '@/lib/useAvoid'
 import { withUndo } from '@/lib/undo'
 import { coverage, suggest } from '@/lib/suggest'
 import type { Context, PlanEntry, Taste } from '@/lib/types'
@@ -112,6 +114,7 @@ function PickBody({
   const [filters, setFilters] = useState<Taste[]>([])
   const [note, setNote] = useState('')
 
+  const avoid = useAvoid()
   const dow = fromDateKey(date).getDay()
   const ranked = useMemo(
     () =>
@@ -121,8 +124,9 @@ function PickBody({
         tastes,
         context: { ...ctx, isWeekend: dow === 0 || dow === 6 },
         recent: cooked.map((c) => c.recipeId),
+        avoid,
       }),
-    [recipes, pantry, tastes, ctx, dow, cooked]
+    [recipes, pantry, tastes, ctx, dow, cooked, avoid]
   )
 
   const needle = q.trim().toLowerCase()
@@ -306,10 +310,24 @@ function MenuBody({
   onCooked: (date: string) => void
 }) {
   const clearPlanEntry = useStore((s) => s.clearPlanEntry)
+  const setServings = useStore((s) => s.setServings)
+  const cookingFor = useStore((s) => s.settings.cookingFor)
   const hasMeal = !!entry && !!(entry.recipeId || entry.leftoversOf)
   const hasContent = !!entry && !!(entry.recipeId || entry.leftoversOf || entry.note)
   return (
     <ul className="-mx-3 space-y-1">
+      {entry?.recipeId && (
+        <li className="flex min-h-[3.5rem] items-center justify-between gap-3 px-3">
+          <span className="font-medium">Cooking for</span>
+          <Stepper
+            value={entry.servings ?? cookingFor}
+            onChange={(v) => setServings(date, v)}
+            min={1}
+            max={24}
+            label="Cooking for"
+          />
+        </li>
+      )}
       <Row
         icon={Pencil}
         label={hasContent ? 'Change' : 'Pick something'}

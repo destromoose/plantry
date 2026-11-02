@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Heart, Link2, PencilLine, Plus, Search, SearchX } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { AvoidBadge } from '@/components/features/household/AvoidWarning'
 import { coverage } from '@/lib/suggest'
 import type { Taste } from '@/lib/types'
 import { formatMinutes, cn } from '@/lib/utils'
@@ -201,6 +202,7 @@ export function RecipeLibrary() {
                           {cov.have} of {cov.total}
                         </span>
                       </p>
+                      <AvoidBadge recipe={recipe} />
                       {recipe.tastes.length > 0 && (
                         <div className="flex flex-wrap gap-1 pt-0.5">
                           {recipe.tastes.slice(0, 2).map((t) => (

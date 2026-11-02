@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { CloudSun, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { useAvoid } from '@/lib/useAvoid'
 import { useAppContext } from '@/components/shell/Providers'
 import { suggest } from '@/lib/suggest'
 import { addDays, cn, formatMinutes, fromDateKey, shortDay, toDateKey } from '@/lib/utils'
@@ -34,6 +35,7 @@ export function Tonight() {
   const entry = plan.find((p) => p.date === target && p.slot === 'dinner')
   const me = members.find((m) => m.isMe) ?? members[0]
 
+  const avoid = useAvoid()
   const ranked = useMemo(
     () =>
       suggest({
@@ -43,8 +45,9 @@ export function Tonight() {
         energy,
         context: ctx,
         recent: cooked.map((c) => c.recipeId),
+        avoid,
       }),
-    [recipes, pantry, settings.tastes, energy, ctx, cooked]
+    [recipes, pantry, settings.tastes, energy, ctx, cooked, avoid]
   )
 
   const greeting =

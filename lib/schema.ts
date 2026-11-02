@@ -141,6 +141,8 @@ export const defaultSettings: Settings = {
   tastes: [],
   weatherEnabled: false,
   householdWord: 'household',
+  cookingFor: 2,
+  avoid: [],
 }
 
 const settingsSchema = z.object({
@@ -151,6 +153,8 @@ const settingsSchema = z.object({
   tastes: z.array(taste).catch([]),
   weatherEnabled: z.boolean().catch(false),
   householdWord: z.enum(['household', 'family', 'home']).catch('household'),
+  cookingFor: z.number().int().min(1).max(24).catch(2),
+  avoid: z.array(z.string()).catch([]),
 })
 
 /** The persisted collections and the schema for one item of each. */

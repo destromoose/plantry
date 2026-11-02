@@ -123,6 +123,10 @@ export interface Settings {
   tastes: Taste[]
   weatherEnabled: boolean
   householdWord: 'household' | 'family' | 'home'
+  /** How many people dinner is usually for. */
+  cookingFor: number
+  /** Allergens and diets the whole household avoids (see lib/diet.ts). */
+  avoid: string[]
 }
 
 export interface Weather {

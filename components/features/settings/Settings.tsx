@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/Button'
 import { Card, SectionTitle } from '@/components/ui/Card'
 import { Chip } from '@/components/ui/Chip'
 import { Sheet } from '@/components/ui/Sheet'
+import { AvoidPicker } from '@/components/features/household/AvoidPicker'
+import { Stepper } from '@/components/ui/Stepper'
 import { toast } from '@/components/ui/Toast'
 import { settle } from '@/lib/motion'
 import { cn, toDateKey } from '@/lib/utils'
@@ -209,6 +211,34 @@ export function Settings() {
             </Chip>
           ))}
         </div>
+      </Card>
+
+      <Card>
+        <SectionTitle>Cooking for</SectionTitle>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-[15px] text-ink-2">
+            How many people dinner is usually for. Recipes scale to this.
+          </p>
+          <Stepper
+            value={settings.cookingFor}
+            onChange={(v) => update({ cookingFor: v })}
+            min={1}
+            max={24}
+            label="Cooking for"
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle>Keep off the table</SectionTitle>
+        <p className="mb-4 text-[15px] text-ink-2">
+          Plantry never suggests a dinner with these. Set them for one person in{' '}
+          {settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)}.
+        </p>
+        <AvoidPicker value={settings.avoid} onChange={(v) => update({ avoid: v })} />
+        <p className="mt-4 text-sm text-ink-3">
+          Plantry checks ingredient names. Always check packaging for allergens.
+        </p>
       </Card>
 
       <Card>

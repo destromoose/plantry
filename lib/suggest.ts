@@ -1,4 +1,5 @@
 import type { Context, Energy, PantryItem, Recipe, Taste } from './types'
+import { isSafe } from './diet'
 import { daysBetween, toDateKey } from './utils'
 
 export interface Scored {
@@ -18,6 +19,8 @@ export interface SuggestInput {
   /** Recipe ids cooked recently, most recent first. Penalized so dinner does not repeat. */
   recent?: string[]
   exclude?: string[]
+  /** Allergens and diets to respect. Recipes that break one are never suggested. */
+  avoid?: string[]
 }
 
 /** Coverage of a recipe's required ingredients by the pantry. */
@@ -33,7 +36,7 @@ export function coverage(recipe: Recipe, pantry: PantryItem[]) {
  * can later replace it behind the same interface.
  */
 export function suggest(input: SuggestInput): Scored[] {
-  const { recipes, pantry, tastes, energy, context, recent = [], exclude = [] } = input
+  const { recipes, pantry, tastes, energy, context, recent = [], exclude = [], avoid = [] } = input
   const today = toDateKey(new Date(context.now))
   const aging = new Set(
     pantry
@@ -44,6 +47,7 @@ export function suggest(input: SuggestInput): Scored[] {
   const out: Scored[] = []
   for (const recipe of recipes) {
     if (exclude.includes(recipe.id)) continue
+    if (avoid.length && !isSafe(recipe, avoid)) continue
     const reasons: string[] = []
     let score = 0
 
