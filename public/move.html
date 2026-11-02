@@ -81,9 +81,11 @@
     'choose.old': 'Usar mi cocina de la dirección anterior', 'choose.new': 'Conservar lo que hay aquí',
     'failed.title': 'Tu cocina no se trajo', 'failed.retry': 'Intentar de nuevo', 'failed.skip': 'Seguir a Plantry',
     'failed.gone': 'Este enlace ya se usó o caducó. Abre Plantry en la dirección anterior para traer tus datos de nuevo. Ahí siguen guardados.',
+    'failed.full': 'Este teléfono no tiene espacio para guardar tu cocina. Libera espacio y vuelve a intentarlo. Tus datos siguen guardados en la dirección anterior.',
     'failed.net': 'No se pudo conectar con Plantry. Revisa tu conexión e inténtalo de nuevo. Tus datos siguen guardados en la dirección anterior.'
   } : {
     'failed.gone': 'This link was already used or has expired. Open Plantry at the old address to bring your data over again. It is still saved there.',
+    'failed.full': "This phone doesn't have room to save your kitchen. Free up some space and try again. Your data is still saved at the old address.",
     'failed.net': "Plantry couldn't be reached. Check your connection and try again. Your data is still saved at the old address."
   }
   if (es) {
@@ -94,7 +96,7 @@
   var q = new URLSearchParams(location.search)
   // Only ever continue to a page on this address.
   var next = (function (v) {
-    try { var u = new URL(v || '/', location.origin); return u.origin === location.origin ? u.pathname + u.search + u.hash : '/' } catch (e) { return '/' }
+    try { var u = new URL(v || '/', location.origin); return u.origin === location.origin ? '/' + u.pathname.replace(/^[\/\\]+/, '') + u.search + u.hash : '/' } catch (e) { return '/' }
   })(q.get('next'))
   var from = q.get('from') === 'app' ? 'app' : 'web'
   var h = new URLSearchParams(location.hash.slice(1))
@@ -113,20 +115,33 @@
   function show(id) { ['moving', 'confirm', 'choose', 'failed'].forEach(function (s) { document.getElementById(s).hidden = s !== id }) }
   function fail(kind) {
     document.getElementById('failedBody').textContent = T['failed.' + kind]
-    document.getElementById('retry').hidden = kind !== 'net'
+    document.getElementById('retry').hidden = kind === 'gone'
     show('failed')
   }
   function seen() { try { return JSON.parse(ls.getItem(IMPORTED) || '[]') } catch (e) { return [] } }
   function remember(fp) { if (!fp) return; var s = seen().filter(function (x) { return x !== fp }); s.push(fp); ls.setItem(IMPORTED, JSON.stringify(s.slice(-10))) }
   function onboarded(text) { try { return !!JSON.parse(text).state.settings.onboarded } catch (e) { return false } }
 
+  var mine = function (k) { return k && k.indexOf('plantry-') === 0 && k.indexOf('plantry-move') !== 0 }
+  var pending = null
+
+  // Writes the moved data, or puts back exactly what was here if the phone can't save it.
   function apply(items, fp) {
-    var old = []
-    for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (k && k.indexOf('plantry-') === 0 && k.indexOf('plantry-move') !== 0) old.push(k) }
-    old.forEach(function (k) { ls.removeItem(k) })
-    Object.keys(items).forEach(function (k) { if (k.indexOf('plantry-') === 0 && k.indexOf('plantry-move') !== 0) ls.setItem(k, String(items[k])) })
-    remember(fp)
-    ls.setItem(WELCOME, from)
+    pending = { items: items, fp: fp }
+    var before = {}
+    for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (mine(k)) before[k] = ls.getItem(k) }
+    try {
+      Object.keys(before).forEach(function (k) { ls.removeItem(k) })
+      Object.keys(items).forEach(function (k) { if (mine(k)) ls.setItem(k, String(items[k])) })
+      remember(fp)
+      ls.setItem(WELCOME, from)
+    } catch (e) {
+      try {
+        Object.keys(items).forEach(function (k) { if (mine(k)) ls.removeItem(k) })
+        Object.keys(before).forEach(function (k) { ls.setItem(k, before[k]) })
+      } catch (e2) {}
+      return fail('full')
+    }
     go()
   }
 
@@ -147,11 +162,13 @@
 
   function collect() {
     show('moving')
+    // The link is spent once collected, so a retry after a save problem reuses what came.
+    if (pending) return apply(pending.items, pending.fp)
     fetch('/api/move/' + encodeURIComponent(token), { method: 'POST', cache: 'no-store' })
       .then(function (r) {
         if (r.status === 404 || r.status === 400) return fail('gone')
         if (!r.ok) return fail('net')
-        return r.json().then(receive)
+        return r.json().then(receive).catch(function () { fail('net') })
       }, function () { fail('net') })
   }
 
