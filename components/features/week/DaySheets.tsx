@@ -221,7 +221,7 @@ function PickBody({
           Suggestions
         </h3>
         {list.length === 0 ? (
-          <p className="py-4 text-[15px] text-ink-2">Nothing matches. Try fewer filters.</p>
+          <p className="py-4 text-[0.9375rem] text-ink-2">Nothing matches. Try fewer filters.</p>
         ) : (
           <ul className="space-y-2">
             {list.map(({ recipe }) => {
@@ -431,7 +431,7 @@ function ClaimBody({
   const members = useStore((s) => s.members)
   const claimNight = useStore((s) => s.claimNight)
   if (members.length === 0)
-    return <p className="text-[15px] text-ink-2">Add someone to your household first.</p>
+    return <p className="text-[0.9375rem] text-ink-2">Add someone to your household first.</p>
   return (
     <ul className="space-y-2">
       {members.map((m) => (

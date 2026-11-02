@@ -200,7 +200,7 @@ export function Shop() {
             className="glass fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-pill py-2 pl-5 pr-2 lg:bottom-6"
           >
             <span className="text-sm font-medium">{checked} in the basket</span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -264,7 +264,7 @@ function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
         type="button"
         role="checkbox"
         aria-checked={item.checked}
-        aria-label={item.name}
+        aria-label={qty ? `${item.name}, ${qty}` : item.name}
         onClick={() => !dragged.current && toggleOnce(item.id)}
         className="flex h-14 min-w-0 flex-1 items-center gap-3 pl-3 text-left"
       >

@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Sparkles,
@@ -78,6 +78,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isImmersive = immersive.some((p) => pathname.startsWith(p))
 
+  // After moving to another screen, put focus on its heading so keyboard and screen
+  // reader users start at the top of the new page instead of the old button.
+  const firstPath = useRef(true)
+  useEffect(() => {
+    if (!hydrated) return
+    if (firstPath.current) {
+      firstPath.current = false
+      return
+    }
+    const t = setTimeout(() => {
+      const h = document.querySelector<HTMLElement>('#main h1')
+      if (!h) return
+      h.setAttribute('tabindex', '-1')
+      h.focus({ preventScroll: true })
+    }, 80)
+    return () => clearTimeout(t)
+  }, [pathname, hydrated])
+
   if (!hydrated) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
@@ -93,11 +111,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     )
   }
 
+  const extras = (
+    <>
+      <Toaster />
+      <p id="announcer" className="sr-only" aria-live="polite" />
+    </>
+  )
+
   if (isImmersive) {
     return (
       <>
-        <Toaster />
-        <motion.main
+        {extras}
+        <motion.div
+          id="main"
           key={pathname}
           variants={page}
           initial="hidden"
@@ -105,14 +131,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className="min-h-dvh"
         >
           {children}
-        </motion.main>
+        </motion.div>
       </>
     )
   }
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-6xl lg:gap-8 lg:px-6">
-      <Toaster />
+      <a
+        href="#main"
+        className="sr-only z-[90] rounded-pill bg-accent px-4 py-2 font-semibold text-accent-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Skip to content
+      </a>
+      {extras}
       <Sidebar pathname={pathname} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between px-5 pb-1 pt-5 lg:hidden">
@@ -144,6 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Enter-only page fade. An exit animation with mode="wait" never finishes under the
             App Router and leaves the new page invisible, so pages only animate in. */}
         <motion.main
+          id="main"
           key={pathname}
           variants={page}
           initial="hidden"
@@ -152,7 +185,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           {children}
         </motion.main>
-        <TabBar pathname={pathname} />
+        {/* The recipe page has its own action bar; one floating bar at a time. */}
+        {!/^\/recipes\/(?!new$)[^/]+$/.test(pathname) && <TabBar pathname={pathname} />}
       </div>
     </div>
   )
@@ -175,7 +209,7 @@ function TabBar({ pathname }: { pathname: string }) {
               href={t.href}
               aria-current={on ? 'page' : undefined}
               className={cn(
-                'relative flex h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-pill text-[11px] font-medium transition-colors',
+                'relative flex h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-pill text-[0.6875rem] font-medium transition-colors',
                 on ? 'text-accent-ink' : 'text-ink-2'
               )}
             >
@@ -212,7 +246,7 @@ function Sidebar({ pathname }: { pathname: string }) {
               href={t.href}
               aria-current={on ? 'page' : undefined}
               className={cn(
-                'relative flex h-11 items-center gap-3 rounded-pill px-3 text-[15px] font-medium transition-colors',
+                'relative flex h-11 items-center gap-3 rounded-pill px-3 text-[0.9375rem] font-medium transition-colors',
                 on ? 'text-accent-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink',
                 i === tabs.length && 'mt-4'
               )}

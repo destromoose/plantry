@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowRight, Plus, X } from 'lucide-react'
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
 import { Logo } from '@/components/ui/Logo'
+import { toast } from '@/components/ui/Toast'
 import { AvoidPicker } from '@/components/features/household/AvoidPicker'
 import { cn } from '@/lib/utils'
 
@@ -27,16 +28,96 @@ export const tasteOptions: { id: Taste; label: string; hint: string }[] = [
 ]
 
 const steps = ['who', 'taste', 'avoid', 'pantry'] as const
+/** The same limit as the Household screen. */
+export const MAX_PEOPLE = 12
+
+const DRAFT = 'plantry-onboarding'
+interface Draft {
+  step: (typeof steps)[number]
+  names: string[]
+  tastes: Taste[]
+  avoid: string[]
+  picked: string[]
+}
+function loadDraft(): Draft | undefined {
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT) ?? window.localStorage.getItem(DRAFT)
+    return raw ? (JSON.parse(raw) as Draft) : undefined
+  } catch {
+    return undefined
+  }
+}
+function saveDraft(d: Draft) {
+  try {
+    window.localStorage.setItem(DRAFT, JSON.stringify(d))
+  } catch {
+    /* a draft is a nicety */
+  }
+}
+function clearDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT)
+  } catch {
+    /* ignore */
+  }
+}
 
 export function Onboarding() {
   const router = useRouter()
   const complete = useStore((s) => s.completeOnboarding)
-  const [step, setStep] = useState<(typeof steps)[number]>('who')
-  const [names, setNames] = useState<string[]>([''])
-  const [tastes, setTastes] = useState<Taste[]>([])
-  const [avoid, setAvoid] = useState<string[]>([])
-  const [picked, setPicked] = useState<Set<string>>(new Set(quickPicks.slice(0, 8)))
+  // A draft is kept as you go, so a reload or a phone call doesn't lose it.
+  const [draft] = useState(loadDraft)
+  const [step, setStepState] = useState<(typeof steps)[number]>(draft?.step ?? 'who')
+  const [names, setNames] = useState<string[]>(draft?.names ?? [''])
+  const [tastes, setTastes] = useState<Taste[]>(draft?.tastes ?? [])
+  const [avoid, setAvoid] = useState<string[]>(draft?.avoid ?? [])
+  const [picked, setPicked] = useState<Set<string>>(new Set(draft?.picked ?? []))
+  const [tried, setTried] = useState(false)
+  const importData = useStore((s) => s.importData)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
   const idx = steps.indexOf(step)
+
+  useEffect(() => {
+    saveDraft({ step, names, tastes, avoid, picked: [...picked] })
+  }, [step, names, tastes, avoid, picked])
+
+  // Each step is a history entry, so the phone's Back button goes to the previous step.
+  const setStep = (s: (typeof steps)[number]) => {
+    setStepState(s)
+    setTried(false)
+    window.history.pushState({ onboarding: s }, '')
+  }
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const s = (e.state as { onboarding?: (typeof steps)[number] } | null)?.onboarding
+      setStepState(s && steps.includes(s) ? s : 'who')
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  // Move focus to the new step's heading.
+  const firstRender = useRef(true)
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    heading.current?.focus({ preventScroll: true })
+  }, [step])
+
+  async function restore(file?: File) {
+    if (!file) return
+    const res = importData(await file.text())
+    if (!res.ok) {
+      toast(res.error ?? 'Could not read that file.', { tone: 'error' })
+      return
+    }
+    clearDraft()
+    toast('Welcome back. Everything is restored.')
+    router.replace('/')
+  }
 
   const canNext = useMemo(() => {
     if (step === 'who') return names.some((n) => n.trim())
@@ -44,11 +125,19 @@ export function Onboarding() {
     return true
   }, [step, names, tastes])
 
+  const hint =
+    step === 'who' ? 'Add your name to continue.' : step === 'taste' ? 'Pick at least one.' : ''
+
   function next() {
+    if (!canNext) {
+      setTried(true)
+      return
+    }
     if (idx < steps.length - 1) setStep(steps[idx + 1])
     else {
+      clearDraft()
       complete({
-        members: names.map((name) => ({ name })),
+        members: names.map((name) => ({ name: name.trim().slice(0, 40) })),
         tastes,
         avoid,
         pantryNames: [...picked],
@@ -82,10 +171,18 @@ export function Onboarding() {
       >
         {step === 'who' && (
           <section>
-            <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+            <h1
+              ref={heading}
+              tabIndex={-1}
+              className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
+            >
               Who eats here?
             </h1>
-            <p className="mt-3 text-[15px] text-ink-2">
+            <p className="mt-3 text-base text-ink">
+              Plantry picks tonight&apos;s dinner from what you have, plans the week and writes the
+              shopping list.
+            </p>
+            <p className="mt-3 text-[0.9375rem] text-ink-2">
               First names only. You first. Nobody signs in, nobody gets an email. This stays on your
               device.
             </p>
@@ -114,6 +211,7 @@ export function Onboarding() {
                       if (e.key === 'Enter' && canNext) next()
                     }}
                     aria-label={i === 0 ? 'Your name' : `Household member ${i + 1}`}
+                    maxLength={40}
                   />
                   {i > 0 && (
                     <Button
@@ -128,7 +226,7 @@ export function Onboarding() {
                 </motion.li>
               ))}
             </motion.ul>
-            {names.length < 6 && (
+            {names.length < MAX_PEOPLE && (
               <Button
                 variant="ghost"
                 className="-ml-2 mt-3"
@@ -137,15 +235,37 @@ export function Onboarding() {
                 <Plus className="h-4 w-4" /> Add someone
               </Button>
             )}
+            <p className="mt-8 text-sm text-ink-2">
+              Moving from another phone?{' '}
+              <button
+                type="button"
+                className="min-h-[44px] font-medium text-accent underline-offset-2 hover:underline"
+                onClick={() => fileRef.current?.click()}
+              >
+                Restore from a Plantry backup
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                aria-label="Plantry backup file"
+                onChange={(e) => restore(e.target.files?.[0])}
+              />
+            </p>
           </section>
         )}
 
         {step === 'taste' && (
           <section>
-            <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+            <h1
+              ref={heading}
+              tabIndex={-1}
+              className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
+            >
               How do you like to eat?
             </h1>
-            <p className="mt-3 text-[15px] text-ink-2">
+            <p className="mt-3 text-[0.9375rem] text-ink-2">
               Pick a few. These are tastes, not rules. Allergies and diets come next.
             </p>
             <motion.div
@@ -166,7 +286,7 @@ export function Onboarding() {
                       }
                       className="h-auto flex-col items-start gap-0 px-4 py-2.5"
                     >
-                      <span className="text-[15px]">{t.label}</span>
+                      <span className="text-[0.9375rem]">{t.label}</span>
                       <span
                         className={cn(
                           'text-xs font-normal',
@@ -185,10 +305,14 @@ export function Onboarding() {
 
         {step === 'avoid' && (
           <section>
-            <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+            <h1
+              ref={heading}
+              tabIndex={-1}
+              className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
+            >
               Anything to keep off the table?
             </h1>
-            <p className="mt-3 text-[15px] text-ink-2">
+            <p className="mt-3 text-[0.9375rem] text-ink-2">
               Plantry will never suggest a dinner with these. You can set it per person later. Skip
               if nothing applies.
             </p>
@@ -201,12 +325,16 @@ export function Onboarding() {
 
         {step === 'pantry' && (
           <section>
-            <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+            <h1
+              ref={heading}
+              tabIndex={-1}
+              className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
+            >
               What&apos;s already in the kitchen?
             </h1>
-            <p className="mt-3 text-[15px] text-ink-2">
-              Tap what you have. Plantry uses this to suggest dinners you can make right now, and to
-              shorten your list.
+            <p className="mt-3 text-[0.9375rem] text-ink-2">
+              Tap what you have. Nothing is ticked for you. Plantry uses this to suggest dinners you
+              can make right now, and to shorten your list.
             </p>
             <motion.div
               variants={staggerContainer}
@@ -244,7 +372,7 @@ export function Onboarding() {
         )}
       </motion.div>
 
-      <div className="mt-8 flex items-center justify-between">
+      <div className="safe-bottom sticky bottom-0 -mx-6 mt-8 flex flex-wrap items-center justify-between gap-2 bg-canvas/85 px-6 pt-3 backdrop-blur">
         <Button
           variant="ghost"
           onClick={() => idx > 0 && setStep(steps[idx - 1])}
@@ -252,10 +380,27 @@ export function Onboarding() {
         >
           Back
         </Button>
-        <Button size="lg" onClick={next} disabled={!canNext}>
-          {idx === steps.length - 1 ? 'Show me tonight' : 'Next'}
-          <ArrowRight className="h-5 w-5" />
-        </Button>
+        <div className="flex flex-col items-end">
+          <Button
+            size="lg"
+            onClick={next}
+            aria-disabled={!canNext}
+            aria-describedby={!canNext ? 'next-hint' : undefined}
+            className={cn(!canNext && 'opacity-60')}
+          >
+            {idx === steps.length - 1 ? 'Show me tonight' : 'Next'}
+            <ArrowRight className="h-5 w-5" />
+          </Button>
+          {!canNext && (
+            <p
+              id="next-hint"
+              className={cn('mt-1 text-sm', tried ? 'font-medium text-danger' : 'text-ink-3')}
+              role={tried ? 'alert' : undefined}
+            >
+              {hint}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -15,7 +15,7 @@ export function AvoidWarning({ recipe, className }: { recipe: Recipe; className?
     <div
       role="note"
       className={cn(
-        'flex gap-3 rounded-2xl border p-3 text-[15px]',
+        'flex gap-3 rounded-2xl border p-3 text-[0.9375rem]',
         c.blocking.length ? 'border-danger/40 bg-danger/10' : 'border-line bg-surface-2',
         className
       )}

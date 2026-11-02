@@ -35,7 +35,9 @@ export function SaveSheet({
 
   return (
     <Sheet open={open} onClose={onClose} title="Save for another night">
-      <p className="mb-4 text-[15px] text-ink-2">{recipe.title} will be waiting. Which night?</p>
+      <p className="mb-4 text-[0.9375rem] text-ink-2">
+        {recipe.title} will be waiting. Which night?
+      </p>
       <ul className="space-y-2">
         {days.map((d) => {
           const entry = plan.find((p) => p.date === d && p.slot === 'dinner')
@@ -104,7 +106,7 @@ export function HandoffSheet({
     <Sheet open={open} onClose={onClose} title="Hand off dinner">
       {others.length === 0 || !me ? (
         <div>
-          <p className="text-[15px] text-ink-2">
+          <p className="text-[0.9375rem] text-ink-2">
             Add someone to your household first. Then you can pass the apron.
           </p>
           <Link
@@ -117,7 +119,7 @@ export function HandoffSheet({
         </div>
       ) : (
         <div>
-          <p className="mb-4 text-[15px] text-ink-2">
+          <p className="mb-4 text-[0.9375rem] text-ink-2">
             {recipe ? `Pass ${recipe.title} to someone.` : 'Pass tonight to someone.'}
           </p>
           <Label htmlFor="handoff-msg">Add a note (optional)</Label>

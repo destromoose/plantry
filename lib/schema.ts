@@ -145,6 +145,8 @@ export const defaultSettings: Settings = {
   cookingFor: 2,
   avoid: [],
   cookingWithKids: false,
+  highContrast: false,
+  textSize: 'normal',
 }
 
 const settingsSchema = z.object({
@@ -158,6 +160,8 @@ const settingsSchema = z.object({
   cookingFor: z.number().int().min(1).max(24).catch(2),
   avoid: z.array(z.string()).catch([]),
   cookingWithKids: z.boolean().catch(false),
+  highContrast: z.boolean().catch(false),
+  textSize: z.enum(['normal', 'large', 'larger']).catch('normal'),
 })
 
 /** The persisted collections and the schema for one item of each. */

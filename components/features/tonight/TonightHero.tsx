@@ -4,7 +4,17 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Clock, HandHeart, Lock, RefreshCw, Users, UtensilsCrossed } from 'lucide-react'
+import {
+  ArrowRight,
+  Clock,
+  HandHeart,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Users,
+  UtensilsCrossed,
+} from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
@@ -17,6 +27,7 @@ import { Tag } from '@/components/ui/Chip'
 import { Eyebrow } from '@/components/ui/Card'
 import { ProgressRing } from '@/components/ui/ProgressRing'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Sheet } from '@/components/ui/Sheet'
 import { toast } from '@/components/ui/Toast'
 import { Thumb } from '@/components/features/week/Thumb'
 import { HandoffSheet, SaveSheet } from './TonightSheets'
@@ -34,6 +45,7 @@ export function TonightHero(props: HeroProps) {
   const { ranked, entry, energy, targetDate, today } = props
   const recipes = useStore((s) => s.recipes)
   const clearPlanEntry = useStore((s) => s.clearPlanEntry)
+  const setEnergy = useStore((s) => s.setEnergy)
 
   const planned = entry?.recipeId ? recipes.find((r) => r.id === entry.recipeId) : undefined
   const leftoverOf = entry?.leftoversOf
@@ -60,11 +72,15 @@ export function TonightHero(props: HeroProps) {
       <div className="card p-6">
         <Eyebrow>Decided</Eyebrow>
         <h2 className="mt-1 font-display text-fluid-xl font-semibold">{entry.note}</h2>
-        <p className="mt-1 text-[15px] text-ink-2">Dinner is handled. Nothing to wash.</p>
+        <p className="mt-1 text-[0.9375rem] text-ink-2">Dinner is handled. Nothing to wash.</p>
         <Button
           variant="secondary"
           className="mt-5"
-          onClick={() => clearPlanEntry(targetDate, 'dinner')}
+          onClick={() => {
+            // Also move off "Can't tonight", or the takeout option just comes back.
+            clearPlanEntry(targetDate, 'dinner')
+            setEnergy(targetDate, 'quick')
+          }}
         >
           Pick something to cook instead
         </Button>
@@ -91,7 +107,7 @@ export function TonightHero(props: HeroProps) {
           <h2 className="mt-1 font-display text-fluid-xl font-semibold leading-tight">
             Leftovers: {leftoverOf.title}
           </h2>
-          <p className="mt-1 text-[15px] text-ink-2">Already cooked. Heat, plate, done.</p>
+          <p className="mt-1 text-[0.9375rem] text-ink-2">Already cooked. Heat, plate, done.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => clearPlanEntry(targetDate, 'dinner')}>
               Cook something else
@@ -170,7 +186,11 @@ function Deck(props: HeroProps) {
           onDragStart={() => (moved.current = true)}
           onDragEnd={(_, info) => {
             setTimeout(() => (moved.current = false), 0)
-            if (Math.abs(info.offset.x) > 100) shuffle(info.offset.x > 0 ? 1 : -1)
+            if (
+              Math.abs(info.offset.x) > 140 &&
+              Math.abs(info.offset.x) > Math.abs(info.offset.y) * 1.5
+            )
+              shuffle(info.offset.x > 0 ? 1 : -1)
           }}
           onClickCapture={(e) => {
             if (moved.current) {
@@ -187,7 +207,7 @@ function Deck(props: HeroProps) {
           />
         </motion.div>
       </AnimatePresence>
-      <p className="mt-3 text-center text-xs text-ink-3">Swipe the card to shuffle</p>
+      <p className="mt-3 text-center text-sm text-ink-2">Swipe the card sideways to shuffle</p>
       <span className="sr-only" aria-live="polite">
         Showing {scored.recipe.title}
       </span>
@@ -215,6 +235,25 @@ function PlannedOrSuggested({
   const setSeen = useStore((s) => s.setShuffleSeen)
   const [handoff, setHandoff] = useState(false)
   const [save, setSave] = useState(false)
+  const [more, setMore] = useState(false)
+  const addShopItem = useStore((s) => s.addShopItem)
+  const seen = useStore((s) => s.shuffleSeen)
+  const missingIngs = recipe.ingredients.filter(
+    (i) => !i.optional && !pantry.some((p) => p.key === i.key)
+  )
+  function addMissing() {
+    let added = 0
+    for (const i of missingIngs)
+      if (
+        addShopItem(i.name, i.aisle, {
+          quantity: i.quantity || undefined,
+          unit: i.unit,
+          recipeId: recipe.id,
+        }) === 'added'
+      )
+        added++
+    toast(added ? `${added} added to your list` : 'Already on your list')
+  }
 
   const cov = coverage(recipe, pantry)
   const coverLine =
@@ -239,8 +278,9 @@ function PlannedOrSuggested({
     <article className="card overflow-hidden">
       <Link
         href={`/recipes/${recipe.id}`}
-        className="relative block aspect-[4/3] max-h-[420px] w-full bg-surface-2 sm:aspect-[16/9]"
-        aria-label={`Open ${recipe.title}`}
+        className="relative block aspect-[16/9] max-h-[32vh] w-full bg-surface-2 sm:max-h-[420px]"
+        aria-hidden
+        tabIndex={-1}
         draggable={false}
       >
         <motion.div
@@ -286,16 +326,24 @@ function PlannedOrSuggested({
             size={48}
             stroke={5}
             tone={cov.missing.length === 0 ? 'secondary' : 'accent'}
+            label={`${cov.have} of ${cov.total} ingredients at home`}
           >
-            <span className="font-display text-sm font-semibold">{cov.have}</span>
+            <span className="font-display text-sm font-semibold" aria-hidden>
+              {cov.have}/{cov.total}
+            </span>
           </ProgressRing>
         </div>
 
-        <p className="mt-3 text-[15px]">
+        <p className="mt-3 text-[0.9375rem]">
           <span className="font-medium">
             You have {cov.have} of {cov.total}.
           </span>{' '}
           <span className="text-ink-2">{coverLine}.</span>
+          {missingIngs.length > 0 && (
+            <Button variant="ghost" size="sm" className="ml-1 text-accent" onClick={addMissing}>
+              <Plus className="h-3.5 w-3.5" aria-hidden /> Add {missingIngs.length} to list
+            </Button>
+          )}
         </p>
 
         {tags.length > 0 && (
@@ -328,27 +376,63 @@ function PlannedOrSuggested({
               <RefreshCw className="h-4 w-4" aria-hidden /> Shuffle
             </Button>
           )}
-          <Button variant="ghost" onClick={() => setHandoff(true)}>
-            <HandHeart className="h-4 w-4" aria-hidden /> Hand off
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="More options"
+            className="ml-auto"
+            onClick={() => setMore(true)}
+          >
+            <MoreHorizontal className="h-5 w-5" aria-hidden />
+          </Button>
+        </div>
+      </div>
+
+      <Sheet open={more} onClose={() => setMore(false)} title={recipe.title}>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setMore(false)
+              setHandoff(true)
+            }}
+          >
+            <HandHeart className="h-4 w-4" aria-hidden /> Hand off to someone
           </Button>
           {planned ? (
             <Button
-              variant="ghost"
-              onClick={() =>
+              variant="secondary"
+              onClick={() => {
+                setMore(false)
+                // Don't offer the same dish again straight away.
+                setSeen([...seen, recipe.id])
                 withUndo('Cleared tonight. Pick another.', () =>
                   clearPlanEntry(targetDate, 'dinner')
                 )
-              }
+              }}
             >
               Not feeling it
             </Button>
           ) : (
-            <Button variant="ghost" onClick={() => setSave(true)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setMore(false)
+                setSave(true)
+              }}
+            >
               Save for another night
             </Button>
           )}
+          <Link
+            href={`/recipes/${recipe.id}`}
+            className={buttonVariants({ variant: 'ghost' })}
+            onClick={() => setMore(false)}
+          >
+            Open the recipe
+          </Link>
         </div>
-      </div>
+      </Sheet>
 
       <HandoffSheet
         open={handoff}
@@ -400,7 +484,7 @@ function CantTonight({
       <h2 id="easy-way" className="mt-1 font-display text-fluid-xl font-semibold leading-tight">
         Fair. Here&apos;s the easy way out.
       </h2>
-      <p className="mt-1 text-[15px] text-ink-2">Pick whichever takes the least from you.</p>
+      <p className="mt-1 text-[0.9375rem] text-ink-2">Pick whichever takes the least from you.</p>
 
       <div className="mt-5 space-y-3">
         {leftoverRecipe && (

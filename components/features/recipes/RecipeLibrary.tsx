@@ -129,7 +129,10 @@ export function RecipeLibrary() {
         ))}
       </div>
 
-      <div className="mt-5" aria-live="polite">
+      <p className="sr-only" aria-live="polite">
+        {filtered.length === 1 ? '1 recipe' : `${filtered.length} recipes`}
+      </p>
+      <div className="mt-5">
         {filtered.length === 0 ? (
           <EmptyState
             icon={SearchX}
@@ -183,10 +186,10 @@ export function RecipeLibrary() {
                       />
                     </motion.div>
                     <div className="space-y-1.5 p-3">
-                      <h2 className="font-display text-[17px] font-semibold leading-snug tracking-tight">
+                      <h2 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-tight">
                         {recipe.title}
                       </h2>
-                      <p className="flex items-center gap-1.5 text-[13px] text-ink-2">
+                      <p className="flex items-center gap-1.5 text-[0.8125rem] text-ink-2">
                         <span>{formatMinutes(recipe.activeMinutes)}</span>
                         <span aria-hidden className="text-ink-3">
                           ·

@@ -19,7 +19,7 @@ export function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-4 py-2 text-left text-[15px]"
+      className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-4 py-2 text-left text-[0.9375rem]"
     >
       {label}
       <span

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -54,6 +54,10 @@ export function RecipeDetail({ id }: { id: string }) {
   const cookingFor = useStore((s) => s.settings.cookingFor)
 
   const [servings, setServings] = useState<number | null>(null)
+  useEffect(() => {
+    if (recipe) document.title = `${recipe.title} · Plantry`
+  }, [recipe])
+
   // A cook session for this recipe that was left part-way.
   const [resume] = useState(() => {
     if (typeof window === 'undefined') return undefined
@@ -81,7 +85,7 @@ export function RecipeDetail({ id }: { id: string }) {
         action={
           <Link
             href="/recipes"
-            className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[15px] font-medium hover:bg-line/60"
+            className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
           >
             Back to recipes
           </Link>
@@ -150,7 +154,7 @@ export function RecipeDetail({ id }: { id: string }) {
           <Button
             variant="glass"
             size="icon"
-            aria-label={recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-label="Favorite"
             aria-pressed={recipe.isFavorite}
             onClick={() => toggleFavorite(recipe.id)}
           >
@@ -172,9 +176,7 @@ export function RecipeDetail({ id }: { id: string }) {
           <h1 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">
             {recipe.title}
           </h1>
-          {recipe.description && (
-            <p className="mt-2 text-[16px] text-ink-2">{recipe.description}</p>
-          )}
+          {recipe.description && <p className="mt-2 text-base text-ink-2">{recipe.description}</p>}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {recipe.tastes.map((t) => (
               <Tag key={t}>{tasteLabels[t]}</Tag>
@@ -228,7 +230,7 @@ export function RecipeDetail({ id }: { id: string }) {
                     {have && <Check className="h-3.5 w-3.5" aria-hidden />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="text-[15px]">{ing.name}</span>
+                    <span className="text-[0.9375rem]">{ing.name}</span>
                     {ing.optional && <span className="text-sm text-ink-3"> (optional)</span>}
                     <span className="sr-only">
                       {have ? ', you have it' : ', not in your pantry'}
@@ -268,7 +270,7 @@ export function RecipeDetail({ id }: { id: string }) {
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[16px] leading-relaxed">{withFahrenheit(step.text)}</p>
+                  <p className="text-base leading-relaxed">{withFahrenheit(step.text)}</p>
                   {step.timerMinutes && (
                     <Tag className="mt-2 gap-1">
                       <Timer className="h-3 w-3" aria-hidden /> {step.timerMinutes} min
@@ -281,7 +283,10 @@ export function RecipeDetail({ id }: { id: string }) {
         </motion.section>
       </motion.div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-center px-4 lg:bottom-6">
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 lg:bottom-6"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      >
         <div className="glass pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-pill p-2">
           <Button
             variant="secondary"
@@ -324,7 +329,7 @@ export function RecipeDetail({ id }: { id: string }) {
       </Sheet>
 
       <Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete this recipe?">
-        <p className="mb-5 text-[15px] text-ink-2">
+        <p className="mb-5 text-[0.9375rem] text-ink-2">
           {recipe.title} will be removed from your recipes. Any night you planned it for goes back
           to empty.
         </p>

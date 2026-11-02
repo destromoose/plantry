@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { announce as say } from '@/lib/announce'
 import { addDays, toDateKey } from '@/lib/utils'
 import { clearCookSession, loadCookSession, saveCookSession } from '@/lib/cookSession'
 import { cautionsFor, needsGrownUp, withFahrenheit } from '@/lib/safety'
@@ -69,13 +70,13 @@ function StepCautions({ text, own, kids }: { text: string; own?: string; kids: b
   return (
     <ul className="space-y-1.5 pt-1">
       {list.map((c) => (
-        <li key={c.kind} className="flex items-start gap-2 text-[15px] text-ink-2">
+        <li key={c.kind} className="flex items-start gap-2 text-[0.9375rem] text-ink-2">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
           <span>{c.note}</span>
         </li>
       ))}
       {kids && needsGrownUp(list) && (
-        <li className="pl-6 text-[15px] font-medium text-ink">
+        <li className="pl-6 text-[0.9375rem] font-medium text-ink">
           New to this? Ask a grown-up to help with this step.
         </li>
       )}
@@ -223,6 +224,21 @@ export function CookMode({
 
   const anyRunning = Object.values(timers).some((t) => t.endsAt !== null)
 
+  useEffect(() => {
+    if (recipe) document.title = `Cooking ${recipe.title} · Plantry`
+  }, [recipe])
+
+  // Read the new step out when it changes.
+  const firstStep = useRef(true)
+  useEffect(() => {
+    if (firstStep.current) {
+      firstStep.current = false
+      return
+    }
+    const s = steps[index]
+    if (s) say(`Step ${index + 1} of ${steps.length}. ${s.text}`)
+  }, [index, steps])
+
   // Save the place and timers so a reload, a locked phone or a closed tab can resume.
   useEffect(() => {
     if (!recipe || finishing.current) return
@@ -258,7 +274,7 @@ export function CookMode({
           action={
             <Link
               href={recipe ? `/recipes/${recipe.id}` : '/recipes'}
-              className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[15px] font-medium hover:bg-line/60"
+              className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
             >
               {recipe ? 'Back to the recipe' : 'Back to recipes'}
             </Link>
@@ -269,8 +285,10 @@ export function CookMode({
   }
 
   function onDragEnd(_: unknown, info: PanInfo) {
-    if (info.offset.x < -80 || info.velocity.x < -500) next()
-    else if (info.offset.x > 80 || info.velocity.x > 500) prev()
+    // A clear sideways swipe only, so a slip while reading doesn't change the step.
+    if (Math.abs(info.offset.x) < Math.abs(info.offset.y) * 1.5) return
+    if (info.offset.x < -120 || (info.offset.x < -60 && info.velocity.x < -800)) next()
+    else if (info.offset.x > 120 || (info.offset.x > 60 && info.velocity.x > 800)) prev()
   }
 
   const alreadyDone = !!entry?.done
@@ -327,9 +345,9 @@ export function CookMode({
           >
             <X className="h-5 w-5" aria-hidden />
           </Button>
-          <p className="min-w-0 flex-1 truncate text-center text-sm font-medium text-ink-2">
+          <h1 className="min-w-0 flex-1 truncate text-center text-sm font-medium text-ink-2">
             {recipe.title}
-          </p>
+          </h1>
           <div className="w-11" aria-hidden />
         </div>
         {awake && <p className="mt-1 text-center text-xs text-ink-3">Screen stays on</p>}
@@ -377,7 +395,7 @@ export function CookMode({
                     : `${stepName(s.text)} timer, ${formatClock(remainingOf(t, now))} left${t.endsAt === null ? ', paused' : ''}. Go to step ${i + 1}.`
                 }
                 className={cn(
-                  'inline-flex h-9 items-center gap-1.5 rounded-pill px-3 text-[13px] font-medium tabular-nums',
+                  'inline-flex h-9 items-center gap-1.5 rounded-pill px-3 text-[0.8125rem] font-medium tabular-nums',
                   t.finished
                     ? 'animate-pulse bg-danger text-cream'
                     : t.endsAt === null
@@ -437,7 +455,7 @@ export function CookMode({
         </AnimatePresence>
       </main>
 
-      <footer className="safe-bottom flex items-center gap-2 pt-2">
+      <footer className="safe-bottom sticky bottom-0 z-10 -mx-5 flex items-center gap-2 bg-canvas/85 px-5 pt-2 backdrop-blur">
         <Button variant="glass" size="lg" onClick={() => setIngOpen(true)}>
           <ListChecks className="h-5 w-5" aria-hidden /> Ingredients
         </Button>
@@ -517,7 +535,7 @@ export function CookMode({
                       )}
                     </AnimatePresence>
                   </span>
-                  <span className={cn('flex-1 text-[15px]', on && 'text-ink-3 line-through')}>
+                  <span className={cn('flex-1 text-[0.9375rem]', on && 'text-ink-3 line-through')}>
                     {ing.name}
                     {ing.optional && ' (optional)'}
                   </span>
@@ -544,10 +562,10 @@ export function CookMode({
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             Dinner&apos;s done.
           </h2>
-          <p className="mt-1 text-[15px] text-ink-2">{recipe.title}</p>
+          <p className="mt-1 text-[0.9375rem] text-ink-2">{recipe.title}</p>
         </div>
         {alreadyDone ? (
-          <p className="mb-4 text-center text-[15px] text-ink-2">
+          <p className="mb-4 text-center text-[0.9375rem] text-ink-2">
             Already marked as cooked, so it won&apos;t be counted twice.
           </p>
         ) : (

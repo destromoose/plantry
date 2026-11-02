@@ -22,14 +22,18 @@ export function Stepper({ value, onChange, min = 1, max = 12, label }: StepperPr
     >
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon"
         onClick={() => onChange(Math.max(min, value - 1))}
-        aria-label="Decrease"
+        aria-label={`${label}: one fewer`}
         disabled={value <= min}
       >
         <Minus className="h-4 w-4" />
       </Button>
-      <div className="relative h-7 w-8 overflow-hidden text-center tabular-nums">
+      <div
+        className="relative h-7 w-8 overflow-hidden text-center tabular-nums"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <AnimatePresence initial={false} mode="popLayout">
           <motion.span
             key={value}
@@ -45,9 +49,9 @@ export function Stepper({ value, onChange, min = 1, max = 12, label }: StepperPr
       </div>
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon"
         onClick={() => onChange(Math.min(max, value + 1))}
-        aria-label="Increase"
+        aria-label={`${label}: one more`}
         disabled={value >= max}
       >
         <Plus className="h-4 w-4" />

@@ -8,7 +8,7 @@ export const Input = React.forwardRef<
   <input
     ref={ref}
     className={cn(
-      'h-12 w-full rounded-2xl border border-line bg-surface px-4 text-[15px] text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20',
+      'h-12 w-full rounded-2xl border border-line-strong bg-surface px-4 text-base text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20',
       className
     )}
     {...props}
@@ -23,7 +23,7 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      'min-h-[6rem] w-full rounded-2xl border border-line bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20',
+      'min-h-[6rem] w-full rounded-2xl border border-line-strong bg-surface px-4 py-3 text-base text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20',
       className
     )}
     {...props}
@@ -58,7 +58,7 @@ export function Select({
   return (
     <select
       className={cn(
-        'h-12 w-full appearance-none rounded-2xl border border-line bg-surface px-4 text-[15px] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20',
+        'h-12 w-full appearance-none rounded-2xl border border-line-strong bg-surface px-4 text-base text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20',
         className
       )}
       {...props}

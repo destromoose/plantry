@@ -1,5 +1,7 @@
 import { RecipeEditor } from '@/components/features/recipes/RecipeEditor'
 
+export const metadata = { title: 'Recipe editor' }
+
 export default async function Page({
   searchParams,
 }: {

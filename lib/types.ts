@@ -131,6 +131,8 @@ export interface Settings {
   avoid: string[]
   /** Show ask-a-grown-up notes on hot and sharp steps. */
   cookingWithKids: boolean
+  highContrast: boolean
+  textSize: 'normal' | 'large' | 'larger'
 }
 
 export interface Weather {

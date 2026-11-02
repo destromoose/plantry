@@ -19,7 +19,7 @@ const sans = Inter_Tight({
 })
 
 export const metadata: Metadata = {
-  title: 'Plantry. Dinner, decided.',
+  title: { default: 'Plantry. Dinner, decided.', template: '%s · Plantry' },
   description:
     'The app that answers "what\'s for dinner?" before you ask. Built from your pantry, your energy, and the day outside.',
   applicationName: 'Plantry',

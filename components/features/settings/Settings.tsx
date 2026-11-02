@@ -155,6 +155,27 @@ export function Settings() {
       </Card>
 
       <Card>
+        <SectionTitle>Reading</SectionTitle>
+        <Choice
+          label="Text size"
+          value={settings.textSize}
+          onChange={(v) => update({ textSize: v })}
+          options={[
+            { id: 'normal', label: 'Normal' },
+            { id: 'large', label: 'Large' },
+            { id: 'larger', label: 'Larger' },
+          ]}
+        />
+        <div className="mt-3">
+          <Toggle
+            checked={settings.highContrast}
+            onChange={(v) => update({ highContrast: v })}
+            label="High contrast"
+          />
+        </div>
+      </Card>
+
+      <Card>
         <SectionTitle>Motion</SectionTitle>
         <Choice
           label="Motion"
@@ -171,7 +192,7 @@ export function Settings() {
       <Card>
         <SectionTitle>Weather</SectionTitle>
         <div className="flex items-center justify-between gap-4">
-          <p className="text-[15px] text-ink-2">
+          <p className="text-[0.9375rem] text-ink-2">
             Let the weather nudge dinner toward cozy or light.
             {settings.weatherEnabled && weather && (
               <span className="mt-1 block text-ink">
@@ -217,7 +238,7 @@ export function Settings() {
       <Card>
         <SectionTitle>Cooking for</SectionTitle>
         <div className="flex items-center justify-between gap-4">
-          <p className="text-[15px] text-ink-2">
+          <p className="text-[0.9375rem] text-ink-2">
             How many people dinner is usually for. Recipes scale to this.
           </p>
           <Stepper
@@ -239,7 +260,7 @@ export function Settings() {
 
       <Card>
         <SectionTitle>Keep off the table</SectionTitle>
-        <p className="mb-4 text-[15px] text-ink-2">
+        <p className="mb-4 text-[0.9375rem] text-ink-2">
           Plantry never suggests a dinner with these. Set them for one person in{' '}
           {settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)}.
         </p>
@@ -265,7 +286,9 @@ export function Settings() {
 
       <Card>
         <SectionTitle>Words</SectionTitle>
-        <p className="mb-3 text-[15px] text-ink-2">What do you call the people you cook for?</p>
+        <p className="mb-3 text-[0.9375rem] text-ink-2">
+          What do you call the people you cook for?
+        </p>
         <Choice
           label="Household word"
           value={settings.householdWord}

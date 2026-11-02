@@ -28,12 +28,13 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
       aria-pressed={selected}
       className={cn(
         'inline-flex select-none items-center gap-1.5 rounded-pill border font-medium transition-colors',
-        size === 'sm' ? 'h-8 px-3 text-[13px]' : 'h-10 px-4 text-sm',
+        "relative after:absolute after:-inset-x-0.5 after:-inset-y-1.5 after:content-['']",
+        size === 'sm' ? 'h-8 px-3 text-[0.8125rem]' : 'h-11 px-4 text-sm',
         selected
           ? tone === 'secondary'
             ? 'border-secondary bg-secondary text-secondary-ink'
             : 'border-accent bg-accent text-accent-ink'
-          : 'border-line bg-surface/70 text-ink-2 hover:border-ink-3 hover:text-ink',
+          : 'border-line-strong bg-surface/70 text-ink-2 hover:border-ink-3 hover:text-ink',
         className
       )}
       {...props}

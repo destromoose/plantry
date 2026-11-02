@@ -73,6 +73,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
     [settings.mood, settings.weatherEnabled, weather, plan, recipes, tick, stayDate]
   )
 
+  // Contrast and text size live on <html> too.
+  useEffect(() => {
+    const html = document.documentElement
+    if (settings.highContrast) html.dataset.contrast = 'more'
+    else delete html.dataset.contrast
+    if (settings.textSize !== 'normal') html.dataset.text = settings.textSize
+    else delete html.dataset.text
+    html.dataset.motion = settings.reducedMotion === 'on' ? 'reduce' : 'auto'
+  }, [settings.highContrast, settings.textSize, settings.reducedMotion])
+
   // Apply the mood to <html> so CSS tokens switch, with a soft crossfade.
   useEffect(() => {
     document.documentElement.dataset.mood = context.mood

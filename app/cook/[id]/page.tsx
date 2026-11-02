@@ -1,5 +1,7 @@
 import { CookMode } from '@/components/features/cook/CookMode'
 
+export const metadata = { title: 'Cooking' }
+
 export default async function Page({
   params,
   searchParams,

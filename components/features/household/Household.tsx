@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { MAX_PEOPLE } from '@/components/features/onboarding/Onboarding'
 import { withUndo } from '@/lib/undo'
 import { avoidLabel } from '@/lib/diet'
 import { AvoidPicker } from './AvoidPicker'
@@ -138,6 +139,10 @@ export function Household() {
             onSubmit={(e) => {
               e.preventDefault()
               if (!newName.trim()) return
+              if (members.length >= MAX_PEOPLE) {
+                toast(`Up to ${MAX_PEOPLE} people for now.`)
+                return
+              }
               addMember(newName)
               toast(`${newName.trim()} is in`)
               setNewName('')
@@ -148,6 +153,7 @@ export function Household() {
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Add someone"
               aria-label="Add someone"
+              maxLength={40}
             />
             <Button
               type="submit"
@@ -262,7 +268,7 @@ export function Household() {
           <SectionTitle>
             <span id="recap-h">This week</span>
           </SectionTitle>
-          <ul className="space-y-1.5 text-[15px] text-ink-2">
+          <ul className="space-y-1.5 text-[0.9375rem] text-ink-2">
             <li>You decided dinner {pluralize(decided, 'time')} so far.</li>
             {members.map((m) => (
               <li key={m.id}>

@@ -1,15 +1,25 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, ChevronLeft, ChevronRight, MoreHorizontal, Plus, Sparkles } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { announce } from '@/lib/announce'
 import { householdAvoid } from '@/lib/diet'
 import { useAppContext } from '@/components/shell/Providers'
 import { pickNext, suggest } from '@/lib/suggest'
-import { addDays, cn, formatMinutes, fromDateKey, shortDay, toDateKey, weekOf } from '@/lib/utils'
+import {
+  addDays,
+  cn,
+  dayLabel,
+  formatMinutes,
+  fromDateKey,
+  shortDay,
+  toDateKey,
+  weekOf,
+} from '@/lib/utils'
 import { reveal, staggerContainer, checkPop } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { Eyebrow } from '@/components/ui/Card'
@@ -36,6 +46,15 @@ export function Week() {
     () => weekOf(addDays(ctx.targetDate, offset * 7)),
     [ctx.targetDate, offset]
   )
+  const firstWeek = useRef(true)
+  useEffect(() => {
+    if (firstWeek.current) {
+      firstWeek.current = false
+      return
+    }
+    announce(`Showing ${range}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offset])
 
   const entryFor = (d: string) => plan.find((p) => p.date === d && p.slot === 'dinner')
   const isDecided = (d: string) => {
@@ -232,7 +251,7 @@ export function Week() {
                   isToday ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'
                 )}
               >
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-wider">
                   {shortDay(date)}
                 </span>
                 <span className="font-display text-xl font-semibold leading-none">
@@ -266,6 +285,7 @@ export function Week() {
                     <button
                       type="button"
                       onClick={() => setActive({ date, kind: 'pick' })}
+                      aria-label={`Pick something for ${dayLabel(date, today)}`}
                       className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-ink-3/60 text-sm font-medium text-ink-2 hover:bg-surface-2"
                     >
                       <Plus className="h-4 w-4" aria-hidden /> Pick something

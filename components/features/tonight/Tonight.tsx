@@ -83,13 +83,13 @@ export function Tonight() {
         <h1 className="mt-1 font-display text-fluid-xl font-semibold leading-none tracking-tight">
           {dateText}
         </h1>
-        <p className="mt-2 text-[15px] text-ink-2">
+        <p className="mt-2 text-[0.9375rem] text-ink-2">
           {me ? `${greeting}, ${me.name}.` : `${greeting}.`}
         </p>
         {doneTonight && (
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-pill bg-secondary/15 px-3 py-1 text-sm font-medium text-ink">
-            <Check className="h-4 w-4 text-secondary" aria-hidden /> Tonight&apos;s {doneTonight}{' '}
-            is done. Here&apos;s tomorrow.
+            <Check className="h-4 w-4 text-secondary" aria-hidden /> Tonight&apos;s {doneTonight} is
+            done. Here&apos;s tomorrow.
           </p>
         )}
         {ctx.canStayTonight && (

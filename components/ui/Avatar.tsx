@@ -18,7 +18,11 @@ export function Avatar({
   className?: string
 }) {
   const dim =
-    size === 'sm' ? 'h-6 w-6 text-[11px]' : size === 'lg' ? 'h-12 w-12 text-lg' : 'h-8 w-8 text-sm'
+    size === 'sm'
+      ? 'h-6 w-6 text-[0.6875rem]'
+      : size === 'lg'
+        ? 'h-12 w-12 text-lg'
+        : 'h-8 w-8 text-sm'
   return (
     <span
       title={member.name}

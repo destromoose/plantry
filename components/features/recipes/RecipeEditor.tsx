@@ -109,7 +109,7 @@ export function RecipeEditor({
         action={
           <Link
             href="/recipes"
-            className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[15px] font-medium hover:bg-line/60"
+            className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
           >
             Back to recipes
           </Link>
@@ -382,7 +382,7 @@ export function RecipeEditor({
               role="switch"
               aria-checked={leftovers}
               onClick={() => setLeftovers((v) => !v)}
-              className="flex h-12 items-center justify-between rounded-2xl border border-line bg-surface px-4 text-[15px]"
+              className="flex h-12 items-center justify-between rounded-2xl border border-line bg-surface px-4 text-[0.9375rem]"
             >
               Makes leftovers
               <span

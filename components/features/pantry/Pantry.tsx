@@ -152,7 +152,7 @@ export function Pantry() {
                   <button
                     type="button"
                     onClick={() => pickSuggestion(o)}
-                    className="h-8 rounded-pill border border-line bg-surface/70 px-3 text-[13px] text-ink-2 hover:text-ink"
+                    className="h-8 rounded-pill border border-line bg-surface/70 px-3 text-[0.8125rem] text-ink-2 hover:text-ink"
                   >
                     {o.name}
                   </button>
