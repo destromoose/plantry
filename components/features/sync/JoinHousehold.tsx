@@ -13,6 +13,7 @@ import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
+import { MAX_PEOPLE } from '@/components/features/onboarding/Onboarding'
 import { toast } from '@/components/ui/Toast'
 
 type Peek = Awaited<ReturnType<typeof peekHousehold>>
@@ -143,15 +144,17 @@ export function JoinHousehold() {
                     {m.name}
                   </Chip>
                 ))}
-                <Chip
-                  role="radio"
-                  aria-checked={newName !== null}
-                  aria-pressed={undefined}
-                  selected={newName !== null}
-                  onClick={() => setNewName(newName === null ? '' : null)}
-                >
-                  {t('Someone new')}
-                </Chip>
+                {d!.members.length < MAX_PEOPLE && (
+                  <Chip
+                    role="radio"
+                    aria-checked={newName !== null}
+                    aria-pressed={undefined}
+                    selected={newName !== null}
+                    onClick={() => setNewName(newName === null ? '' : null)}
+                  >
+                    {t('Someone new')}
+                  </Chip>
+                )}
               </div>
             </div>
           )}
@@ -178,7 +181,7 @@ export function JoinHousehold() {
             </p>
           )}
           <div className="flex flex-col gap-2">
-            <Button size="lg" onClick={join}>
+            <Button size="lg" onClick={join} disabled={newName !== null && !newName.trim()}>
               {t('Join')}
             </Button>
             <Button variant="ghost" onClick={() => setPeek(null)}>
