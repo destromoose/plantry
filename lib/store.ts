@@ -20,11 +20,12 @@ import type {
 import { addDays, keyOf, toDateKey, uid } from './utils'
 import { addAmount, compatible, subtract, type Amount } from './quantity'
 import { defaultLife, guessZone } from './pantryGuess'
-import { seedRecipes } from './seed/recipes'
+import { canonicalRecipes, localSeedRecipes, localizeRecipes } from './seed/localize'
 import { staples } from './seed/pantry'
 import { checkImport, cleanData, defaultSettings } from './schema'
 import { createSafeStorage, useStorageStatus } from './storage'
 import { guessCurrency } from './cost'
+import { t } from './i18n'
 
 export interface PlantryState {
   settings: Settings
@@ -180,7 +181,7 @@ export const useStore = create<PlantryState>()(
     (set, get) => ({
       settings: defaultSettings,
       members: [],
-      recipes: seedRecipes,
+      recipes: localSeedRecipes(),
       pantry: [],
       plan: [],
       shop: [],
@@ -206,7 +207,7 @@ export const useStore = create<PlantryState>()(
             isMe: i === 0,
           }))
         if (newMembers.length === 0)
-          newMembers.push({ id: uid('m'), name: 'Me', color: 'terracotta', isMe: true })
+          newMembers.push({ id: uid('m'), name: t('Me'), color: 'terracotta', isMe: true })
         set((s) => ({
           members: newMembers,
           settings: {
@@ -276,7 +277,9 @@ export const useStore = create<PlantryState>()(
         set((s) => ({
           recipes: s.recipes.filter((r) => r.id !== id),
           plan: s.plan.map((p) =>
-            p.recipeId === id ? { ...p, recipeId: undefined, note: p.note ?? 'Removed recipe' } : p
+            p.recipeId === id
+              ? { ...p, recipeId: undefined, note: p.note ?? t('Removed recipe') }
+              : p
           ),
         })),
       toggleFavorite: (id) =>
@@ -658,7 +661,7 @@ export const useStore = create<PlantryState>()(
             exportedAt: new Date().toISOString(),
             settings,
             members,
-            recipes,
+            recipes: canonicalRecipes(recipes),
             pantry,
             plan,
             shop,
@@ -676,13 +679,13 @@ export const useStore = create<PlantryState>()(
         try {
           raw = JSON.parse(json)
         } catch {
-          return { ok: false, error: 'Could not read that file.' }
+          return { ok: false, error: t('Could not read that file.') }
         }
         const res = checkImport(raw)
         if (!res.ok) return { ok: false, error: res.error }
         set({
           ...res.data,
-          recipes: res.data.recipes.length ? res.data.recipes : seedRecipes,
+          recipes: res.data.recipes.length ? localizeRecipes(res.data.recipes) : localSeedRecipes(),
           shuffleSeen: [],
         })
         return { ok: true, dropped: res.dropped }
@@ -691,7 +694,7 @@ export const useStore = create<PlantryState>()(
         set({
           settings: defaultSettings,
           members: [],
-          recipes: seedRecipes,
+          recipes: localSeedRecipes(),
           pantry: [],
           plan: [],
           shop: [],
@@ -711,7 +714,7 @@ export const useStore = create<PlantryState>()(
         ({
           settings: s.settings,
           members: s.members,
-          recipes: s.recipes,
+          recipes: canonicalRecipes(s.recipes),
           pantry: s.pantry,
           plan: s.plan,
           shop: s.shop,
@@ -733,7 +736,8 @@ export const useStore = create<PlantryState>()(
           ...current,
           ...data,
           settings: { ...current.settings, ...(data.settings ?? {}) },
-          recipes: data.recipes && data.recipes.length ? data.recipes : current.recipes,
+          recipes:
+            data.recipes && data.recipes.length ? localizeRecipes(data.recipes) : current.recipes,
         } as PlantryState
       },
       onRehydrateStorage: () => () => {

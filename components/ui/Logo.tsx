@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /** The Plantry mark: a plate seen from above with a leaf, drawn in one stroke. */
@@ -11,7 +12,7 @@ export function Logo({ className, withWord = true }: { className?: string; withW
         <path d="M14 18l3-3" stroke="rgb(var(--canvas))" strokeWidth="1" strokeLinecap="round" />
       </svg>
       {withWord && (
-        <span className="font-display text-xl font-semibold tracking-tight">Plantry</span>
+        <span className="font-display text-xl font-semibold tracking-tight">{t('Plantry')}</span>
       )}
     </span>
   )

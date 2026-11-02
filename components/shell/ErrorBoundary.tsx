@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { Component, type ReactNode } from 'react'
 import { downloadText, readRawSaved } from '@/lib/storage'
 
@@ -38,11 +40,12 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error?: 
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-5 px-6 py-12">
         <h1 className="font-display text-fluid-2xl font-semibold leading-tight tracking-tight">
-          Something went wrong.
+          {t('Something went wrong.')}
         </h1>
         <p className="text-ink-2">
-          Plantry hit a problem reading your saved data. Your data is still on this device. Download
-          a copy first, then try again or start fresh.
+          {t(
+            'Plantry hit a problem reading your saved data. Your data is still on this device. Download a copy first, then try again or start fresh.'
+          )}
         </p>
         <div className="flex flex-col gap-3">
           <button
@@ -50,21 +53,21 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error?: 
             onClick={download}
             className="min-h-[48px] rounded-pill bg-accent px-5 font-semibold text-accent-ink"
           >
-            Download my data
+            {t('Download my data')}
           </button>
           <button
             type="button"
             onClick={() => window.location.reload()}
             className="min-h-[48px] rounded-pill border border-line bg-surface px-5 font-semibold text-ink"
           >
-            Try again
+            {t('Try again')}
           </button>
           <button
             type="button"
             onClick={startFresh}
             className="min-h-[48px] rounded-pill px-5 font-semibold text-danger"
           >
-            Start fresh (keeps a backup)
+            {t('Start fresh (keeps a backup)')}
           </button>
         </div>
       </main>

@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import { z } from 'zod'
 import type { Settings } from './types'
 
@@ -273,12 +274,14 @@ export function checkImport(
   raw: unknown
 ): { ok: true; data: CleanData; dropped: number } | { ok: false; error: string } {
   if (!isObject(raw) || !Array.isArray(raw.recipes))
-    return { ok: false, error: 'That file does not look like a Plantry export.' }
+    return { ok: false, error: t('That file does not look like a Plantry export.') }
   const { data, dropped, badCollections } = cleanData(raw)
   if (badCollections.length)
     return {
       ok: false,
-      error: `That file has a broken ${badCollections[0]} section, so nothing was imported.`,
+      error: t('That file has a broken {part} section, so nothing was imported.', {
+        part: badCollections[0],
+      }),
     }
   return {
     ok: true,

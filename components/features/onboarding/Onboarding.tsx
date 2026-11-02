@@ -1,5 +1,7 @@
 'use client'
 
+import { getLang, switchLang, t } from '@/lib/i18n'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -18,14 +20,14 @@ import { AvoidPicker } from '@/components/features/household/AvoidPicker'
 import { cn } from '@/lib/utils'
 
 export const tasteOptions: { id: Taste; label: string; hint: string }[] = [
-  { id: 'cozy', label: 'Cozy', hint: 'braises, soups, bakes' },
-  { id: 'fresh', label: 'Fresh', hint: 'herbs, citrus, crunch' },
-  { id: 'fast', label: 'Fast', hint: 'on the table in 20' },
-  { id: 'one-pan', label: 'One pan', hint: 'less washing up' },
-  { id: 'veg-forward', label: 'Veg-forward', hint: 'plants do the work' },
-  { id: 'spicy', label: 'Spicy', hint: 'bring the chili' },
-  { id: 'big-batch', label: 'Big batch', hint: 'cook once, eat twice' },
-  { id: 'kid-friendly', label: 'Kid-friendly', hint: 'nobody pushes it around the plate' },
+  { id: 'cozy', label: t('Cozy'), hint: t('braises, soups, bakes') },
+  { id: 'fresh', label: t('Fresh'), hint: t('herbs, citrus, crunch') },
+  { id: 'fast', label: t('Fast'), hint: t('on the table in 20') },
+  { id: 'one-pan', label: t('One pan'), hint: t('less washing up') },
+  { id: 'veg-forward', label: t('Veg-forward'), hint: t('plants do the work') },
+  { id: 'spicy', label: t('Spicy'), hint: t('bring the chili') },
+  { id: 'big-batch', label: t('Big batch'), hint: t('cook once, eat twice') },
+  { id: 'kid-friendly', label: t('Kid-friendly'), hint: t('nobody pushes it around the plate') },
 ]
 
 const steps = ['who', 'taste', 'avoid', 'pantry'] as const
@@ -136,11 +138,11 @@ export function Onboarding() {
     if (!file) return
     const res = importData(await file.text())
     if (!res.ok) {
-      toast(res.error ?? 'Could not read that file.', { tone: 'error' })
+      toast(res.error ?? t('Could not read that file.'), { tone: 'error' })
       return
     }
     clearDraft()
-    toast('Welcome back. Everything is restored.')
+    toast(t('Welcome back. Everything is restored.'))
     router.replace('/')
   }
 
@@ -151,7 +153,11 @@ export function Onboarding() {
   }, [step, names, tastes])
 
   const hint =
-    step === 'who' ? 'Add your name to continue.' : step === 'taste' ? 'Pick at least one.' : ''
+    step === 'who'
+      ? t('Add your name to continue.')
+      : step === 'taste'
+        ? t('Pick at least one.')
+        : ''
 
   function next() {
     // Already finishing: a second tap must not finish again.
@@ -194,7 +200,10 @@ export function Onboarding() {
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-6 pb-8 pt-10">
       <div className="mb-8 flex items-center justify-between">
         <Logo className="text-ink" />
-        <div className="flex gap-1.5" aria-label={`Step ${idx + 1} of ${steps.length}`}>
+        <div
+          className="flex gap-1.5"
+          aria-label={t('Step {v0} of {length}', { v0: idx + 1, length: steps.length })}
+        >
           {steps.map((s, i) => (
             <motion.span
               key={s}
@@ -220,15 +229,17 @@ export function Onboarding() {
               tabIndex={-1}
               className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
             >
-              Who eats here?
+              {t('Who eats here?')}
             </h1>
             <p className="mt-3 text-base text-ink">
-              Plantry picks tonight&apos;s dinner from what you have, plans the week and writes the
-              shopping list.
+              {t(
+                "Plantry picks tonight's dinner from what you have, plans the week and writes the shopping list."
+              )}
             </p>
             <p className="mt-3 text-[0.9375rem] text-ink-2">
-              First names only. You first. Nobody signs in, nobody gets an email. This stays on your
-              device.
+              {t(
+                'First names only. You first. Nobody signs in, nobody gets an email. This stays on your device.'
+              )}
             </p>
             <motion.ul
               variants={staggerContainer}
@@ -247,21 +258,23 @@ export function Onboarding() {
                   <Input
                     autoFocus={i === 0}
                     value={n}
-                    placeholder={i === 0 ? 'Your name' : 'Another name'}
+                    placeholder={i === 0 ? t('Your name') : t('Another name')}
                     onChange={(e) =>
                       setNames((arr) => arr.map((v, j) => (j === i ? e.target.value : v)))
                     }
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && canNext) next()
                     }}
-                    aria-label={i === 0 ? 'Your name' : `Household member ${i + 1}`}
+                    aria-label={
+                      i === 0 ? t('Your name') : t('Household member {v0}', { v0: i + 1 })
+                    }
                     maxLength={40}
                   />
                   {i > 0 && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label="Remove"
+                      aria-label={t('Remove')}
                       onClick={() => setNames((arr) => arr.filter((_, j) => j !== i))}
                     >
                       <X className="h-5 w-5" />
@@ -276,34 +289,55 @@ export function Onboarding() {
                 className="-ml-2 mt-3"
                 onClick={() => setNames((arr) => [...arr, ''])}
               >
-                <Plus className="h-4 w-4" /> Add someone
+                <Plus className="h-4 w-4" /> {t('Add someone')}
               </Button>
             )}
-            <p className="mt-8 text-sm text-ink-2">
-              Moving from another phone?{' '}
+            <div
+              className="mt-8 flex items-center gap-1 text-sm"
+              role="group"
+              aria-label="Language / Idioma"
+            >
+              {(['en', 'es'] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  lang={l}
+                  aria-pressed={getLang() === l}
+                  onClick={() => switchLang(l)}
+                  className={cn(
+                    'min-h-[44px] rounded-pill px-3 font-medium',
+                    getLang() === l ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
+                  )}
+                >
+                  {l === 'en' ? 'English' : 'Español'}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-ink-2">
+              {t('Moving from another phone?')}
               <button
                 type="button"
                 className="min-h-[44px] font-medium text-accent underline-offset-2 hover:underline"
                 onClick={() => fileRef.current?.click()}
               >
-                Restore from a Plantry backup
+                {t('Restore from a Plantry backup')}
               </button>
               <input
                 ref={fileRef}
                 type="file"
                 accept="application/json,.json"
                 className="hidden"
-                aria-label="Plantry backup file"
+                aria-label={t('Plantry backup file')}
                 onChange={(e) => restore(e.target.files?.[0])}
               />
             </p>
             <p className="mt-1 text-sm text-ink-2">
-              Someone at home already uses Plantry?{' '}
+              {t('Someone at home already uses Plantry?')}{' '}
               <Link
                 href="/join"
                 className="inline-flex min-h-[44px] items-center font-medium text-accent underline-offset-2 hover:underline"
               >
-                Join with their code
+                {t('Join with their code')}
               </Link>
             </p>
           </section>
@@ -316,10 +350,10 @@ export function Onboarding() {
               tabIndex={-1}
               className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
             >
-              How do you like to eat?
+              {t('How do you like to eat?')}
             </h1>
             <p className="mt-3 text-[0.9375rem] text-ink-2">
-              Pick a few. These are tastes, not rules. Allergies and diets come next.
+              {t('Pick a few. These are tastes, not rules. Allergies and diets come next.')}
             </p>
             <motion.div
               variants={staggerContainer}
@@ -327,26 +361,28 @@ export function Onboarding() {
               animate="show"
               className="mt-8 flex flex-wrap gap-2.5"
             >
-              {tasteOptions.map((t, i) => {
-                const on = tastes.includes(t.id)
+              {tasteOptions.map((tItem, i) => {
+                const on = tastes.includes(tItem.id)
                 return (
-                  <motion.div key={t.id} variants={reveal} custom={i}>
+                  <motion.div key={tItem.id} variants={reveal} custom={i}>
                     <Chip
                       selected={on}
                       size="md"
                       onClick={() =>
-                        setTastes((arr) => (on ? arr.filter((x) => x !== t.id) : [...arr, t.id]))
+                        setTastes((arr) =>
+                          on ? arr.filter((x) => x !== tItem.id) : [...arr, tItem.id]
+                        )
                       }
                       className="h-auto flex-col items-start gap-0 px-4 py-2.5"
                     >
-                      <span className="text-[0.9375rem]">{t.label}</span>
+                      <span className="text-[0.9375rem]">{tItem.label}</span>
                       <span
                         className={cn(
                           'text-xs font-normal',
                           on ? 'text-accent-ink/80' : 'text-ink-3'
                         )}
                       >
-                        {t.hint}
+                        {tItem.hint}
                       </span>
                     </Chip>
                   </motion.div>
@@ -363,15 +399,16 @@ export function Onboarding() {
               tabIndex={-1}
               className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
             >
-              Anything to keep off the table?
+              {t('Anything to keep off the table?')}
             </h1>
             <p className="mt-3 text-[0.9375rem] text-ink-2">
-              Plantry will never suggest a dinner with these. You can set it per person later. Skip
-              if nothing applies.
+              {t(
+                'Plantry will never suggest a dinner with these. You can set it per person later. Skip if nothing applies.'
+              )}
             </p>
             <AvoidPicker value={avoid} onChange={setAvoid} className="mt-8" />
             <p className="mt-4 text-sm text-ink-3">
-              Plantry checks ingredient names. Always check packaging for allergens.
+              {t('Plantry checks ingredient names. Always check packaging for allergens.')}
             </p>
           </section>
         )}
@@ -383,11 +420,12 @@ export function Onboarding() {
               tabIndex={-1}
               className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight outline-none"
             >
-              What&apos;s already in the kitchen?
+              {t("What's already in the kitchen?")}
             </h1>
             <p className="mt-3 text-[0.9375rem] text-ink-2">
-              Tap what you have. Nothing is ticked for you. Plantry uses this to suggest dinners you
-              can make right now, and to shorten your list.
+              {t(
+                'Tap what you have. Nothing is ticked for you. Plantry uses this to suggest dinners you can make right now, and to shorten your list.'
+              )}
             </p>
             <motion.div
               variants={staggerContainer}
@@ -419,7 +457,7 @@ export function Onboarding() {
               })}
             </motion.div>
             <p className="mt-4 text-sm text-ink-3">
-              {picked.size} picked. You can add anything else later.
+              {t('{size} picked. You can add anything else later.', { size: picked.size })}
             </p>
           </section>
         )}
@@ -427,7 +465,7 @@ export function Onboarding() {
 
       <div className="safe-bottom sticky bottom-0 -mx-6 mt-8 flex flex-wrap items-center justify-between gap-2 bg-canvas/85 px-6 pt-3 backdrop-blur">
         <Button variant="ghost" onClick={back} className={cn(idx === 0 && 'invisible')}>
-          Back
+          {t('Back')}
         </Button>
         <div className="flex flex-col items-end">
           <Button
@@ -437,7 +475,7 @@ export function Onboarding() {
             aria-describedby={!canNext ? 'next-hint' : undefined}
             className={cn(!canNext && 'opacity-60')}
           >
-            {idx === steps.length - 1 ? 'Show me tonight' : 'Next'}
+            {idx === steps.length - 1 ? t('Show me tonight') : t('Next')}
             <ArrowRight className="h-5 w-5" />
           </Button>
           {!canNext && (

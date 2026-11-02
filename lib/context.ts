@@ -1,3 +1,4 @@
+import { getLang } from '@/lib/i18n'
 import type { Context, Mood, PlanEntry, Recipe, Settings, Weather } from './types'
 import { addDays, toDateKey } from './utils'
 
@@ -134,6 +135,22 @@ function describe(i: {
   hour: number
   lateNight: boolean
 }): string {
+  const wet = !!i.weather?.precipitation
+  const cold = !wet && !!i.weather && i.weather.tempC <= 12
+  const hot = !wet && !!i.weather && i.weather.tempC >= 26
+  if (getLang() === 'es') {
+    // "Tarde lluviosa entre semana, así que tiré a algo reconfortante."
+    const time = { dawn: 'Mañana', day: 'Tarde', dusk: 'Noche', night: 'Noche cerrada' }[i.mood]
+    const adj = wet ? ' lluviosa' : cold ? ' fría' : hot ? ' calurosa' : ''
+    const day = i.isWeekend ? ' de fin de semana' : ' entre semana'
+    const lean =
+      i.lean === 'warm'
+        ? ', así que tiré a algo reconfortante'
+        : i.lean === 'light'
+          ? ', así que lo dejé ligero'
+          : ''
+    return `${time}${adj}${day}${lean}.${i.lateNight ? ' Pensando en mañana.' : ''}`
+  }
   const day = i.isWeekend ? 'weekend' : 'weekday'
   const time =
     i.mood === 'dawn'
@@ -143,12 +160,7 @@ function describe(i: {
         : i.mood === 'dusk'
           ? 'evening'
           : 'late night'
-  let w = ''
-  if (i.weather) {
-    if (i.weather.precipitation) w = 'Rainy '
-    else if (i.weather.tempC <= 12) w = 'Chilly '
-    else if (i.weather.tempC >= 26) w = 'Hot '
-  }
+  const w = wet ? 'Rainy ' : cold ? 'Chilly ' : hot ? 'Hot ' : ''
   const leanText =
     i.lean === 'warm' ? ', so I leaned cozy' : i.lean === 'light' ? ', so I kept it light' : ''
   const target = i.lateNight ? ' Thinking about tomorrow.' : ''

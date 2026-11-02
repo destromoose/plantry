@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { memo, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Copy, ListChecks, Pencil, Plus, Share2, ShoppingBasket, Trash2, X } from 'lucide-react'
@@ -20,15 +22,15 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 
 const aisles: { id: Aisle; label: string }[] = [
-  { id: 'produce', label: 'Produce' },
-  { id: 'meat-fish', label: 'Meat and fish' },
-  { id: 'dairy', label: 'Dairy' },
-  { id: 'bakery', label: 'Bakery' },
-  { id: 'pantry', label: 'Pantry' },
-  { id: 'frozen', label: 'Frozen' },
-  { id: 'spices', label: 'Spices' },
-  { id: 'drinks', label: 'Drinks' },
-  { id: 'other', label: 'Other' },
+  { id: 'produce', label: t('Produce') },
+  { id: 'meat-fish', label: t('Meat and fish') },
+  { id: 'dairy', label: t('Dairy') },
+  { id: 'bakery', label: t('Bakery') },
+  { id: 'pantry', label: t('Pantry') },
+  { id: 'frozen', label: t('Frozen') },
+  { id: 'spices', label: t('Spices') },
+  { id: 'drinks', label: t('Drinks') },
+  { id: 'other', label: t('Other') },
 ]
 
 export function Shop() {
@@ -69,9 +71,10 @@ export function Shop() {
   function fromPlan() {
     // The same week as the Week screen: the one holding the dinner Tonight is about.
     const res = generateShop(weekOf(targetDate))
-    if (res.kept) toast('Nothing planned for the rest of this week, so your list stayed as it is.')
-    else if (res.fromPlan === 0) toast('Your pantry covers everything planned this week.')
-    else toast(`${pluralize(res.fromPlan, 'item')} for this week's dinners`)
+    if (res.kept)
+      toast(t('Nothing planned for the rest of this week, so your list stayed as it is.'))
+    else if (res.fromPlan === 0) toast(t('Your pantry covers everything planned this week.'))
+    else toast(t("{v0} for this week's dinners", { v0: pluralize(res.fromPlan, 'item') }))
   }
 
   function listText() {
@@ -91,7 +94,7 @@ export function Shop() {
     const text = listText()
     if (canShare) {
       try {
-        await navigator.share({ title: 'Shopping list', text })
+        await navigator.share({ title: t('Shopping list'), text })
         return
       } catch (e) {
         if ((e as Error)?.name === 'AbortError') return
@@ -99,7 +102,7 @@ export function Shop() {
     }
     try {
       await navigator.clipboard.writeText(text)
-      toast('Copied. Paste it into a message or a note.')
+      toast(t('Copied. Paste it into a message or a note.'))
     } catch {
       // Some browsers block the clipboard. Show the list so it can be copied by hand.
       setCopyFallback(text)
@@ -107,27 +110,32 @@ export function Shop() {
   }
 
   function add(name: string) {
-    if (addShopItem(name) === 'exists') toast(`${name.trim()} is already on your list`)
+    if (addShopItem(name) === 'exists')
+      toast(t('{v0} is already on your list', { v0: name.trim() }))
   }
 
   const planButton = (
     <Button variant="secondary" onClick={fromPlan}>
-      <ListChecks className="h-4 w-4" aria-hidden /> Add from this week&apos;s plan
+      <ListChecks className="h-4 w-4" aria-hidden /> {t("Add from this week's plan")}
     </Button>
   )
 
   return (
     <div className="pb-32">
       <PageHeader
-        title="Shop"
+        title={t('Shop')}
         subtitle={
           shop.length === 0
-            ? 'Your list is empty'
+            ? t('Your list is empty')
             : unchecked === 0
-              ? 'Everything is in the basket'
-              : `${pluralize(unchecked, 'thing')} to get${
-                  cost.total > 0.5 ? `, about ${formatMoney(cost.total, currency)}` : ''
-                }`
+              ? t('Everything is in the basket')
+              : t('{v0} to get{v1}', {
+                  v0: pluralize(unchecked, 'thing'),
+                  v1:
+                    cost.total > 0.5
+                      ? t(', about {v0}', { v0: formatMoney(cost.total, currency) })
+                      : '',
+                })
         }
         actions={
           <>
@@ -138,16 +146,16 @@ export function Shop() {
                 ) : (
                   <Copy className="h-4 w-4" aria-hidden />
                 )}{' '}
-                {canShare ? 'Share list' : 'Copy list'}
+                {canShare ? t('Share list') : t('Copy list')}
               </Button>
             )}
             {shop.length > 0 && (
               <Button
                 variant="ghost"
-                onClick={() => withUndo('List cleared', clearShop)}
+                onClick={() => withUndo(t('List cleared'), clearShop)}
                 className="text-ink-2"
               >
-                <Trash2 className="h-4 w-4" aria-hidden /> Clear list
+                <Trash2 className="h-4 w-4" aria-hidden /> {t('Clear list')}
               </Button>
             )}
             {shop.length > 0 && planButton}
@@ -160,8 +168,8 @@ export function Shop() {
       {shop.length === 0 ? (
         <EmptyState
           icon={ShoppingBasket}
-          title="Nothing to buy"
-          body="Plan a few dinners on Week, then add what they need here in one tap."
+          title={t('Nothing to buy')}
+          body={t('Plan a few dinners on Week, then add what they need here in one tap.')}
           action={planButton}
         />
       ) : (
@@ -198,7 +206,9 @@ export function Shop() {
 
       {dismissed.length > 0 && (
         <p className="mt-6 text-center text-sm text-ink-3">
-          {pluralize(dismissed.length, 'item')} you removed will stay off this list.{' '}
+          {t('{v0} you removed will stay off this list.', {
+            v0: pluralize(dismissed.length, 'item'),
+          })}
           <button
             type="button"
             className="min-h-[44px] font-medium text-accent underline-offset-2 hover:underline"
@@ -207,20 +217,20 @@ export function Shop() {
               fromPlan()
             }}
           >
-            Bring them back
+            {t('Bring them back')}
           </button>
         </p>
       )}
 
-      <Sheet open={!!copyFallback} onClose={() => setCopyFallback(null)} title="Your list">
+      <Sheet open={!!copyFallback} onClose={() => setCopyFallback(null)} title={t('Your list')}>
         <p className="mb-3 text-ink-2">
-          This browser blocked copying. Select the text below and copy it yourself.
+          {t('This browser blocked copying. Select the text below and copy it yourself.')}
         </p>
         <Textarea
           readOnly
           rows={10}
           value={copyFallback ?? ''}
-          aria-label="Shopping list as text"
+          aria-label={t('Shopping list as text')}
           onFocus={(e) => e.currentTarget.select()}
         />
       </Sheet>
@@ -235,23 +245,23 @@ export function Shop() {
             exit={{ opacity: 0, y: 24 }}
             className="glass fixed inset-x-5 bottom-24 z-30 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-pill py-2 pl-5 pr-2 md:bottom-6"
           >
-            <span className="text-sm font-medium">{checked} in the basket</span>
+            <span className="text-sm font-medium">{t('{checked} in the basket', { checked })}</span>
             <span className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => withUndo('Cleared the ticked items', clearChecked)}
+                onClick={() => withUndo(t('Cleared the ticked items'), clearChecked)}
               >
-                Clear checked
+                {t('Clear checked')}
               </Button>
               <Button
                 size="sm"
                 onClick={() => {
                   finishShopping()
-                  toast('Added to your pantry')
+                  toast(t('Added to your pantry'))
                 }}
               >
-                Done shopping
+                {t('Done shopping')}
               </Button>
             </span>
           </motion.div>
@@ -287,8 +297,8 @@ function AddForm({ onAdd }: { onAdd: (name: string) => void }) {
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="Add something"
-        aria-label="Add a shopping item"
+        placeholder={t('Add something')}
+        aria-label={t('Add a shopping item')}
         autoComplete="off"
         maxLength={60}
       />
@@ -296,7 +306,7 @@ function AddForm({ onAdd }: { onAdd: (name: string) => void }) {
         type="submit"
         size="icon"
         variant={name.trim() ? 'primary' : 'secondary'}
-        aria-label="Add to list"
+        aria-label={t('Add to list')}
         aria-disabled={!name.trim()}
         className="shrink-0"
       >
@@ -320,7 +330,7 @@ function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => vo
   const qty = draft.qty.trim() ? parseAmount(draft.qty) : undefined
   const bad = !!draft.qty.trim() && !(qty && qty > 0)
   return (
-    <Sheet open={!!item} onClose={onClose} title="Change this item">
+    <Sheet open={!!item} onClose={onClose} title={t('Change this item')}>
       {item && (
         <form
           className="space-y-4"
@@ -328,12 +338,12 @@ function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => vo
             e.preventDefault()
             if (bad || !draft.name.trim()) return
             update(item.id, { name: draft.name, quantity: qty, unit: draft.unit.trim() })
-            toast('Saved')
+            toast(t('Saved'))
             onClose()
           }}
         >
           <div>
-            <Label htmlFor="shop-name">Name</Label>
+            <Label htmlFor="shop-name">{t('Name')}</Label>
             <Input
               id="shop-name"
               value={draft.name}
@@ -343,12 +353,12 @@ function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => vo
           </div>
           {item.more?.length ? (
             <p className="text-sm text-ink-3">
-              Now {amountText(item)}. Type an amount to replace it.
+              {t('Now {v0}. Type an amount to replace it.', { v0: amountText(item) })}
             </p>
           ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="shop-qty">Amount</Label>
+              <Label htmlFor="shop-qty">{t('Amount')}</Label>
               <Input
                 id="shop-qty"
                 inputMode="decimal"
@@ -360,23 +370,23 @@ function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => vo
               />
             </div>
             <div>
-              <Label htmlFor="shop-unit">Unit</Label>
+              <Label htmlFor="shop-unit">{t('Unit')}</Label>
               <Input
                 id="shop-unit"
                 value={draft.unit}
                 maxLength={20}
-                placeholder="g, ml, tins"
+                placeholder={t('g, ml, tins')}
                 onChange={(e) => setDraft({ ...draft, unit: e.target.value })}
               />
             </div>
           </div>
           {bad && (
             <p id="shop-qty-err" className="text-sm text-danger">
-              Try a number like 2, 1.5 or ½, or leave it blank.
+              {t('Try a number like 2, 1.5 or ½, or leave it blank.')}
             </p>
           )}
           <Button type="submit" className="w-full">
-            Save
+            {t('Save')}
           </Button>
         </form>
       )}
@@ -460,14 +470,18 @@ const Row = memo(function Row({
           >
             {item.name}
           </span>
-          {fromTitle && <span className="block truncate text-xs text-ink-3">from {fromTitle}</span>}
+          {fromTitle && (
+            <span className="block truncate text-xs text-ink-3">
+              {t('from {fromTitle}', { fromTitle })}
+            </span>
+          )}
         </span>
         {qty && <span className="shrink-0 text-sm text-ink-2">{qty}</span>}
       </button>
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label={`Change ${item.name}`}
+        aria-label={t('Change {name}', { name: item.name })}
         onClick={() => onEdit(item)}
         className={hoverReveal}
       >
@@ -476,7 +490,7 @@ const Row = memo(function Row({
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label={`Remove ${item.name}`}
+        aria-label={t('Remove {name}', { name: item.name })}
         onClick={() => withUndo(`${item.name} removed`, () => remove(item.id))}
         className={hoverReveal}
       >

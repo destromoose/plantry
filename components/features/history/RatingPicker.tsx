@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { Chip } from '@/components/ui/Chip'
 import { ratingLabels } from '@/lib/history'
 import type { Rating } from '@/lib/types'
@@ -10,7 +12,7 @@ const order: Rating[] = ['loved', 'fine', 'not-again']
 export function RatingPicker({
   value,
   onChange,
-  label = 'How was it?',
+  label = t('How was it?'),
 }: {
   value?: Rating
   onChange: (r?: Rating) => void

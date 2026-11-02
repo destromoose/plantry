@@ -1,5 +1,7 @@
 'use client'
 
+import { getLang, t } from '@/lib/i18n'
+
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { MotionConfig } from 'framer-motion'
 import { useStore } from '@/lib/store'
@@ -35,6 +37,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const updateSettings = useStore((s) => s.updateSettings)
   const hydrated = useStore((s) => s.hydrated)
 
+  useEffect(() => {
+    document.documentElement.lang = getLang()
+  }, [])
+
   // Household sync runs in the background once saved data is loaded.
   useEffect(() => {
     if (hydrated) initSync()
@@ -52,9 +58,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // Re-run the engine on a clear change only: exactly when the next mood band, the
   // late-evening cutoff or midnight arrives, and when the tab becomes visible again.
   useEffect(() => {
-    const id = setTimeout(() => setTick((t) => t + 1), msUntilNextChange(new Date()))
+    const id = setTimeout(() => setTick((tItem) => tItem + 1), msUntilNextChange(new Date()))
     const onVis = () => {
-      if (document.visibilityState === 'visible') setTick((t) => t + 1)
+      if (document.visibilityState === 'visible') setTick((tItem) => tItem + 1)
     }
     document.addEventListener('visibilitychange', onVis)
     return () => {
@@ -76,7 +82,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         // Location was refused: turn the setting off rather than leave it on and silent.
         if (err.code === err.PERMISSION_DENIED) {
           updateSettings({ weatherEnabled: false })
-          toast('Weather is off because location was not allowed.')
+          toast(t('Weather is off because location was not allowed.'))
         }
       },
       { maximumAge: 30 * 60 * 1000, timeout: 8000 }

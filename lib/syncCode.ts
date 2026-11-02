@@ -12,9 +12,7 @@ export function newHouseholdCode(): string {
 
 /** Read a code the way people type it: any case, with spaces or dashes. */
 export function normalizeCode(input: string): string | undefined {
-  const c = input
-    .toUpperCase()
-    .replace(/[\s-]/g, '')
+  const c = input.toUpperCase().replace(/[\s-]/g, '')
   return c.length === LENGTH && [...c].every((ch) => ALPHABET.includes(ch)) ? c : undefined
 }
 

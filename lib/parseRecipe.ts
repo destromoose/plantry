@@ -67,10 +67,10 @@ export function detectTimer(text: string): number | undefined {
 }
 
 function toNumber(s: string): number {
-  const t = s.replace(',', '.')
-  const m = t.match(/^(\d*)([½¼¾⅓⅔])$/)
+  const tItem = s.replace(',', '.')
+  const m = tItem.match(/^(\d*)([½¼¾⅓⅔])$/)
   if (m) return Number(m[1] || 0) + (VULGAR[m[2]] ?? 0)
-  return Number(t) || 0
+  return Number(tItem) || 0
 }
 
 function parseQuantityToken(tok: string): number | undefined {
@@ -151,8 +151,8 @@ function buildSteps(lines: string[]): ParsedStep[] {
     }
   }
   return steps.map((text) => {
-    const t = detectTimer(text)
-    return t ? { text, timerMinutes: t } : { text }
+    const tItem = detectTimer(text)
+    return tItem ? { text, timerMinutes: tItem } : { text }
   })
 }
 

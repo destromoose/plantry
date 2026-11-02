@@ -1,3 +1,4 @@
+import { andList, t } from '@/lib/i18n'
 import type { Context, Energy, PantryItem, Rating, Recipe, Taste } from './types'
 import { isSafe } from './diet'
 import { isUseSoon, toDateKey } from './utils'
@@ -67,23 +68,23 @@ export function suggest(input: SuggestInput): Scored[] {
     const cov = coverage(recipe, pantry)
     const ratio = cov.total ? cov.have / cov.total : 0
     score += ratio * 40
-    if (cov.missing.length === 0 && cov.total > 0) reasons.push('You have everything')
+    if (cov.missing.length === 0 && cov.total > 0) reasons.push(t('You have everything'))
     else if (cov.missing.length <= 2 && cov.total > 0)
-      reasons.push(`Only missing ${cov.missing.join(' and ')}`)
+      reasons.push(t('Only missing {v0}', { v0: andList(cov.missing) }))
 
     const usesAging = recipe.ingredients.filter((i) => aging.has(i.key))
     if (usesAging.length) {
       score += Math.min(usesAging.length, 3) * 6
-      reasons.push(`Uses up your ${usesAging[0].name.toLowerCase()}`)
+      reasons.push(t('Uses up your {v0}', { v0: usesAging[0].name.toLowerCase() }))
     }
 
-    const tasteHits = recipe.tastes.filter((t) => tastes.includes(t)).length
+    const tasteHits = recipe.tastes.filter((tItem) => tastes.includes(tItem)).length
     score += tasteHits * 5
 
     if (energy === 'quick') {
       if (recipe.activeMinutes <= 20) {
         score += 15
-        reasons.push('Quick')
+        reasons.push(t('Quick'))
       } else score -= recipe.activeMinutes
     } else if (energy === 'cant-tonight') {
       if (recipe.activeMinutes <= 10) score += 25
@@ -96,7 +97,7 @@ export function suggest(input: SuggestInput): Scored[] {
 
     if (context.weatherLean !== 'any' && recipe.weather === context.weatherLean) {
       score += 10
-      reasons.push(context.weatherLean === 'warm' ? 'Good for a cold night' : 'Nothing heavy')
+      reasons.push(context.weatherLean === 'warm' ? t('Good for a cold night') : t('Nothing heavy'))
     }
     if (
       context.weatherLean !== 'any' &&
@@ -119,14 +120,14 @@ export function suggest(input: SuggestInput): Scored[] {
       if (cost > budgetPerServing) score -= Math.min(30, (cost / budgetPerServing - 1) * 30)
       else {
         score += 6
-        if (cost <= budgetPerServing * 0.7) reasons.push('Easy on the budget')
+        if (cost <= budgetPerServing * 0.7) reasons.push(t('Easy on the budget'))
       }
     }
 
     const rating = ratings[recipe.id]
     if (rating === 'loved') {
       score += 8
-      if (recentIdx === -1) reasons.push('You loved it last time')
+      if (recentIdx === -1) reasons.push(t('You loved it last time'))
     } else if (rating === 'not-again') score -= 40
 
     out.push({ recipe, score, have: cov.have, missing: cov.missing, reasons: reasons.slice(0, 2) })

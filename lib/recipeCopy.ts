@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n'
 import type { Recipe } from './types'
 import { uid } from './utils'
 
@@ -8,7 +9,7 @@ export function copyOfRecipe(
   const { id: _id, createdAt: _c, isFavorite: _f, custom: _x, ...rest } = r
   return {
     ...rest,
-    title: `${r.title} (my version)`,
+    title: t('{title} (my version)', { title: r.title }),
     ingredients: r.ingredients.map((i) => ({ ...i, id: uid('i') })),
     steps: r.steps.map((s) => ({ ...s, id: uid('s') })),
   }

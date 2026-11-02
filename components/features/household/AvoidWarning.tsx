@@ -1,5 +1,7 @@
 'use client'
 
+import { andList, t } from '@/lib/i18n'
+
 import { AlertTriangle } from 'lucide-react'
 import { conflicts, conflictText } from '@/lib/diet'
 import { useAvoid } from '@/lib/useAvoid'
@@ -27,13 +29,15 @@ export function AvoidWarning({ recipe, className }: { recipe: Recipe; className?
       <p>
         {c.blocking.length ? (
           <>
-            <strong className="font-semibold">{conflictText(c)}.</strong> Your household avoids
-            this: {c.culprits.join(', ').toLowerCase()}.
+            <strong className="font-semibold">{conflictText(c)}.</strong>{' '}
+            {t('Your household avoids this: {v0}.', { v0: c.culprits.join(', ').toLowerCase() })}
           </>
         ) : null}
         {c.leaveOut.length ? (
           <span className={cn(c.blocking.length && 'mt-1 block')}>
-            Leave out the {c.leaveOut.join(' and ').toLowerCase()} to keep it safe.
+            {t('Leave out the {v0} to keep it safe.', {
+              v0: andList(c.leaveOut).toLowerCase(),
+            })}
           </span>
         ) : null}
       </p>

@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useDragControls } from 'framer-motion'
@@ -54,11 +56,11 @@ export function Sheet({ open, onClose, title, children, className, tall }: Sheet
       const el = panel.current
       if (!el) return
       const first = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].find(
-        (n) => n.getAttribute('aria-label') !== 'Close'
+        (n) => n.getAttribute('aria-label') !== t('Close')
       )
       ;(first ?? el).focus({ preventScroll: true })
     }
-    const t = setTimeout(focusFirst, 30)
+    const tItem = setTimeout(focusFirst, 30)
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -83,7 +85,7 @@ export function Sheet({ open, onClose, title, children, className, tall }: Sheet
     }
     document.addEventListener('keydown', onKey)
     return () => {
-      clearTimeout(t)
+      clearTimeout(tItem)
       document.removeEventListener('keydown', onKey)
       others.forEach((el) => el.removeAttribute('inert'))
       openCount--
@@ -112,7 +114,7 @@ export function Sheet({ open, onClose, title, children, className, tall }: Sheet
               role="dialog"
               aria-modal="true"
               aria-labelledby={title ? titleId : undefined}
-              aria-label={title ? undefined : 'Dialog'}
+              aria-label={title ? undefined : t('Dialog')}
               tabIndex={-1}
               variants={sheet}
               initial="hidden"
@@ -141,7 +143,7 @@ export function Sheet({ open, onClose, title, children, className, tall }: Sheet
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label={t('Close')}
                   className="absolute right-2 top-2"
                 >
                   <X className="h-5 w-5" />

@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { memo, useMemo, useRef, useState } from 'react'
 import { Thumb } from '@/components/features/week/Thumb'
 import Link from 'next/link'
@@ -26,10 +28,10 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 
 const zones: { id: PantryZone; label: string }[] = [
-  { id: 'fridge', label: 'Fridge' },
-  { id: 'freezer', label: 'Freezer' },
-  { id: 'cupboard', label: 'Cupboard' },
-  { id: 'counter', label: 'Counter' },
+  { id: 'fridge', label: t('Fridge') },
+  { id: 'freezer', label: t('Freezer') },
+  { id: 'cupboard', label: t('Cupboard') },
+  { id: 'counter', label: t('Counter') },
 ]
 
 const freshness = freshnessOf
@@ -97,7 +99,9 @@ export function Pantry() {
     const res = addPantryItem({ name: clean, zone: z === 'auto' ? guessZone(clean) : z })
     setZone('auto')
     toast(
-      res === 'added' ? `${clean} is in the pantry` : `${clean} was already there. Marked as fresh.`
+      res === 'added'
+        ? t('{clean} is in the pantry', { clean })
+        : t('{clean} was already there. Marked as fresh.', { clean })
     )
     setName('')
   }
@@ -113,17 +117,17 @@ export function Pantry() {
   function addStarter() {
     let added = 0
     for (const n of quickPicks.slice(0, 12)) if (addPantryItem({ name: n }) === 'added') added++
-    toast(added ? `${added} staples added` : 'You already have these staples')
+    toast(added ? t('{added} staples added', { added }) : t('You already have these staples'))
   }
 
   return (
     <div className="pb-8">
       <PageHeader
-        title="Pantry"
+        title={t('Pantry')}
         subtitle={
           <>
             {pluralize(pantry.length, 'thing')}
-            {soon > 0 ? `, ${soon} to use soon` : ''}
+            {soon > 0 ? t(', {soon} to use soon', { soon }) : ''}
           </>
         }
         actions={
@@ -132,7 +136,7 @@ export function Pantry() {
             onClick={() => setCookOpen(true)}
             disabled={pantry.length === 0}
           >
-            <ChefHat className="h-4 w-4" aria-hidden /> Cook from what I have
+            <ChefHat className="h-4 w-4" aria-hidden /> {t('Cook from what I have')}
           </Button>
         }
       />
@@ -148,12 +152,12 @@ export function Pantry() {
           <Input
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
-            placeholder="Add something you have"
-            aria-label="Add a pantry item"
+            placeholder={t('Add something you have')}
+            aria-label={t('Add a pantry item')}
             autoComplete="off"
           />
           {matches.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Suggestions">
+            <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t('Suggestions')}>
               {matches.map((o) => (
                 <li key={o.name}>
                   <button
@@ -171,13 +175,13 @@ export function Pantry() {
         <Select
           value={zone}
           onChange={(e) => setZone(e.target.value as PantryZone | 'auto')}
-          aria-label="Where it lives"
+          aria-label={t('Where it lives')}
           className="w-36 shrink-0"
         >
           <option value="auto">
             {name.trim()
-              ? `${zones.find((z) => z.id === guessed)?.label} (guess)`
-              : 'Where it lives'}
+              ? t('{v0} (guess)', { v0: zones.find((z) => z.id === guessed)?.label })
+              : t('Where it lives')}
           </option>
           {zones.map((z) => (
             <option key={z.id} value={z.id}>
@@ -188,7 +192,7 @@ export function Pantry() {
         <Button
           type="submit"
           size="icon"
-          aria-label="Add to pantry"
+          aria-label={t('Add to pantry')}
           aria-disabled={!name.trim()}
           variant={name.trim() ? 'primary' : 'secondary'}
         >
@@ -199,9 +203,9 @@ export function Pantry() {
       {pantry.length === 0 ? (
         <EmptyState
           icon={Refrigerator}
-          title="Your pantry is empty"
-          body="Add a few staples and Plantry can tell you what you can make tonight."
-          action={<Button onClick={addStarter}>Add 12 staples</Button>}
+          title={t('Your pantry is empty')}
+          body={t('Add a few staples and Plantry can tell you what you can make tonight.')}
+          action={<Button onClick={addStarter}>{t('Add 12 staples')}</Button>}
         />
       ) : (
         <div className="space-y-8">
@@ -211,23 +215,23 @@ export function Pantry() {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Find in your pantry"
-                aria-label="Find in your pantry"
+                placeholder={t('Find in your pantry')}
+                aria-label={t('Find in your pantry')}
               />
               <Select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as typeof sort)}
-                aria-label="Sort"
+                aria-label={t('Sort')}
                 className="w-40 shrink-0"
               >
-                <option value="soon">Use soon first</option>
-                <option value="az">A to Z</option>
-                <option value="new">Newest first</option>
+                <option value="soon">{t('Use soon first')}</option>
+                <option value="az">{t('A to Z')}</option>
+                <option value="new">{t('Newest first')}</option>
               </Select>
             </div>
           )}
           {grouped.length === 0 && (
-            <p className="text-center text-ink-2">Nothing called &ldquo;{search}&rdquo;.</p>
+            <p className="text-center text-ink-2">{t('Nothing called “{search}”.', { search })}</p>
           )}
           {grouped.map((z) => (
             <section key={z.id} aria-labelledby={`zone-${z.id}`}>
@@ -256,7 +260,12 @@ export function Pantry() {
 
       <ItemSheet item={active} onClose={() => setActive(null)} />
 
-      <Sheet open={cookOpen} onClose={() => setCookOpen(false)} title="Cook from what I have" tall>
+      <Sheet
+        open={cookOpen}
+        onClose={() => setCookOpen(false)}
+        title={t('Cook from what I have')}
+        tall
+      >
         <CookList
           open={cookOpen}
           recipes={recipes}
@@ -314,7 +323,7 @@ const Tile = memo(function Tile({
       <button
         type="button"
         onClick={() => !dragged.current && onOpen(item)}
-        aria-label={`${item.name}, options`}
+        aria-label={t('{name}, options', { name: item.name })}
         className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-card p-3.5 text-left"
       >
         <ProgressRing value={f} size={40} stroke={4} tone={tone}>
@@ -329,7 +338,9 @@ const Tile = memo(function Tile({
               })}
             </span>
           )}
-          {isUseSoon(item, today) && <Tag className={cn('mt-1', 'text-ink-2')}>Use soon</Tag>}
+          {isUseSoon(item, today) && (
+            <Tag className={cn('mt-1', 'text-ink-2')}>{t('Use soon')}</Tag>
+          )}
         </span>
       </button>
     </motion.li>
@@ -340,7 +351,9 @@ const Tile = memo(function Tile({
 function markUsedUp(item: PantryItem, usedUp: (id: string) => boolean) {
   let listed = false
   withUndo(
-    item.staple ? `${item.name} used up and added to your list` : `${item.name} used up`,
+    item.staple
+      ? t('{name} used up and added to your list', { name: item.name })
+      : t('{name} used up', { name: item.name }),
     () => {
       listed = usedUp(item.id)
     }
@@ -366,12 +379,12 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2">
             <label className="text-sm font-medium text-ink-2">
-              How much
+              {t('How much')}
               <Input
                 inputMode="decimal"
                 className="mt-1"
                 defaultValue={shown.quantity ?? ''}
-                placeholder="Not sure"
+                placeholder={t('Not sure')}
                 onBlur={(e) => {
                   const n = Number(e.target.value.replace(',', '.'))
                   update(shown.id, { quantity: e.target.value.trim() && n > 0 ? n : undefined })
@@ -379,16 +392,16 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
               />
             </label>
             <label className="text-sm font-medium text-ink-2">
-              Unit
+              {t('Unit')}
               <Input
                 className="mt-1"
                 defaultValue={shown.unit ?? ''}
-                placeholder="g, ml, whole"
+                placeholder={t('g, ml, whole')}
                 onBlur={(e) => update(shown.id, { unit: e.target.value.trim() || undefined })}
               />
             </label>
             <label className="text-sm font-medium text-ink-2">
-              Where it lives
+              {t('Where it lives')}
               <Select
                 className="mt-1"
                 value={shown.zone}
@@ -402,7 +415,7 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
               </Select>
             </label>
             <label className="text-sm font-medium text-ink-2">
-              Keeps for
+              {t('Keeps for')}
               <Select
                 className="mt-1"
                 value={String(shown.softLifeDays)}
@@ -413,9 +426,9 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
                   .map((d) => (
                     <option key={d} value={d}>
                       {d >= 365
-                        ? 'A year or more'
+                        ? t('A year or more')
                         : d >= 30
-                          ? `${Math.round(d / 30)} months`.replace(/^1 months/, '1 month')
+                          ? `${Math.round(d / 30)} months`.replace(/^1 months/, t('1 month'))
                           : `${d} days`}
                     </option>
                   ))}
@@ -431,7 +444,7 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
                 onClose()
               }}
             >
-              Restock (just bought more)
+              {t('Restock (just bought more)')}
             </Button>
             <Button
               variant="secondary"
@@ -440,7 +453,7 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
                 onClose()
               }}
             >
-              {shown.staple ? 'Used it up (add to my list)' : 'Used it up'}
+              {shown.staple ? t('Used it up (add to my list)') : t('Used it up')}
             </Button>
             <Button
               variant="ghost"
@@ -450,7 +463,7 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
                 onClose()
               }}
             >
-              Remove (added by mistake)
+              {t('Remove (added by mistake)')}
             </Button>
           </div>
         </div>
@@ -486,7 +499,7 @@ function CookList({
   }, [open, recipes, pantry, tastes, ctx, recent, avoid])
 
   if (results.length === 0)
-    return <p className="text-ink-2">Nothing to cook from yet. Add a few things first.</p>
+    return <p className="text-ink-2">{t('Nothing to cook from yet. Add a few things first.')}</p>
   return (
     <ul className="space-y-2">
       {results.map((s) => (
@@ -502,11 +515,11 @@ function CookList({
                 {s.recipe.title}
               </span>
               <span className="block text-sm text-ink-2">
-                You have {s.have} of {s.total}
+                {t('You have {have} of {total}', { have: s.have, total: s.total })}
               </span>
               {s.missing.length > 0 && (
                 <span className="block truncate text-xs text-ink-3">
-                  Missing {s.missing.join(', ')}
+                  {t('Missing {v0}', { v0: s.missing.join(', ') })}
                 </span>
               )}
             </span>
