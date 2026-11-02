@@ -48,7 +48,10 @@ struct CookSession: Codable, Equatable {
         if let data = try? JSONEncoder().encode(s) { UserDefaults.standard.set(data, forKey: Self.key) }
     }
 
-    static func clear() { UserDefaults.standard.removeObject(forKey: key) }
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+        Notifications.cancelAll()
+    }
 }
 
 /// Timers keyed by step id. Accurate via wall clock, independent of tick rate.
@@ -68,7 +71,8 @@ final class Timers {
         for (id, t) in self.states where t.endsAt != nil && t.endsAt! <= n {
             self.states[id] = TimerState(durationMs: t.durationMs, remainingMs: 0, endsAt: nil, finished: true)
         }
-        if self.states.values.contains(where: { $0.endsAt != nil }) { tick() }
+        // Keep ringing for anything that finished while away, and counting for anything still running.
+        if anyRunning || anyRinging { tick() }
     }
 
     func state(for id: String) -> TimerState? { states[id] }
@@ -162,6 +166,11 @@ enum Notifications {
 
     static func cancel(id: String) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["timer-\(id)"])
+    }
+
+    /// Timers are the only notifications Plantry schedules.
+    static func cancelAll() {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
 }
 

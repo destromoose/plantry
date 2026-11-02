@@ -103,7 +103,7 @@ enum Quantity {
         list.map { format($0.quantity, $0.unit, forShopping: forShopping) }.filter { !$0.isEmpty }.joined(separator: " + ")
     }
 
-    private static let vulgar: [Character: Double] = ["½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1.0 / 3, "⅔": 2.0 / 3, "⅛": 0.125]
+    private static let vulgar: [Character: Double] = ["½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1.0 / 3, "⅔": 2.0 / 3, "⅛": 0.125, "⅜": 0.375, "⅝": 0.625, "⅞": 0.875]
 
     /// Read an amount someone typed: "2", "1.5", "1,5", "3/4", "1 1/2", "1½", "½". Nil for anything else.
     static func parse(_ input: String) -> Double? {

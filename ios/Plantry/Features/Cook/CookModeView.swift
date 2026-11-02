@@ -32,10 +32,16 @@ struct CookModeView: View {
     @State private var resumed = false
 
     private var recipe: RecipeModel? { recipes.first { $0.id == request.recipeId } }
-    private var entry: PlanEntryModel? { request.date.flatMap { store.dinner(on: $0) } }
+    /// The night this cook belongs to: the one it was opened for, else Tonight's target.
+    private var cookDate: String { request.date ?? ctxProvider.context.targetDate }
+    private var entry: PlanEntryModel? { store.dinner(on: cookDate) }
     private var settings: SettingsModel? { settingsRows.first }
     private var kids: Bool { settings?.cookingWithKids ?? false }
-    private var alreadyDone: Bool { entry?.done ?? false }
+    /// Done already when the night is marked cooked, or (from a recipe page) that night was cooked with this very recipe.
+    private var alreadyDone: Bool {
+        guard let entry, entry.done else { return false }
+        return request.date != nil || entry.recipeId == request.recipeId
+    }
 
     /// One servings number, in order: changed here, passed in, the plan, the household.
     private var count: Int {
@@ -265,16 +271,19 @@ struct CookModeView: View {
                 Text(alreadyDone ? "Already logged." : "That's dinner.").font(Type.title)
                 if alreadyDone {
                     Text("This night is already marked cooked, so nothing is counted twice.").font(Type.body).foregroundStyle(t.ink2)
-                } else if request.date != nil && entry != nil {
+                } else if entry != nil {
                     Toggle(isOn: $usePantry) { Text("Use up the fresh stuff from my pantry").font(Type.body) }.tint(t.accent)
                     Toggle(isOn: $leftovers) { Text("There are leftovers").font(Type.body) }.tint(t.accent)
                     if leftovers && tomorrowBusy {
                         Toggle(isOn: $replaceTomorrow) { Text("Swap tomorrow's plan for these leftovers").font(Type.body) }.tint(t.accent)
                     }
                 } else {
-                    Text("Log it as tonight's dinner so the week and the pantry keep up.").font(Type.body).foregroundStyle(t.ink2)
+                    Text("Log it as \(cookDate == ctxProvider.today ? "tonight's" : "tomorrow's") dinner so the week and the pantry keep up.").font(Type.body).foregroundStyle(t.ink2)
+                    Toggle(isOn: $usePantry) { Text("Use up the fresh stuff from my pantry").font(Type.body) }.tint(t.accent)
+                    Toggle(isOn: $leftovers) { Text("There are leftovers").font(Type.body) }.tint(t.accent)
                 }
                 Button(alreadyDone ? "Back to Tonight" : "Finish") { finish() }.pbutton(.primary, .lg, fill: true)
+                    .accessibilityHint(alreadyDone ? "" : "Marks the night cooked and updates the pantry")
             }
         }
         .presentationDetents([.medium])
@@ -339,20 +348,21 @@ struct CookModeView: View {
             nav.go(.tonight)
             return
         }
-        if let date = request.date, entry != nil {
+        let date = cookDate
+        if request.date != nil, entry != nil {
             store.setServings(date, count)
             let undo = store.undoable { _ = store.markCooked(date, leftovers: leftovers, usePantry: usePantry, replaceTomorrow: replaceTomorrow) }
             ctxProvider.refresh()
             toaster.show("Nice work.") { undo(); ctxProvider.refresh() }
         } else {
-            // Cooking straight from a recipe: log it as tonight's dinner.
-            let today = ctxProvider.today
+            // Cooking straight from a recipe: log it as the dinner Tonight is about, unless that night is already cooked.
+            if entry?.done == true { CookSession.clear(); dismiss(); nav.go(.tonight); return }
             let undo = store.undoable {
-                store.setDinner(today, recipeId: recipe.id, servings: count)
-                _ = store.markCooked(today, leftovers: leftovers, usePantry: usePantry)
+                store.setDinner(date, recipeId: recipe.id, servings: count, cookId: entry?.cookId)
+                _ = store.markCooked(date, leftovers: leftovers, usePantry: usePantry)
             }
             ctxProvider.refresh()
-            toaster.show("Logged as tonight's dinner. Nice work.") { undo(); ctxProvider.refresh() }
+            toaster.show("Logged as \(date == ctxProvider.today ? "tonight's" : "tomorrow's") dinner. Nice work.") { undo(); ctxProvider.refresh() }
         }
         Haptic.success()
         CookSession.clear()

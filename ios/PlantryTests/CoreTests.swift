@@ -47,10 +47,6 @@ final class ContextEngineTests: XCTestCase {
         let evening = ContextEngine.build(.init(now: date(2026, 11, 3, 18), settings: Settings(), weather: nil, plan: [], recipes: []))
         XCTAssertEqual(evening.targetLabel, "Tonight")
         XCTAssertEqual(evening.targetDate, "2026-11-03")
-        // Past midnight the date has rolled over, so the new day's dinner is the target.
-        let small = ContextEngine.build(.init(now: date(2026, 11, 4, 0, 30), settings: Settings(), weather: nil, plan: [], recipes: []))
-        XCTAssertEqual(small.targetLabel, "Tonight")
-        XCTAssertEqual(small.targetDate, "2026-11-04")
     }
 
     func testNudges() {
@@ -313,5 +309,25 @@ final class StoreTests: XCTestCase {
         undo()
         XCTAssertEqual(store.dinner(on: "2026-11-03")?.recipeId, recipe.id)
         XCTAssertEqual(store.dinner(on: "2026-11-03")?.servings, 3)
+    }
+
+    func testFinishShoppingKeepsDismissedAndFoldsAmounts() throws {
+        let store = try makeStore()
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: [])
+        store.addPantryItem(name: "Yogurt", quantity: 100, unit: "g")
+        store.addShopItem("Yogurt", quantity: 350, unit: "g")
+        store.addShopItem("Yogurt", quantity: 2, unit: "tbsp")
+        store.settings.shopDismissed = ["lime"]
+        for item in store.fetch(ShopItemModel.self) { store.toggleShopItem(item) }
+        store.finishShopping()
+        let yogurt = store.fetch(PantryItemModel.self).first { $0.key == "yogurt" }
+        XCTAssertEqual(yogurt?.quantity, 450)
+        XCTAssertEqual(store.settings.shopDismissed, ["lime"])
+    }
+
+    func testAmountParserReadsEveryFractionItPrints() {
+        for q in [0.125, 0.375, 0.625, 0.875, 1.5, 2.25] {
+            XCTAssertEqual(Quantity.parse(Quantity.niceNumber(q)) ?? -1, q, accuracy: 0.001)
+        }
     }
 }

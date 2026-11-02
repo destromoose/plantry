@@ -498,19 +498,23 @@ final class Store {
         let now = ISO.now()
         let pantry = fetch(PantryItemModel.self)
         for item in fetch(ShopItemModel.self, #Predicate { $0.checked }) {
+            // Every amount on the row, in the first unit that adds up: 350 g + 2 tbsp becomes 350 g.
+            let bought = item.amounts
             if let existing = pantry.first(where: { $0.key == item.key }) {
                 existing.addedAt = now
-                if let q = item.quantity, let have = existing.quantity, Quantity.compatible(existing.unit ?? "", item.unit ?? "") {
-                    existing.apply(amount: Quantity.add([Amount(quantity: have, unit: existing.unit ?? "")], Amount(quantity: q, unit: item.unit ?? "")).first)
-                } else if let q = item.quantity, existing.quantity == nil {
-                    existing.quantity = q; existing.unit = item.unit
+                if let have = existing.quantity {
+                    var list = [Amount(quantity: have, unit: existing.unit ?? "")]
+                    for a in bought { list = Quantity.add(list, a) }
+                    existing.apply(amount: list.first)
+                } else if let first = bought.first {
+                    existing.apply(amount: first)
                 }
             } else {
-                context.insert(PantryItemModel(makePantryItem(item.name, now: now, aisle: item.aisle, quantity: item.quantity, unit: item.unit)))
+                context.insert(PantryItemModel(makePantryItem(item.name, now: now, aisle: item.aisle, quantity: bought.first?.quantity, unit: bought.first?.unit)))
             }
             context.delete(item)
         }
-        settings.shopDismissed = []
+        // Rows the person removed from the list stay off until they ask them back.
         save()
     }
 
