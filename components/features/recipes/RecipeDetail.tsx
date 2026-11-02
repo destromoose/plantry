@@ -1,5 +1,6 @@
 'use client'
 
+import { RecipeFacts } from '@/components/features/nutrition/RecipeFacts'
 import { agoLabel, historyFor, ratingLabels } from '@/lib/history'
 import { formatAmount, withTemperatures } from '@/lib/quantity'
 import { useUnits } from '@/lib/useUnits'
@@ -27,14 +28,7 @@ import { useStore } from '@/lib/store'
 import { loadCookSession } from '@/lib/cookSession'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
-import {
-  cn,
-  addDays,
-  dayLabel,
-  formatMinutes,
-  pluralize,
-  toDateKey,
-} from '@/lib/utils'
+import { cn, addDays, dayLabel, formatMinutes, pluralize, toDateKey } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { Tag } from '@/components/ui/Chip'
@@ -195,6 +189,9 @@ export function RecipeDetail({ id }: { id: string }) {
             <Stat icon={Clock} label="Total" value={formatMinutes(recipe.totalMinutes)} />
             <Stat icon={Users} label="Serves" value={String(recipe.servings)} />
           </dl>
+          <div className="mt-4">
+            <RecipeFacts recipe={recipe} servings={current} />
+          </div>
           {!recipe.custom && (
             <div className="mt-4">
               <Button

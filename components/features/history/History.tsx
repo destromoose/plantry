@@ -217,9 +217,9 @@ function fromKeyMinus(key: string, days: number) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div>
-      <dd className="font-display text-3xl font-semibold tabular-nums">{value}</dd>
+    <div className="flex flex-col-reverse">
       <dt className="text-sm text-ink-3">{label}</dt>
+      <dd className="font-display text-3xl font-semibold tabular-nums">{value}</dd>
     </div>
   )
 }

@@ -21,6 +21,9 @@ export interface SuggestInput {
   exclude?: string[]
   /** The latest rating for each recipe: loved ones come back sooner, "not again" ones rarely. */
   ratings?: Record<string, Rating>
+  /** Cost of one serving, and the most a serving should cost, to keep a week on budget. */
+  costOf?: (r: Recipe) => number
+  budgetPerServing?: number
   /** Allergens and diets to respect. Recipes that break one are never suggested. */
   avoid?: string[]
 }
@@ -48,6 +51,8 @@ export function suggest(input: SuggestInput): Scored[] {
     exclude = [],
     avoid = [],
     ratings = {},
+    costOf,
+    budgetPerServing,
   } = input
   const today = toDateKey(new Date(context.now))
   const aging = new Set(pantry.filter((p) => isUseSoon(p, today)).map((p) => p.key))
@@ -108,6 +113,15 @@ export function suggest(input: SuggestInput): Scored[] {
     if (recentIdx !== -1) score -= Math.max(0, 25 - recentIdx * 5)
 
     if (recipe.isFavorite) score += 3
+
+    if (costOf && budgetPerServing && budgetPerServing > 0) {
+      const cost = costOf(recipe)
+      if (cost > budgetPerServing) score -= Math.min(30, (cost / budgetPerServing - 1) * 30)
+      else {
+        score += 6
+        if (cost <= budgetPerServing * 0.7) reasons.push('Easy on the budget')
+      }
+    }
 
     const rating = ratings[recipe.id]
     if (rating === 'loved') {

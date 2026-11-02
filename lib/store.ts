@@ -24,6 +24,7 @@ import { seedRecipes } from './seed/recipes'
 import { staples } from './seed/pantry'
 import { checkImport, cleanData, defaultSettings } from './schema'
 import { createSafeStorage, useStorageStatus } from './storage'
+import { guessCurrency } from './cost'
 
 export interface PlantryState {
   settings: Settings
@@ -160,6 +161,17 @@ function makePantryItem(name: string, now: string, patch: Partial<PantryItem> = 
   }
 }
 
+/** Units and currency that fit where this device is, picked once at onboarding. */
+function localDefaults(): Partial<Settings> {
+  if (typeof navigator === 'undefined') return {}
+  const region = (navigator.language.split('-')[1] ?? '').toUpperCase()
+  const currency = guessCurrency(region)
+  return {
+    ...(currency ? { currency } : {}),
+    ...(region === 'US' || region === 'LR' || region === 'MM' ? { units: 'imperial' } : {}),
+  }
+}
+
 export const STORAGE_KEY = 'plantry-v1'
 const storage = createSafeStorage<PlantryState>()
 
@@ -203,6 +215,7 @@ export const useStore = create<PlantryState>()(
             tastes,
             avoid,
             cookingFor: Math.max(1, newMembers.length),
+            ...localDefaults(),
           },
           pantry: pantryNames.map((n) => makePantryItem(n, now)),
         }))

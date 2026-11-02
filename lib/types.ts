@@ -136,6 +136,14 @@ export interface Settings {
   cookingWithKids: boolean
   highContrast: boolean
   textSize: 'normal' | 'large' | 'larger'
+  /** Show rough nutrition per serving on recipes. */
+  showNutrition: boolean
+  /** Currency for rough costs. */
+  currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'MXN'
+  /** How pricey shops are nearby, so cost estimates land closer. */
+  priceLevel: 'low' | 'average' | 'high'
+  /** Dinner budget for a week, in `currency`. 0 means no budget. */
+  weeklyBudget: number
 }
 
 export interface Weather {

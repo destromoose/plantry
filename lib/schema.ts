@@ -150,6 +150,10 @@ export const defaultSettings: Settings = {
   cookingWithKids: false,
   highContrast: false,
   textSize: 'normal',
+  showNutrition: true,
+  currency: 'USD',
+  priceLevel: 'average',
+  weeklyBudget: 0,
 }
 
 const settingsSchema = z.object({
@@ -165,6 +169,10 @@ const settingsSchema = z.object({
   cookingWithKids: z.boolean().catch(false),
   highContrast: z.boolean().catch(false),
   textSize: z.enum(['normal', 'large', 'larger']).catch('normal'),
+  showNutrition: z.boolean().catch(defaultSettings.showNutrition),
+  currency: z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'MXN']).catch(defaultSettings.currency),
+  priceLevel: z.enum(['low', 'average', 'high']).catch(defaultSettings.priceLevel),
+  weeklyBudget: z.number().finite().min(0).max(100000).catch(0),
 })
 
 /** The persisted collections and the schema for one item of each. */
