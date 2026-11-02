@@ -1,5 +1,7 @@
 'use client'
 
+import { locale, t } from '@/lib/i18n'
+
 import { ratingsOf } from '@/lib/history'
 import { useMemo, useState } from 'react'
 import { Check, CalendarDays, Moon, Pencil, Repeat, Shuffle, Trash2, UserRound } from 'lucide-react'
@@ -29,14 +31,14 @@ import { toast } from '@/components/ui/Toast'
 import { Thumb } from './Thumb'
 
 const tasteLabels: [Taste, string][] = [
-  ['cozy', 'Cozy'],
-  ['fresh', 'Fresh'],
-  ['fast', 'Fast'],
-  ['one-pan', 'One pan'],
-  ['veg-forward', 'Veg-forward'],
-  ['spicy', 'Spicy'],
-  ['big-batch', 'Big batch'],
-  ['kid-friendly', 'Kid-friendly'],
+  ['cozy', t('Cozy')],
+  ['fresh', t('Fresh')],
+  ['fast', t('Fast')],
+  ['one-pan', t('One pan')],
+  ['veg-forward', t('Veg-forward')],
+  ['spicy', t('Spicy')],
+  ['big-batch', t('Big batch')],
+  ['kid-friendly', t('Kid-friendly')],
 ]
 
 export type SheetKind = 'pick' | 'menu' | 'claim' | 'move'
@@ -70,12 +72,12 @@ export function DaySheets({
     date === null
       ? ''
       : kind === 'pick'
-        ? `Dinner for ${dayLabel(date, today)}`
+        ? t('Dinner for {v0}', { v0: dayLabel(date, today) })
         : kind === 'claim'
-          ? 'Who is cooking?'
+          ? t('Who is cooking?')
           : kind === 'move'
-            ? 'Move or swap with which night?'
-            : `${dayLabel(date, today)}, ${fromDateKey(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+            ? t('Move or swap with which night?')
+            : `${dayLabel(date, today)}, ${fromDateKey(date).toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}`
 
   return (
     <Sheet open={open} onClose={onClose} title={title} tall={kind === 'pick'}>
@@ -171,15 +173,15 @@ function PickBody({
     <div className="space-y-5">
       <Input
         type="search"
-        aria-label="Search recipes"
-        placeholder="Search recipes or ingredients"
+        aria-label={t('Search recipes')}
+        placeholder={t('Search recipes or ingredients')}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
       <div
         className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1"
         role="group"
-        aria-label="Filter by taste"
+        aria-label={t('Filter by taste')}
       >
         {tasteLabels.map(([id, label]) => (
           <Chip
@@ -199,7 +201,7 @@ function PickBody({
       {leftovers.length > 0 && !needle && (
         <section>
           <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">
-            Leftovers of...
+            {t('Leftovers of...')}
           </h3>
           <ul className="space-y-2">
             {leftovers.map((r) => (
@@ -220,10 +222,12 @@ function PickBody({
 
       <section>
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">
-          Suggestions
+          {t('Suggestions')}
         </h3>
         {list.length === 0 ? (
-          <p className="py-4 text-[0.9375rem] text-ink-2">Nothing matches. Try fewer filters.</p>
+          <p className="py-4 text-[0.9375rem] text-ink-2">
+            {t('Nothing matches. Try fewer filters.')}
+          </p>
         ) : (
           <ul className="space-y-2">
             {list.map(({ recipe }) => {
@@ -241,7 +245,11 @@ function PickBody({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{recipe.title}</span>
                       <span className="block text-sm text-ink-2">
-                        {formatMinutes(recipe.activeMinutes)} · {cov.have} of {cov.total}
+                        {t('{v0} · {have} of {total}', {
+                          v0: formatMinutes(recipe.activeMinutes),
+                          have: cov.have,
+                          total: cov.total,
+                        })}
                       </span>
                     </span>
                   </button>
@@ -254,7 +262,7 @@ function PickBody({
 
       <section>
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">
-          Something else
+          {t('Something else')}
         </h3>
         <form
           className="flex gap-2"
@@ -265,13 +273,13 @@ function PickBody({
           }}
         >
           <Input
-            aria-label="Free-text dinner"
-            placeholder="Takeout, Out, Dinner at Sam's"
+            aria-label={t('Free-text dinner')}
+            placeholder={t("Takeout, Out, Dinner at Sam's")}
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
           <Button type="submit" variant="secondary" size="lg" disabled={!note.trim()}>
-            Add
+            {t('Add')}
           </Button>
         </form>
       </section>
@@ -345,7 +353,7 @@ function MenuBody({
     })
     const pick = pickNext(ranked, [])
     if (!pick) {
-      toast('No other dinners fit. Add a recipe or loosen a filter.')
+      toast(t('No other dinners fit. Add a recipe or loosen a filter.'))
       return
     }
     setPlanEntry({
@@ -365,43 +373,45 @@ function MenuBody({
     <ul className="-mx-3 space-y-1">
       {entry?.recipeId && (
         <li className="flex min-h-[3.5rem] items-center justify-between gap-3 px-3">
-          <span className="font-medium">Cooking for</span>
+          <span className="font-medium">{t('Cooking for')}</span>
           <Stepper
             value={entry.servings ?? cookingFor}
             onChange={(v) => setServings(date, v)}
             min={1}
             max={24}
-            label="Cooking for"
+            label={t('Cooking for')}
           />
         </li>
       )}
       <Row
         icon={Pencil}
-        label={hasContent ? 'Change' : 'Pick something'}
+        label={hasContent ? t('Change') : t('Pick something')}
         onClick={() => setKind('pick')}
       />
       {hasMeal && !entry?.done && (
         <Row
           icon={Check}
-          label="Mark cooked"
+          label={t('Mark cooked')}
           onClick={() => {
             onCooked(date)
             onClose()
           }}
         />
       )}
-      <Row icon={UserRound} label="Choose who cooks" onClick={() => setKind('claim')} />
+      <Row icon={UserRound} label={t('Choose who cooks')} onClick={() => setKind('claim')} />
       {entry?.recipeId && !entry.done && (
-        <Row icon={Shuffle} label="Something else" onClick={somethingElse} />
+        <Row icon={Shuffle} label={t('Something else')} onClick={somethingElse} />
       )}
-      {hasContent && <Row icon={Repeat} label="Move or swap..." onClick={() => setKind('move')} />}
-      {entry?.note !== 'Not cooking' && (
+      {hasContent && (
+        <Row icon={Repeat} label={t('Move or swap...')} onClick={() => setKind('move')} />
+      )}
+      {entry?.note !== t('Not cooking') && entry?.note !== 'Not cooking' && (
         <Row
           icon={Moon}
-          label="Not cooking this night"
+          label={t('Not cooking this night')}
           onClick={() => {
-            withUndo('Marked as not cooking', () =>
-              setPlanEntry({ date, slot: 'dinner', note: 'Not cooking', cookId: entry?.cookId })
+            withUndo(t('Marked as not cooking'), () =>
+              setPlanEntry({ date, slot: 'dinner', note: t('Not cooking'), cookId: entry?.cookId })
             )
             onClose()
           }}
@@ -410,10 +420,10 @@ function MenuBody({
       {entry && (
         <Row
           icon={Trash2}
-          label="Remove"
+          label={t('Remove')}
           danger
           onClick={() => {
-            withUndo('Dinner removed', () => clearPlanEntry(date, 'dinner'))
+            withUndo(t('Dinner removed'), () => clearPlanEntry(date, 'dinner'))
             onClose()
           }}
         />
@@ -434,7 +444,9 @@ function ClaimBody({
   const members = useStore((s) => s.members)
   const claimNight = useStore((s) => s.claimNight)
   if (members.length === 0)
-    return <p className="text-[0.9375rem] text-ink-2">Add someone to your household first.</p>
+    return (
+      <p className="text-[0.9375rem] text-ink-2">{t('Add someone to your household first.')}</p>
+    )
   return (
     <ul className="space-y-2">
       {members.map((m) => (
@@ -443,7 +455,7 @@ function ClaimBody({
             type="button"
             onClick={() => {
               claimNight(date, m.id)
-              toast(`${m.name} has the night`)
+              toast(t('{name} has the night', { name: m.name }))
               onClose()
             }}
             className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 text-left hover:border-ink-3"
@@ -451,7 +463,7 @@ function ClaimBody({
             <Avatar member={m} />
             <span className="flex-1 font-medium">{m.name}</span>
             {entry?.cookId === m.id && (
-              <Check className="h-5 w-5 text-secondary" aria-label="Current cook" />
+              <Check className="h-5 w-5 text-secondary" aria-label={t('Current cook')} />
             )}
           </button>
         </li>
@@ -465,7 +477,7 @@ function ClaimBody({
               onClose()
             }}
           >
-            Unclaim
+            {t('Unclaim')}
           </Button>
         </li>
       )}
@@ -507,11 +519,11 @@ function MoveBody({
   function problem(d: string): string | undefined {
     const other = dinnerOn(d)
     const cook = cookDateOf(entry)
-    if (cook && d <= cook) return 'Before it is cooked'
+    if (cook && d <= cook) return t('Before it is cooked')
     const left = leftoversDateOf(entry)
-    if (left && d >= left) return 'After its leftovers night'
+    if (left && d >= left) return t('After its leftovers night')
     const otherCook = cookDateOf(other)
-    if (otherCook && date <= otherCook) return 'Would put leftovers first'
+    if (otherCook && date <= otherCook) return t('Would put leftovers first')
     return undefined
   }
   return (
@@ -521,7 +533,7 @@ function MoveBody({
         const label = other?.recipeId
           ? recipes.find((r) => r.id === other.recipeId)?.title
           : other?.leftoversOf
-            ? 'Leftovers'
+            ? t('Leftovers')
             : other?.note
         const why = problem(d)
         return (
@@ -532,7 +544,9 @@ function MoveBody({
               onClick={() => {
                 movePlanEntry(entry.id, d)
                 toast(
-                  label ? `Swapped with ${dayLabel(d, today)}` : `Moved to ${dayLabel(d, today)}`
+                  label
+                    ? t('Swapped with {v0}', { v0: dayLabel(d, today) })
+                    : t('Moved to {v0}', { v0: dayLabel(d, today) })
                 )
                 onClose()
               }}
@@ -546,7 +560,9 @@ function MoveBody({
                 {why ? (
                   <span className="block truncate text-sm text-ink-3">{why}</span>
                 ) : label ? (
-                  <span className="block truncate text-sm text-ink-2">Swaps with {label}</span>
+                  <span className="block truncate text-sm text-ink-2">
+                    {t('Swaps with {label}', { label })}
+                  </span>
                 ) : null}
               </span>
             </button>

@@ -1,3 +1,4 @@
+import { locale, t } from '@/lib/i18n'
 // The cooking history: what was cooked, when, by whom, and how it went.
 // Pure functions over the `cooked` log so screens and the suggestion ranker agree.
 
@@ -5,9 +6,9 @@ import type { CookedEntry, Rating } from './types'
 import { daysBetween, fromDateKey } from './utils'
 
 export const ratingLabels: Record<Rating, string> = {
-  loved: 'Loved it',
-  fine: 'Fine',
-  'not-again': 'Not again',
+  loved: t('Loved it'),
+  fine: t('Fine'),
+  'not-again': t('Not again'),
 }
 
 export interface RecipeHistory {
@@ -66,8 +67,8 @@ export function byMonth(cooked: CookedEntry[]) {
   return groups
 }
 
-export const monthLabel = (key: string, locale?: string) =>
-  fromDateKey(`${key}-01`).toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+export const monthLabel = (key: string) =>
+  fromDateKey(`${key}-01`).toLocaleDateString(locale(), { month: 'long', year: 'numeric' })
 
 /** The recipes cooked most, most first. */
 export function mostCooked(cooked: CookedEntry[], limit = 3) {
@@ -82,9 +83,11 @@ export function mostCooked(cooked: CookedEntry[], limit = 3) {
 /** "today", "yesterday", "5 days ago", "3 weeks ago", "in March". */
 export function agoLabel(date: string, today: string) {
   const d = daysBetween(date, today)
-  if (d <= 0) return 'today'
-  if (d === 1) return 'yesterday'
-  if (d < 14) return `${d} days ago`
-  if (d < 60) return `${Math.round(d / 7)} weeks ago`
-  return `in ${fromDateKey(date).toLocaleDateString(undefined, { month: 'long' })}`
+  if (d <= 0) return t('today')
+  if (d === 1) return t('yesterday')
+  if (d < 14) return t('{d} days ago', { d })
+  if (d < 60) return t('{v0} weeks ago', { v0: Math.round(d / 7) })
+  return t('in {month}', {
+    month: fromDateKey(date).toLocaleDateString(locale(), { month: 'long' }),
+  })
 }

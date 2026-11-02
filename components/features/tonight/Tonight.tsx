@@ -1,5 +1,7 @@
 'use client'
 
+import { locale, t } from '@/lib/i18n'
+
 import { ratingsOf } from '@/lib/history'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -61,13 +63,13 @@ export function Tonight() {
 
   const greeting =
     ctx.mood === 'dawn'
-      ? 'Morning'
+      ? t('Morning')
       : ctx.mood === 'day'
-        ? 'Afternoon'
+        ? t('Afternoon')
         : ctx.mood === 'dusk'
-          ? 'Evening'
-          : 'Late one'
-  const dateText = fromDateKey(target).toLocaleDateString(undefined, {
+          ? t('Evening')
+          : t('Late one')
+  const dateText = fromDateKey(target).toLocaleDateString(locale(), {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -81,7 +83,7 @@ export function Tonight() {
       className="space-y-7 pb-8 pt-4"
     >
       <motion.header variants={reveal}>
-        <Eyebrow>{ctx.targetLabel}</Eyebrow>
+        <Eyebrow>{t(ctx.targetLabel)}</Eyebrow>
         <h1 className="mt-1 font-display text-fluid-xl font-semibold leading-none tracking-tight">
           {dateText}
         </h1>
@@ -90,8 +92,8 @@ export function Tonight() {
         </p>
         {doneTonight && (
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-pill bg-secondary/15 px-3 py-1 text-sm font-medium text-ink">
-            <Check className="h-4 w-4 text-secondary" aria-hidden /> Tonight&apos;s {doneTonight} is
-            done. Here&apos;s tomorrow.
+            <Check className="h-4 w-4 text-secondary" aria-hidden />{' '}
+            {t("Tonight's {doneTonight} is done. Here's tomorrow.", { doneTonight })}
           </p>
         )}
         {ctx.canStayTonight && (
@@ -101,7 +103,7 @@ export function Tonight() {
             className="-ml-3 mt-1"
             onClick={() => stayTonight(true)}
           >
-            Still eating tonight? Stay on today
+            {t('Still eating tonight? Stay on today')}
           </Button>
         )}
       </motion.header>
@@ -125,8 +127,8 @@ export function Tonight() {
         <NudgeCard nudge={ctx.nudge} targetDate={target} today={today} now={ctx.now} />
       </motion.div>
 
-      <motion.section variants={reveal} aria-label="Next three days">
-        <SectionTitle>Next three days</SectionTitle>
+      <motion.section variants={reveal} aria-label={t('Next three days')}>
+        <SectionTitle>{t('Next three days')}</SectionTitle>
         <NextDays target={target} />
       </motion.section>
 
@@ -136,13 +138,13 @@ export function Tonight() {
           className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <Eyebrow>Sunday ritual</Eyebrow>
+            <Eyebrow>{t('Sunday ritual')}</Eyebrow>
             <p className="mt-1 font-display text-lg font-semibold">
-              Ten minutes now saves five decisions later.
+              {t('Ten minutes now saves five decisions later.')}
             </p>
           </div>
           <Link href="/week" className={cn(buttonVariants({ variant: 'secondary' }), 'self-start')}>
-            Plan the week
+            {t('Plan the week')}
           </Link>
         </motion.section>
       )}
@@ -181,7 +183,7 @@ function NudgeCard({
   const shell = (title: string, body: string | undefined, action: React.ReactNode) => (
     <aside
       className="card flex flex-col gap-3 border-l-4 border-l-accent p-5 sm:flex-row sm:items-center sm:justify-between"
-      aria-label="A nudge"
+      aria-label={t('A nudge')}
     >
       <div>
         <p className="font-display text-lg font-semibold leading-snug">{title}</p>
@@ -189,7 +191,12 @@ function NudgeCard({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {action}
-        <Button variant="ghost" size="icon-sm" aria-label="Dismiss" onClick={() => setHidden(true)}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t('Dismiss')}
+          onClick={() => setHidden(true)}
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -198,10 +205,10 @@ function NudgeCard({
 
   if (nudge === 'plan-week')
     return shell(
-      "It's a good morning to plan the week",
-      'A few minutes now and the weekday scramble mostly goes away.',
+      t("It's a good morning to plan the week"),
+      t('A few minutes now and the weekday scramble mostly goes away.'),
       <Link href="/week" className={buttonVariants({ variant: 'primary', size: 'sm' })}>
-        Open the week
+        {t('Open the week')}
       </Link>
     )
 
@@ -209,23 +216,26 @@ function NudgeCard({
     const ing = recipe.ingredients.find((i) => i.aisle === 'frozen' || i.aisle === 'meat-fish')
     if (!ing) return null
     return shell(
-      `Take the ${ing.name.toLowerCase()} out of the freezer`,
-      `For ${recipe.title}. It will thank you by dinner.`,
+      t('Take the {v0} out of the freezer', { v0: ing.name.toLowerCase() }),
+      t('For {title}. It will thank you by dinner.', { title: recipe.title }),
       null
     )
   }
 
   if (nudge === 'start-now' && recipe) {
     const eat = new Date(new Date(now).getTime() + recipe.totalMinutes * 60_000)
-    const time = eat.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    const time = eat.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })
     return shell(
-      `Start now and you'll eat by ${time}`,
-      `${recipe.title} takes ${formatMinutes(recipe.totalMinutes)} start to finish.`,
+      t("Start now and you'll eat by {time}", { time }),
+      t('{title} takes {v1} start to finish.', {
+        title: recipe.title,
+        v1: formatMinutes(recipe.totalMinutes),
+      }),
       <Link
         href={`/cook/${recipe.id}?date=${targetDate}`}
         className={buttonVariants({ variant: 'primary', size: 'sm' })}
       >
-        Cook
+        {t('Cook')}
       </Link>
     )
   }
@@ -236,14 +246,14 @@ function NudgeCard({
     const r = y?.recipeId ? recipes.find((x) => x.id === y.recipeId && x.leftovers) : undefined
     if (!r) return null
     return shell(
-      `There's ${r.title} in the fridge from yesterday`,
-      'Already cooked. Tonight can be easy.',
+      t("There's {title} in the fridge from yesterday", { title: r.title }),
+      t('Already cooked. Tonight can be easy.'),
       entry?.leftoversOf === r.id ? null : (
         <Button
           size="sm"
           onClick={() => setPlanEntry({ date: targetDate, slot: 'dinner', leftoversOf: r.id })}
         >
-          Have it {targetDate === today ? 'tonight' : 'tomorrow'}
+          {targetDate === today ? t('Have it tonight') : t('Have it tomorrow')}
         </Button>
       )
     )
@@ -267,7 +277,7 @@ function NextDays({ target }: { target: string }) {
         const title = e?.recipeId
           ? r?.title
           : e?.leftoversOf
-            ? `Leftovers: ${r?.title ?? ''}`
+            ? t('Leftovers: {v0}', { v0: r?.title ?? '' })
             : e?.note
         const cook = members.find((m) => m.id === e?.cookId)
         return (
@@ -288,7 +298,7 @@ function NextDays({ target }: { target: string }) {
                   !title && 'font-normal text-ink-3'
                 )}
               >
-                {title || 'Nothing yet'}
+                {title || t('Nothing yet')}
               </span>
             </Link>
           </li>
@@ -317,20 +327,21 @@ function WeatherOptIn() {
     <div className="card flex items-center gap-3 p-4">
       <CloudSun className="h-5 w-5 shrink-0 text-ink-2" aria-hidden />
       <p className="flex-1 text-sm text-ink-2">
-        Let Plantry check the weather? Rainy nights lean cozy. It sends your rough location to a
-        weather service.
+        {t(
+          'Let Plantry check the weather? Rainy nights lean cozy. It sends your rough location to a weather service.'
+        )}
       </p>
       <Button
         size="sm"
         variant="secondary"
         onClick={() => updateSettings({ weatherEnabled: true })}
       >
-        Sure
+        {t('Sure')}
       </Button>
       <Button
         size="icon-sm"
         variant="ghost"
-        aria-label="Dismiss"
+        aria-label={t('Dismiss')}
         onClick={() => {
           setDismissed(true)
           try {

@@ -1,5 +1,7 @@
 'use client'
 
+import { langSetting, switchLang, t, type LangSetting } from '@/lib/i18n'
+
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,7 +22,7 @@ import { Stepper } from '@/components/ui/Stepper'
 import { Toggle } from '@/components/features/cook/Toggle'
 import { toast } from '@/components/ui/Toast'
 import { settle } from '@/lib/motion'
-import { cn, toDateKey } from '@/lib/utils'
+import { cn, pluralize, toDateKey } from '@/lib/utils'
 import type { Settings as SettingsT } from '@/lib/types'
 import { currencies, formatMoney } from '@/lib/cost'
 import { Input } from '@/components/ui/Field'
@@ -66,6 +68,7 @@ export function Settings() {
     dropped: number
   } | null>(null)
   const storage = useStorageStatus()
+  const [lang, setLang] = useState<LangSetting>(() => langSetting())
 
   function doExport() {
     const blob = new Blob([exportData()], { type: 'application/json' })
@@ -77,7 +80,7 @@ export function Settings() {
     a.click()
     a.remove()
     URL.revokeObjectURL(url)
-    toast('Exported')
+    toast(t('Exported'))
   }
 
   // Read and check the file first, then ask before replacing anything.
@@ -90,7 +93,7 @@ export function Settings() {
       text = await file.text()
       raw = JSON.parse(text)
     } catch {
-      toast('Could not read that file.', { tone: 'error' })
+      toast(t('Could not read that file.'), { tone: 'error' })
       return
     }
     const res = checkImport(raw)
@@ -101,9 +104,9 @@ export function Settings() {
     const d = res.data
     const counts = [
       `${d.recipes.length} recipes`,
-      `${d.pantry.length} pantry items`,
-      `${d.plan.length} planned meals`,
-      `${d.shop.length} list items`,
+      t('{length} pantry items', { length: d.pantry.length }),
+      t('{length} planned meals', { length: d.plan.length }),
+      t('{length} list items', { length: d.shop.length }),
       `${d.members.length} people`,
     ].join(', ')
     setPendingImport({ text, name: file.name, counts, dropped: res.dropped })
@@ -114,41 +117,45 @@ export function Settings() {
     const { text } = pendingImport
     setPendingImport(null)
     let failed: string | undefined
-    withUndo('Imported. Your old data is one tap away.', () => {
+    withUndo(t('Imported. Your old data is one tap away.'), () => {
       const res = importData(text)
       if (!res.ok) failed = res.error
     })
     if (failed) toast(failed, { tone: 'error' })
   }
 
-  const toggleTaste = (t: SettingsT['tastes'][number]) =>
+  const toggleTaste = (tItem: SettingsT['tastes'][number]) =>
     update({
-      tastes: settings.tastes.includes(t)
-        ? settings.tastes.filter((x) => x !== t)
-        : [...settings.tastes, t],
+      tastes: settings.tastes.includes(tItem)
+        ? settings.tastes.filter((x) => x !== tItem)
+        : [...settings.tastes, tItem],
     })
 
   return (
     <div className="space-y-5 pb-8">
-      <PageHeader className="mb-2" title="Settings" subtitle="Make it yours." />
+      <PageHeader className="mb-2" title={t('Settings')} subtitle={t('Make it yours.')} />
 
       <Card>
-        <SectionTitle>Mood</SectionTitle>
+        <SectionTitle>{t('Mood')}</SectionTitle>
         <Choice
-          label="Mood"
+          label={t('Mood')}
           value={settings.mood}
           onChange={(v) => update({ mood: v })}
           options={[
-            { id: 'auto', label: 'Follow the day' },
-            { id: 'system', label: 'Match my device' },
-            { id: 'dawn', label: 'Dawn' },
-            { id: 'day', label: 'Day' },
-            { id: 'dusk', label: 'Dusk' },
-            { id: 'night', label: 'Night' },
+            { id: 'auto', label: t('Follow the day') },
+            { id: 'system', label: t('Match my device') },
+            { id: 'dawn', label: t('Dawn') },
+            { id: 'day', label: t('Day') },
+            { id: 'dusk', label: t('Dusk') },
+            { id: 'night', label: t('Night') },
           ]}
         />
-        <p className="mt-4 text-sm text-ink-3">Colours right now ({mood}):</p>
-        <div className="mt-1.5 flex gap-1.5" aria-label={`Colours of the ${mood} mood`} role="img">
+        <p className="mt-4 text-sm text-ink-3">{t('Colours right now ({mood}):', { mood })}</p>
+        <div
+          className="mt-1.5 flex gap-1.5"
+          aria-label={t('Colours of the {mood} mood', { mood })}
+          role="img"
+        >
           {['bg-canvas', 'bg-surface', 'bg-accent', 'bg-secondary'].map((c) => (
             <div key={c} className={cn('h-4 flex-1 rounded-full', c)} />
           ))}
@@ -156,52 +163,71 @@ export function Settings() {
       </Card>
 
       <Card>
-        <SectionTitle>Reading</SectionTitle>
+        <SectionTitle>{t('Language')}</SectionTitle>
         <Choice
-          label="Text size"
+          label={t('Language')}
+          value={lang}
+          onChange={(v) => {
+            setLang(v)
+            switchLang(v)
+          }}
+          options={[
+            { id: 'auto', label: t('Match my device') },
+            { id: 'en', label: 'English' },
+            { id: 'es', label: 'Español' },
+          ]}
+        />
+      </Card>
+
+      <Card>
+        <SectionTitle>{t('Reading')}</SectionTitle>
+        <Choice
+          label={t('Text size')}
           value={settings.textSize}
           onChange={(v) => update({ textSize: v })}
           options={[
-            { id: 'normal', label: 'Normal' },
-            { id: 'large', label: 'Large' },
-            { id: 'larger', label: 'Larger' },
+            { id: 'normal', label: t('Normal') },
+            { id: 'large', label: t('Large') },
+            { id: 'larger', label: t('Larger') },
           ]}
         />
         <div className="mt-3">
           <Toggle
             checked={settings.highContrast}
             onChange={(v) => update({ highContrast: v })}
-            label="High contrast"
+            label={t('High contrast')}
           />
         </div>
       </Card>
 
       <Card>
-        <SectionTitle>Motion</SectionTitle>
+        <SectionTitle>{t('Motion')}</SectionTitle>
         <Choice
-          label="Motion"
+          label={t('Motion')}
           value={settings.reducedMotion}
           onChange={(v) => update({ reducedMotion: v })}
           options={[
-            { id: 'system', label: 'System' },
-            { id: 'on', label: 'Reduced' },
-            { id: 'off', label: 'Full' },
+            { id: 'system', label: t('System') },
+            { id: 'on', label: t('Reduced') },
+            { id: 'off', label: t('Full') },
           ]}
         />
       </Card>
 
       <Card>
-        <SectionTitle>Weather</SectionTitle>
+        <SectionTitle>{t('Weather')}</SectionTitle>
         <div className="flex items-center justify-between gap-4">
           <p className="text-[0.9375rem] text-ink-2">
-            Let the weather nudge dinner toward cozy or light.
+            {t('Let the weather nudge dinner toward cozy or light.')}
             <span className="mt-1 block text-sm text-ink-3">
-              Sends your rough location (to about 10 km) to Open-Meteo, a free weather service,
-              about once an hour. Nothing else leaves this device.
+              {t(
+                'Sends your rough location (to about 10 km) to Open-Meteo, a free weather service, about once an hour. Nothing else leaves this device.'
+              )}
             </span>
             {settings.weatherEnabled && weather && (
               <span className="mt-1 block text-ink">
-                Right now: {Math.round(weather.tempC)}°{weather.precipitation ? ', rain' : ''}
+                {t('Right now: {v0}°', { v0: Math.round(weather.tempC) })}
+                {weather.precipitation ? t(', rain') : ''}
               </span>
             )}
           </p>
@@ -209,7 +235,7 @@ export function Settings() {
             type="button"
             role="switch"
             aria-checked={settings.weatherEnabled}
-            aria-label="Use the weather"
+            aria-label={t('Use the weather')}
             onClick={() => update({ weatherEnabled: !settings.weatherEnabled })}
             className={cn(
               'flex h-8 w-14 shrink-0 items-center rounded-pill p-1 transition-colors',
@@ -226,80 +252,83 @@ export function Settings() {
       </Card>
 
       <Card>
-        <SectionTitle>Tastes</SectionTitle>
-        <div role="group" aria-label="Tastes" className="flex flex-wrap gap-2">
-          {tasteOptions.map((t) => (
+        <SectionTitle>{t('Tastes')}</SectionTitle>
+        <div role="group" aria-label={t('Tastes')} className="flex flex-wrap gap-2">
+          {tasteOptions.map((tItem) => (
             <Chip
-              key={t.id}
-              selected={settings.tastes.includes(t.id)}
-              onClick={() => toggleTaste(t.id)}
+              key={tItem.id}
+              selected={settings.tastes.includes(tItem.id)}
+              onClick={() => toggleTaste(tItem.id)}
             >
-              {t.label}
+              {tItem.label}
             </Chip>
           ))}
         </div>
       </Card>
 
       <Card>
-        <SectionTitle>Cooking for</SectionTitle>
+        <SectionTitle>{t('Cooking for')}</SectionTitle>
         <div className="flex items-center justify-between gap-4">
           <p className="text-[0.9375rem] text-ink-2">
-            How many people dinner is usually for. Recipes scale to this.
+            {t('How many people dinner is usually for. Recipes scale to this.')}
           </p>
           <Stepper
             value={settings.cookingFor}
             onChange={(v) => update({ cookingFor: v })}
             min={1}
             max={24}
-            label="Cooking for"
+            label={t('Cooking for')}
           />
         </div>
         <div className="mt-4 border-t border-line pt-3">
           <Toggle
             checked={settings.cookingWithKids}
             onChange={(v) => update({ cookingWithKids: v })}
-            label="Kids cook too: add ask-a-grown-up notes on hot and sharp steps"
+            label={t('Kids cook too: add ask-a-grown-up notes on hot and sharp steps')}
           />
         </div>
       </Card>
 
       <Card>
-        <SectionTitle>Keep off the table</SectionTitle>
+        <SectionTitle>{t('Keep off the table')}</SectionTitle>
         <p className="mb-4 text-[0.9375rem] text-ink-2">
-          Plantry never suggests a dinner with these. Set them for one person in{' '}
-          {settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)}.
+          {t('Plantry never suggests a dinner with these. Set them for one person in {v0}.', {
+            v0: t(settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)),
+          })}
         </p>
         <AvoidPicker value={settings.avoid} onChange={(v) => update({ avoid: v })} />
         <p className="mt-4 text-sm text-ink-3">
-          Plantry checks ingredient names. Always check packaging for allergens.
+          {t('Plantry checks ingredient names. Always check packaging for allergens.')}
         </p>
       </Card>
 
       <Card>
-        <SectionTitle>Units</SectionTitle>
+        <SectionTitle>{t('Units')}</SectionTitle>
         <Choice
-          label="Units"
+          label={t('Units')}
           value={settings.units}
           onChange={(v) => update({ units: v })}
           options={[
-            { id: 'metric', label: 'Grams and millilitres' },
-            { id: 'imperial', label: 'Cups, ounces and °F' },
+            { id: 'metric', label: t('Grams and millilitres') },
+            { id: 'imperial', label: t('Cups, ounces and °F') },
           ]}
         />
         <p className="mt-3 text-sm text-ink-3">
-          Recipes, the list and oven temperatures switch over. Spoons and counted things stay as
-          they are.
+          {t(
+            'Recipes, the list and oven temperatures switch over. Spoons and counted things stay as they are.'
+          )}
         </p>
       </Card>
 
       <Card id="budget" className="scroll-mt-24">
-        <SectionTitle>Budget</SectionTitle>
+        <SectionTitle>{t('Budget')}</SectionTitle>
         <p className="mb-3 text-[0.9375rem] text-ink-2">
-          Recipes, Week and Shop show about what dinner costs. With a weekly budget, Fill my week
-          leans toward cheaper dinners.
+          {t(
+            'Recipes, Week and Shop show about what dinner costs. With a weekly budget, Fill my week leans toward cheaper dinners.'
+          )}
         </p>
         <label className="mb-4 flex items-center justify-between gap-4">
-          <span className="text-[0.9375rem] text-ink">Dinners each week, at most</span>
+          <span className="text-[0.9375rem] text-ink">{t('Dinners each week, at most')}</span>
           <BudgetInput
             value={settings.weeklyBudget}
             currency={settings.currency}
@@ -307,50 +336,51 @@ export function Settings() {
           />
         </label>
         <Choice
-          label="Currency"
+          label={t('Currency')}
           value={settings.currency}
           onChange={(v) => update({ currency: v })}
           options={currencies.map((c) => ({ id: c, label: c }))}
         />
-        <p className="mb-2 mt-4 text-sm font-medium text-ink-2">Shops near you are</p>
+        <p className="mb-2 mt-4 text-sm font-medium text-ink-2">{t('Shops near you are')}</p>
         <Choice
-          label="Shop prices near you"
+          label={t('Shop prices near you')}
           value={settings.priceLevel}
           onChange={(v) => update({ priceLevel: v })}
           options={[
-            { id: 'low', label: 'Cheaper than most' },
-            { id: 'average', label: 'About average' },
-            { id: 'high', label: 'Pricey' },
+            { id: 'low', label: t('Cheaper than most') },
+            { id: 'average', label: t('About average') },
+            { id: 'high', label: t('Pricey') },
           ]}
         />
         <p className="mt-3 text-sm text-ink-3">
-          Costs are rough, from typical supermarket prices. Good for comparing dinners, not for the
-          till.
+          {t(
+            'Costs are rough, from typical supermarket prices. Good for comparing dinners, not for the till.'
+          )}
         </p>
       </Card>
 
       <Card>
-        <SectionTitle>Nutrition</SectionTitle>
+        <SectionTitle>{t('Nutrition')}</SectionTitle>
         <Toggle
           checked={settings.showNutrition}
           onChange={(v) => update({ showNutrition: v })}
-          label="Show rough calories, protein, carbs, fat and fibre on recipes"
+          label={t('Show rough calories, protein, carbs, fat and fibre on recipes')}
         />
       </Card>
 
       <Card>
-        <SectionTitle>Words</SectionTitle>
+        <SectionTitle>{t('Words')}</SectionTitle>
         <p className="mb-3 text-[0.9375rem] text-ink-2">
-          What do you call the people you cook for?
+          {t('What do you call the people you cook for?')}
         </p>
         <Choice
-          label="Household word"
+          label={t('Household word')}
           value={settings.householdWord}
           onChange={(v) => update({ householdWord: v })}
           options={[
-            { id: 'household', label: 'Household' },
-            { id: 'family', label: 'Family' },
-            { id: 'home', label: 'Home' },
+            { id: 'household', label: t('Household') },
+            { id: 'family', label: t('Family') },
+            { id: 'home', label: t('Home') },
           ]}
         />
       </Card>
@@ -358,16 +388,16 @@ export function Settings() {
       <SyncCard />
 
       <Card>
-        <SectionTitle>Your data</SectionTitle>
+        <SectionTitle>{t('Your data')}</SectionTitle>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={doExport}>
-            <Download className="h-4 w-4" aria-hidden /> Export
+            <Download className="h-4 w-4" aria-hidden /> {t('Export')}
           </Button>
           <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <Upload className="h-4 w-4" aria-hidden /> Import
+            <Upload className="h-4 w-4" aria-hidden /> {t('Import')}
           </Button>
           <Button variant="danger" onClick={() => setConfirm(true)}>
-            Start over
+            {t('Start over')}
           </Button>
         </div>
         <input
@@ -375,33 +405,38 @@ export function Settings() {
           type="file"
           accept="application/json,.json"
           className="hidden"
-          aria-label="Import a Plantry export"
+          aria-label={t('Import a Plantry export')}
           onChange={(e) => doImport(e.target.files?.[0])}
         />
         {storage.writeError && (
           <p role="alert" className="mt-3 text-sm font-medium text-danger">
             {storage.writeError === 'full'
-              ? 'Storage is full, so recent changes are not being saved. Export now, then remove old recipes or photos.'
-              : 'This browser is blocking storage, so changes are not being saved.'}
+              ? t(
+                  'Storage is full, so recent changes are not being saved. Export now, then remove old recipes or photos.'
+                )
+              : t('This browser is blocking storage, so changes are not being saved.')}
           </p>
         )}
         {storage.bytes > 0 && (
           <p className="mt-3 text-sm text-ink-3">
-            Using about {Math.max(1, Math.round(storage.bytes / 1024))} KB of this browser&apos;s
-            storage.
+            {t("Using about {v0} KB of this browser's storage.", {
+              v0: Math.max(1, Math.round(storage.bytes / 1024)),
+            })}
           </p>
         )}
       </Card>
 
       <p className="px-1 text-center text-sm text-ink-3">
-        Plantry keeps everything on this device, in this browser, unless you share it with your
-        household above. Export and Import move it by hand.
+        {t(
+          'Plantry keeps everything on this device, in this browser, unless you share it with your household above. Export and Import move it by hand.'
+        )}
       </p>
 
-      <Sheet open={confirm} onClose={() => setConfirm(false)} title="Start over?">
+      <Sheet open={confirm} onClose={() => setConfirm(false)} title={t('Start over?')}>
         <p className="mb-5 text-ink-2">
-          This clears your pantry, plan, list, household and the recipes you added from this device.
-          Export first if you want a copy.
+          {t(
+            'This clears your pantry, plan, list, household and the recipes you added from this device. Export first if you want a copy.'
+          )}
         </p>
         <div className="flex flex-col gap-2">
           <Button
@@ -412,10 +447,10 @@ export function Settings() {
               router.replace('/onboarding')
             }}
           >
-            Yes, clear everything
+            {t('Yes, clear everything')}
           </Button>
           <Button variant="ghost" onClick={() => setConfirm(false)}>
-            Keep it
+            {t('Keep it')}
           </Button>
         </div>
       </Sheet>
@@ -423,21 +458,23 @@ export function Settings() {
       <Sheet
         open={!!pendingImport}
         onClose={() => setPendingImport(null)}
-        title="Replace everything with this file?"
+        title={t('Replace everything with this file?')}
       >
         <p className="mb-2 text-ink-2">
-          {pendingImport?.name} has {pendingImport?.counts}.
+          {t('{name} has {counts}.', { name: pendingImport?.name, counts: pendingImport?.counts })}
         </p>
         <p className="mb-5 text-ink-2">
-          It replaces what is on this device now. You can undo right after.
+          {t('It replaces what is on this device now. You can undo right after.')}
           {pendingImport?.dropped
-            ? ` ${pendingImport.dropped} unreadable ${pendingImport.dropped === 1 ? 'entry' : 'entries'} will be skipped.`
+            ? t(' {v0} that cannot be read will be skipped.', {
+                v0: pluralize(pendingImport.dropped, 'entry', 'entries'),
+              })
             : ''}
         </p>
         <div className="flex flex-col gap-2">
-          <Button onClick={confirmImport}>Replace with this file</Button>
+          <Button onClick={confirmImport}>{t('Replace with this file')}</Button>
           <Button variant="ghost" onClick={() => setPendingImport(null)}>
-            Keep what I have
+            {t('Keep what I have')}
           </Button>
         </div>
       </Sheet>
@@ -462,14 +499,14 @@ function BudgetInput({
     setText(v ? String(v) : '')
     if (v !== value) {
       onChange(v)
-      toast(v ? `Budget set to ${formatMoney(v, currency)} a week` : 'No budget')
+      toast(v ? t('Budget set to {v0} a week', { v0: formatMoney(v, currency) }) : t('No budget'))
     }
   }
   return (
     <Input
       inputMode="numeric"
-      aria-label={`Weekly dinner budget in ${currency}`}
-      placeholder="No budget"
+      aria-label={t('Weekly dinner budget in {currency}', { currency })}
+      placeholder={t('No budget')}
       className="w-32 text-right"
       value={text}
       maxLength={7}

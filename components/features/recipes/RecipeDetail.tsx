@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { RecipeFacts } from '@/components/features/nutrition/RecipeFacts'
 import { agoLabel, historyFor, ratingLabels } from '@/lib/history'
 import { formatAmount, withTemperatures } from '@/lib/quantity'
@@ -54,7 +56,7 @@ export function RecipeDetail({ id }: { id: string }) {
 
   const [servings, setServings] = useState<number | null>(null)
   useEffect(() => {
-    if (recipe) document.title = `${recipe.title} · Plantry`
+    if (recipe) document.title = t('{title} · Plantry', { title: recipe.title })
   }, [recipe])
 
   // A cook session for this recipe that was left part-way.
@@ -79,14 +81,14 @@ export function RecipeDetail({ id }: { id: string }) {
     return (
       <EmptyState
         icon={UtensilsCrossed}
-        title="That recipe isn't here"
-        body="It may have been deleted, or the link is off."
+        title={t("That recipe isn't here")}
+        body={t('It may have been deleted, or the link is off.')}
         action={
           <Link
             href="/recipes"
             className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
           >
-            Back to recipes
+            {t('Back to recipes')}
           </Link>
         }
       />
@@ -111,8 +113,11 @@ export function RecipeDetail({ id }: { id: string }) {
     const already = missing.length - added
     toast(
       already
-        ? `${pluralize(added, 'item')} added. ${already} already on your list, amounts updated.`
-        : `${pluralize(added, 'item')} added to your list`
+        ? t('{v0} added. {already} already on your list, amounts updated.', {
+            v0: pluralize(added, 'item'),
+            already,
+          })
+        : t('{v0} added to your list', { v0: pluralize(added, 'item') })
     )
   }
 
@@ -120,14 +125,14 @@ export function RecipeDetail({ id }: { id: string }) {
     if (!recipe) return
     setPlanEntry({ date, slot: 'dinner', recipeId: recipe.id, servings: current })
     setPlanOpen(false)
-    toast(`Planned for ${label}`)
+    toast(t('Planned for {label}', { label }))
   }
 
   function remove() {
     if (!recipe) return
     const id = recipe.id
     router.replace('/recipes')
-    withUndo('Recipe deleted', () => deleteRecipe(id))
+    withUndo(t('Recipe deleted'), () => deleteRecipe(id))
   }
 
   return (
@@ -145,7 +150,7 @@ export function RecipeDetail({ id }: { id: string }) {
           <Button
             variant="glass"
             size="icon"
-            aria-label="Back to recipes"
+            aria-label={t('Back to recipes')}
             onClick={() => router.push('/recipes')}
           >
             <ArrowLeft className="h-5 w-5" aria-hidden />
@@ -153,7 +158,7 @@ export function RecipeDetail({ id }: { id: string }) {
           <Button
             variant="glass"
             size="icon"
-            aria-label="Favorite"
+            aria-label={t('Favorite')}
             aria-pressed={recipe.isFavorite}
             onClick={() => toggleFavorite(recipe.id)}
           >
@@ -177,17 +182,17 @@ export function RecipeDetail({ id }: { id: string }) {
           </h1>
           {recipe.description && <p className="mt-2 text-base text-ink-2">{recipe.description}</p>}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {recipe.tastes.map((t) => (
-              <Tag key={t}>{tasteLabels[t]}</Tag>
+            {recipe.tastes.map((tItem) => (
+              <Tag key={tItem}>{tasteLabels[tItem]}</Tag>
             ))}
-            {recipe.leftovers && <Tag>Leftovers</Tag>}
+            {recipe.leftovers && <Tag>{t('Leftovers')}</Tag>}
           </div>
           <AvoidWarning recipe={recipe} className="mt-4" />
           <CookedLine recipeId={recipe.id} />
           <dl className="mt-4 grid grid-cols-3 gap-3">
-            <Stat icon={Flame} label="Active" value={formatMinutes(recipe.activeMinutes)} />
-            <Stat icon={Clock} label="Total" value={formatMinutes(recipe.totalMinutes)} />
-            <Stat icon={Users} label="Serves" value={String(recipe.servings)} />
+            <Stat icon={Flame} label={t('Active')} value={formatMinutes(recipe.activeMinutes)} />
+            <Stat icon={Clock} label={t('Total')} value={formatMinutes(recipe.totalMinutes)} />
+            <Stat icon={Users} label={t('Serves')} value={String(recipe.servings)} />
           </dl>
           <div className="mt-4">
             <RecipeFacts recipe={recipe} servings={current} />
@@ -199,11 +204,11 @@ export function RecipeDetail({ id }: { id: string }) {
                 size="sm"
                 onClick={() => {
                   const copy = addRecipe(copyOfRecipe(recipe))
-                  toast('Copy made. Change what you like.')
+                  toast(t('Copy made. Change what you like.'))
                   router.push(`/recipes/new?id=${copy.id}`)
                 }}
               >
-                <Copy className="h-4 w-4" aria-hidden /> Make my own version
+                <Copy className="h-4 w-4" aria-hidden /> {t('Make my own version')}
               </Button>
             </div>
           )}
@@ -214,10 +219,10 @@ export function RecipeDetail({ id }: { id: string }) {
                 size="sm"
                 onClick={() => router.push(`/recipes/new?id=${recipe.id}`)}
               >
-                <Pencil className="h-4 w-4" aria-hidden /> Edit
+                <Pencil className="h-4 w-4" aria-hidden /> {t('Edit')}
               </Button>
               <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="h-4 w-4" aria-hidden /> Delete
+                <Trash2 className="h-4 w-4" aria-hidden /> {t('Delete')}
               </Button>
             </div>
           )}
@@ -226,13 +231,19 @@ export function RecipeDetail({ id }: { id: string }) {
         <motion.section variants={reveal} custom={1} aria-labelledby="ing-title">
           <SectionTitle
             action={
-              <Stepper value={current} onChange={setServings} min={1} max={24} label="Servings" />
+              <Stepper
+                value={current}
+                onChange={setServings}
+                min={1}
+                max={24}
+                label={t('Servings')}
+              />
             }
           >
-            <span id="ing-title">Ingredients</span>
+            <span id="ing-title">{t('Ingredients')}</span>
           </SectionTitle>
           <p className="-mt-2 mb-3 text-sm text-ink-3">
-            For {current} {current === 1 ? 'serving' : 'servings'}
+            {t('For {count}', { count: pluralize(current, 'serving') })}
           </p>
           <ul className="card divide-y divide-line overflow-hidden">
             {recipe.ingredients.map((ing) => {
@@ -249,14 +260,14 @@ export function RecipeDetail({ id }: { id: string }) {
                   </span>
                   <span className="min-w-0 flex-1 break-words">
                     <span className="text-[0.9375rem]">{ing.name}</span>
-                    {ing.optional && <span className="text-sm text-ink-3"> (optional)</span>}
+                    {ing.optional && <span className="text-sm text-ink-3"> {t('(optional)')}</span>}
                     <span className="sr-only">
-                      {have ? ', you have it' : ', not in your pantry'}
+                      {have ? t(', you have it') : t(', not in your pantry')}
                     </span>
                   </span>
                   {have && (
                     <span aria-hidden className="text-xs font-medium text-secondary">
-                      You have it
+                      {t('You have it')}
                     </span>
                   )}
                   <span className="shrink-0 text-sm tabular-nums text-ink-2">
@@ -268,15 +279,15 @@ export function RecipeDetail({ id }: { id: string }) {
           </ul>
           {missing.length > 0 && (
             <Button variant="outline" className="mt-3" onClick={addMissing}>
-              <ShoppingBasket className="h-4 w-4" aria-hidden /> Add missing to list (
-              {missing.length})
+              <ShoppingBasket className="h-4 w-4" aria-hidden />{' '}
+              {t('Add missing to list ( {length})', { length: missing.length })}
             </Button>
           )}
         </motion.section>
 
         <motion.section variants={reveal} custom={2} aria-labelledby="steps-title">
           <SectionTitle>
-            <span id="steps-title">Steps</span>
+            <span id="steps-title">{t('Steps')}</span>
           </SectionTitle>
           <ol className="space-y-5">
             {recipe.steps.map((step, i) => (
@@ -291,7 +302,8 @@ export function RecipeDetail({ id }: { id: string }) {
                   <p className="text-base leading-relaxed">{withTemperatures(step.text, units)}</p>
                   {step.timerMinutes && (
                     <Tag className="mt-2 gap-1">
-                      <Timer className="h-3 w-3" aria-hidden /> {step.timerMinutes} min
+                      <Timer className="h-3 w-3" aria-hidden />{' '}
+                      {t('{timerMinutes} min', { timerMinutes: step.timerMinutes })}
                     </Tag>
                   )}
                 </div>
@@ -312,7 +324,7 @@ export function RecipeDetail({ id }: { id: string }) {
             className="flex-1"
             onClick={() => setPlanOpen(true)}
           >
-            <CalendarPlus className="h-5 w-5" aria-hidden /> Plan it
+            <CalendarPlus className="h-5 w-5" aria-hidden /> {t('Plan it')}
           </Button>
           <Button
             size="lg"
@@ -325,12 +337,12 @@ export function RecipeDetail({ id }: { id: string }) {
               )
             }
           >
-            {resume ? `Resume at step ${resume.index + 1}` : 'Cook'}
+            {resume ? t('Resume at step {v0}', { v0: resume.index + 1 }) : t('Cook')}
           </Button>
         </div>
       </div>
 
-      <Sheet open={planOpen} onClose={() => setPlanOpen(false)} title="Plan it for dinner">
+      <Sheet open={planOpen} onClose={() => setPlanOpen(false)} title={t('Plan it for dinner')}>
         <ul className="space-y-1">
           {days.map((d) => (
             <li key={d.key}>
@@ -346,17 +358,23 @@ export function RecipeDetail({ id }: { id: string }) {
         </ul>
       </Sheet>
 
-      <Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete this recipe?">
+      <Sheet
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={t('Delete this recipe?')}
+      >
         <p className="mb-5 text-[0.9375rem] text-ink-2">
-          {recipe.title} will be removed from your recipes. Any night you planned it for goes back
-          to empty.
+          {t(
+            '{title} will be removed from your recipes. Any night you planned it for goes back to empty.',
+            { title: recipe.title }
+          )}
         </p>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={() => setDeleteOpen(false)}>
-            Keep it
+            {t('Keep it')}
           </Button>
           <Button variant="danger" className="flex-1" onClick={remove}>
-            <Trash2 className="h-4 w-4" aria-hidden /> Delete
+            <Trash2 className="h-4 w-4" aria-hidden /> {t('Delete')}
           </Button>
         </div>
       </Sheet>
@@ -384,10 +402,11 @@ function CookedLine({ recipeId }: { recipeId: string }) {
   return (
     <div className="mt-4 rounded-2xl bg-surface-2 px-4 py-3 text-[0.9375rem]">
       <p className="text-ink-2">
-        Cooked {h.times === 1 ? 'once' : `${h.times} times`}, last {agoLabel(h.lastDate, today)}
+        {t('Cooked')} {h.times === 1 ? 'once' : `${h.times} times`}
+        {t(', last {v0}', { v0: agoLabel(h.lastDate, today) })}
         {h.rating ? ` · ${ratingLabels[h.rating]}` : ''}.{' '}
         <Link href="/history" className="font-medium text-ink underline underline-offset-2">
-          History
+          {t('History')}
         </Link>
       </p>
       {h.note && <p className="mt-1 italic text-ink">“{h.note}”</p>}

@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useStore, type PlantryState } from './store'
 import { toast } from '@/components/ui/Toast'
 
@@ -32,10 +34,10 @@ export function withUndo(message: string, change: () => void) {
   change()
   toast(message, {
     action: {
-      label: 'Undo',
+      label: t('Undo'),
       onClick: () => {
         useStore.setState(before)
-        toast('Put back')
+        toast(t('Put back'))
       },
     },
   })

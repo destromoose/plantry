@@ -1,8 +1,9 @@
 import type { PantryItem } from '@/lib/types'
+import { getLang } from '@/lib/i18n'
 
 type Staple = Omit<PantryItem, 'id' | 'addedAt'>
 
-export const staples: Array<Omit<PantryItem, 'id' | 'addedAt'>> = [
+const staplesEn: Staple[] = [
   // Oils, condiments, sauces
   {
     name: 'Olive oil',
@@ -255,7 +256,7 @@ export const staples: Array<Omit<PantryItem, 'id' | 'addedAt'>> = [
 ]
 
 /** The 30 most common staples, in the order the onboarding grid shows them. */
-export const quickPicks: string[] = [
+const quickPicksEn: string[] = [
   'Olive oil',
   'Garlic',
   'Onions',
@@ -288,4 +289,48 @@ export const quickPicks: string[] = [
   'Frozen peas',
 ]
 
-// Keeps the Staple alias referenced so the exported shape stays in one place.
+// Spanish names for the staples and quick picks. Keys stay the same, so matching works
+// in either language.
+const namesEs: Record<string, string> = {
+  'Olive oil': 'Aceite de oliva',
+  'Soy sauce': 'Salsa de soya',
+  Vinegar: 'Vinagre',
+  Mustard: 'Mostaza',
+  Honey: 'Miel',
+  Stock: 'Caldo',
+  Rice: 'Arroz',
+  Pasta: 'Pasta',
+  Flour: 'Harina',
+  Lentils: 'Lentejas',
+  'Canned tomatoes': 'Tomate en lata',
+  Chickpeas: 'Garbanzos',
+  'Black beans': 'Frijoles negros',
+  'Coconut milk': 'Leche de coco',
+  Salt: 'Sal',
+  'Black pepper': 'Pimienta negra',
+  'Chili flakes': 'Chile en hojuelas',
+  Cumin: 'Comino',
+  Paprika: 'Pimentón',
+  Oregano: 'Orégano',
+  Garlic: 'Ajo',
+  Onions: 'Cebollas',
+  Potatoes: 'Papas',
+  Carrots: 'Zanahorias',
+  Ginger: 'Jengibre',
+  Spinach: 'Espinaca',
+  Lemons: 'Limones',
+  Limes: 'Limas',
+  Eggs: 'Huevos',
+  Butter: 'Mantequilla',
+  Parmesan: 'Parmesano',
+  Cheddar: 'Queso cheddar',
+  Yogurt: 'Yogur',
+  Bread: 'Pan',
+  Tortillas: 'Tortillas',
+  'Frozen peas': 'Chícharos congelados',
+}
+
+const inSpanish = (name: string) => (getLang() === 'es' ? (namesEs[name] ?? name) : name)
+
+export const staples: Staple[] = staplesEn.map((s) => ({ ...s, name: inSpanish(s.name) }))
+export const quickPicks: string[] = quickPicksEn.map(inSpanish)

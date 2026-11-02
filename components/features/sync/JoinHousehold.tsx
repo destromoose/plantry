@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -55,7 +57,7 @@ export function JoinHousehold() {
   function join() {
     if (!peek) return
     joinHousehold(peek, me)
-    toast('Joined. This phone now shares with your household.')
+    toast(t('Joined. This phone now shares with your household.'))
     router.replace('/')
   }
 
@@ -66,7 +68,7 @@ export function JoinHousehold() {
         <Logo className="text-ink" />
       </div>
       <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
-        Join your household
+        {t('Join your household')}
       </h1>
       {!peek ? (
         <form
@@ -77,14 +79,15 @@ export function JoinHousehold() {
           }}
         >
           <p className="text-[0.9375rem] text-ink-2">
-            Type the 12-letter code from the phone that shared. It&apos;s in Settings on that phone,
-            under Share with your household.
+            {t(
+              "Type the 12-letter code from the phone that shared. It's in Settings on that phone, under Share with your household."
+            )}
           </p>
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="ABCD-EFGH-JKMN"
-            aria-label="Household code"
+            aria-label={t('Household code')}
             autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}
@@ -97,26 +100,30 @@ export function JoinHousehold() {
             </p>
           )}
           <Button type="submit" size="lg" className="w-full" disabled={busy || !code.trim()}>
-            {busy ? 'Looking…' : 'Find household'}
+            {busy ? t('Looking…') : t('Find household')}
           </Button>
         </form>
       ) : (
         <div className="mt-6 space-y-5">
           <div className="card p-4 text-[0.9375rem] text-ink-2">
-            <p className="font-medium text-ink">Household {formatCode(peek.code)}</p>
+            <p className="font-medium text-ink">
+              {t('Household {v0}', { v0: formatCode(peek.code) })}
+            </p>
             <p className="mt-1">
-              {d!.members.length ? d!.members.map((m) => m.name).join(', ') : 'No names yet'}.{' '}
-              {pluralize(d!.recipes.filter((r) => r.custom).length, 'own recipe')},{' '}
-              {pluralize(d!.plan.length, 'planned meal')}, {pluralize(d!.shop.length, 'thing')} on
-              the list.
+              {d!.members.length ? d!.members.map((m) => m.name).join(', ') : t('No names yet')}.{' '}
+              {pluralize(d!.recipes.filter((r) => r.custom).length, 'own recipe')}
+              {t(', {v0}, {v1} on the list.', {
+                v0: pluralize(d!.plan.length, 'planned meal'),
+                v1: pluralize(d!.shop.length, 'thing'),
+              })}
             </p>
           </div>
           {d!.members.length > 0 && (
             <div>
-              <p className="mb-2 text-sm font-medium text-ink-2">Which one is you?</p>
+              <p className="mb-2 text-sm font-medium text-ink-2">{t('Which one is you?')}</p>
               <div
                 role="radiogroup"
-                aria-label="Which one is you?"
+                aria-label={t('Which one is you?')}
                 className="flex flex-wrap gap-2"
               >
                 {d!.members.map((m) => (
@@ -136,17 +143,17 @@ export function JoinHousehold() {
           )}
           {onboarded && hasData && (
             <p className="text-sm text-ink-3">
-              This phone&apos;s plan, pantry, list and history are replaced by the household&apos;s.
-              Recipes you added here are kept and shared. Export first in Settings if you want a
-              copy.
+              {t(
+                "This phone's plan, pantry, list and history are replaced by the household's. Recipes you added here are kept and shared. Export first in Settings if you want a copy."
+              )}
             </p>
           )}
           <div className="flex flex-col gap-2">
             <Button size="lg" onClick={join}>
-              Join
+              {t('Join')}
             </Button>
             <Button variant="ghost" onClick={() => setPeek(null)}>
-              Use a different code
+              {t('Use a different code')}
             </Button>
           </div>
         </div>
@@ -156,7 +163,7 @@ export function JoinHousehold() {
           href={onboarded ? '/settings' : '/onboarding'}
           className="text-sm text-ink-2 underline"
         >
-          {onboarded ? 'Back to Settings' : 'Set up a new household instead'}
+          {onboarded ? t('Back to Settings') : t('Set up a new household instead')}
         </Link>
       </div>
     </div>

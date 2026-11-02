@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { formatAmount, withTemperatures } from '@/lib/quantity'
 import { useUnits } from '@/lib/useUnits'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -66,7 +68,7 @@ function stepName(text: string) {
     .split(/\s+/)
     .filter((w) => w && !skip.has(w.toLowerCase()))
   const name = words.slice(0, 2).join(' ')
-  return name ? name.charAt(0).toUpperCase() + name.slice(1) : 'Timer'
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : t('Timer')
 }
 
 function StepCautions({ text, own, kids }: { text: string; own?: string; kids: boolean }) {
@@ -82,7 +84,7 @@ function StepCautions({ text, own, kids }: { text: string; own?: string; kids: b
       ))}
       {kids && needsGrownUp(list) && (
         <li className="pl-6 text-[0.9375rem] font-medium text-ink">
-          New to this? Ask a grown-up to help with this step.
+          {t('New to this? Ask a grown-up to help with this step.')}
         </li>
       )}
     </ul>
@@ -237,10 +239,10 @@ export function CookMode({
     }
   }, [])
 
-  const anyRunning = Object.values(timers).some((t) => t.endsAt !== null)
+  const anyRunning = Object.values(timers).some((tItem) => tItem.endsAt !== null)
 
   useEffect(() => {
-    if (recipe) document.title = `Cooking ${recipe.title} · Plantry`
+    if (recipe) document.title = t('Cooking {title} · Plantry', { title: recipe.title })
   }, [recipe])
 
   // Read the new step out when it changes.
@@ -251,7 +253,8 @@ export function CookMode({
       return
     }
     const s = steps[index]
-    if (s) say(`Step ${index + 1} of ${steps.length}. ${s.text}`)
+    if (s)
+      say(t('Step {v0} of {length}. {text}', { v0: index + 1, length: steps.length, text: s.text }))
   }, [index, steps])
 
   // Save the place and timers so a reload, a locked phone or a closed tab can resume.
@@ -280,18 +283,18 @@ export function CookMode({
       <div className="mx-auto flex min-h-dvh max-w-md items-center px-5">
         <EmptyState
           icon={UtensilsCrossed}
-          title={recipe ? 'No steps yet' : "That recipe isn't here"}
+          title={recipe ? t('No steps yet') : t("That recipe isn't here")}
           body={
             recipe
-              ? 'Add some steps to cook along.'
-              : 'It may have been deleted, or the link is off.'
+              ? t('Add some steps to cook along.')
+              : t('It may have been deleted, or the link is off.')
           }
           action={
             <Link
               href={recipe ? `/recipes/${recipe.id}` : '/recipes'}
               className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
             >
-              {recipe ? 'Back to the recipe' : 'Back to recipes'}
+              {recipe ? t('Back to the recipe') : t('Back to recipes')}
             </Link>
           }
         />
@@ -331,7 +334,7 @@ export function CookMode({
       const tonight = useStore.getState().plan.find((p) => p.date === today && p.slot === 'dinner')
       if (tonight?.done) {
         // Tonight is already logged. Don't overwrite it or use the pantry twice.
-        toast('Nice work. Tonight was already logged, so nothing changed.')
+        toast(t('Nice work. Tonight was already logged, so nothing changed.'))
         router.push('/')
         return
       }
@@ -341,8 +344,8 @@ export function CookMode({
           : undefined
       withUndo(
         replacing
-          ? `Logged as tonight's dinner instead of ${replacing}.`
-          : "Logged as tonight's dinner. Nice work.",
+          ? t("Logged as tonight's dinner instead of {replacing}.", { replacing })
+          : t("Logged as tonight's dinner. Nice work."),
         () => {
           if (tonight?.recipeId !== recipe.id)
             setPlanEntry({
@@ -366,11 +369,11 @@ export function CookMode({
     }
     if (date && entry) {
       const before = useStore.getState().pantry.length
-      withUndo('Nice work.', () =>
+      withUndo(t('Nice work.'), () =>
         markCooked(date, { usePantry, leftovers, replaceTomorrow: swapTomorrow, rating, note })
       )
       const used = before - useStore.getState().pantry.length
-      if (used > 0) toast(`${pluralize(used, 'thing')} used up from your pantry.`)
+      if (used > 0) toast(t('{v0} used up from your pantry.', { v0: pluralize(used, 'thing') }))
       router.push('/')
     } else {
       router.push(`/recipes/${recipe.id}`)
@@ -386,7 +389,7 @@ export function CookMode({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Close cook mode"
+            aria-label={t('Close cook mode')}
             onClick={() => (anyRunning ? setLeaveOpen(true) : close())}
           >
             <X className="h-5 w-5" aria-hidden />
@@ -396,18 +399,18 @@ export function CookMode({
           </h1>
           <div className="w-11" aria-hidden />
         </div>
-        {awake && <p className="mt-1 text-center text-xs text-ink-3">Screen stays on</p>}
+        {awake && <p className="mt-1 text-center text-xs text-ink-3">{t('Screen stays on')}</p>}
         <p className="sr-only" role="status" aria-live="polite">
           {announce}
         </p>
         <div
           className="mt-3 flex gap-1.5"
           role="progressbar"
-          aria-label="Progress"
+          aria-label={t('Progress')}
           aria-valuemin={1}
           aria-valuemax={steps.length}
           aria-valuenow={index + 1}
-          aria-valuetext={`Step ${index + 1} of ${steps.length}`}
+          aria-valuetext={t('Step {v0} of {length}', { v0: index + 1, length: steps.length })}
         >
           {steps.map((s, i) => (
             <div key={s.id} className="h-1.5 flex-1 overflow-hidden rounded-pill bg-line">
@@ -422,7 +425,7 @@ export function CookMode({
         </div>
         <div className="mt-3 flex min-h-9 flex-wrap justify-center gap-2">
           <AnimatePresence initial={false}>
-            {activeTimers.map(({ s, i, t }) => (
+            {activeTimers.map(({ s, i, t: tItem }) => (
               <motion.button
                 key={s.id}
                 type="button"
@@ -432,28 +435,36 @@ export function CookMode({
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={settle}
                 onClick={() => {
-                  if (t.finished) reset(s.id)
+                  if (tItem.finished) reset(s.id)
                   go(i)
                 }}
                 aria-label={
-                  t.finished
-                    ? `${stepName(s.text)} timer done. Stop the alarm and go to step ${i + 1}.`
-                    : `${stepName(s.text)} timer, ${formatClock(remainingOf(t, now))} left${t.endsAt === null ? ', paused' : ''}. Go to step ${i + 1}.`
+                  tItem.finished
+                    ? t('{v0} timer done. Stop the alarm and go to step {v1}.', {
+                        v0: stepName(s.text),
+                        v1: i + 1,
+                      })
+                    : t('{v0} timer, {v1} left{v2}. Go to step {v3}.', {
+                        v0: stepName(s.text),
+                        v1: formatClock(remainingOf(tItem, now)),
+                        v2: tItem.endsAt === null ? t(', paused') : '',
+                        v3: i + 1,
+                      })
                 }
                 className={cn(
                   'inline-flex h-9 items-center gap-1.5 rounded-pill px-3 text-[0.8125rem] font-medium tabular-nums',
-                  t.finished
+                  tItem.finished
                     ? 'animate-pulse bg-danger text-cream'
-                    : t.endsAt === null
+                    : tItem.endsAt === null
                       ? 'bg-surface-2 text-ink-2'
                       : 'bg-accent text-accent-ink'
                 )}
               >
                 <Timer className="h-3.5 w-3.5" aria-hidden />
                 {stepName(s.text)} ·{' '}
-                {t.finished
-                  ? 'done, tap to stop'
-                  : `${formatClock(remainingOf(t, now))}${t.endsAt === null ? ' paused' : ''}`}
+                {tItem.finished
+                  ? t('done, tap to stop')
+                  : `${formatClock(remainingOf(tItem, now))}${tItem.endsAt === null ? ' paused' : ''}`}
               </motion.button>
             ))}
           </AnimatePresence>
@@ -475,12 +486,12 @@ export function CookMode({
             dragElastic={0.25}
             onDragEnd={onDragEnd}
             className="mx-auto w-full max-w-2xl space-y-8"
-            aria-label={`Step ${index + 1} of ${steps.length}`}
+            aria-label={t('Step {v0} of {length}', { v0: index + 1, length: steps.length })}
           >
             {index === 0 && <AvoidWarning recipe={recipe} />}
             <div className="space-y-3">
               <Eyebrow>
-                Step {index + 1} of {steps.length}
+                {t('Step {v0} of {length}', { v0: index + 1, length: steps.length })}
               </Eyebrow>
               <p className="font-display text-fluid-step font-medium leading-tight tracking-tight">
                 {withTemperatures(step.text, units)}
@@ -503,7 +514,7 @@ export function CookMode({
 
       <footer className="safe-bottom sticky bottom-0 z-10 -mx-5 flex items-center gap-2 bg-canvas/85 px-5 pt-2 backdrop-blur">
         <Button variant="glass" size="lg" onClick={() => setIngOpen(true)}>
-          <ListChecks className="h-5 w-5" aria-hidden /> Ingredients
+          <ListChecks className="h-5 w-5" aria-hidden /> {t('Ingredients')}
         </Button>
         <div className="flex-1" />
         <Button
@@ -512,26 +523,27 @@ export function CookMode({
           className="w-16 px-0"
           onClick={prev}
           disabled={index === 0}
-          aria-label="Previous step"
+          aria-label={t('Previous step')}
         >
           <ArrowLeft className="h-6 w-6" aria-hidden />
         </Button>
         {isLast ? (
           <Button size="lg" onClick={next}>
-            <Check className="h-5 w-5" aria-hidden /> Done
+            <Check className="h-5 w-5" aria-hidden /> {t('Done')}
           </Button>
         ) : (
-          <Button size="lg" className="w-20 px-0" onClick={next} aria-label="Next step">
+          <Button size="lg" className="w-20 px-0" onClick={next} aria-label={t('Next step')}>
             <ArrowRight className="h-6 w-6" aria-hidden />
           </Button>
         )}
       </footer>
 
-      <Sheet open={ingOpen} onClose={() => setIngOpen(false)} title="Ingredients" tall>
+      <Sheet open={ingOpen} onClose={() => setIngOpen(false)} title={t('Ingredients')} tall>
         <AvoidWarning recipe={recipe} className="mb-3" />
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="text-sm text-ink-3">
-            For {count} {count === 1 ? 'person' : 'people'}. Tap to check off.
+            {t('For {count}', { count: pluralize(count, 'person', 'people') })}
+            {t('. Tap to check off.')}
           </p>
           <Stepper
             value={count}
@@ -541,7 +553,7 @@ export function CookMode({
             }}
             min={1}
             max={24}
-            label="Servings"
+            label={t('Servings')}
           />
         </div>
         <ul className="space-y-1">
@@ -583,7 +595,7 @@ export function CookMode({
                   </span>
                   <span className={cn('flex-1 text-[0.9375rem]', on && 'text-ink-3 line-through')}>
                     {ing.name}
-                    {ing.optional && ' (optional)'}
+                    {ing.optional && t(' (optional)')}
                   </span>
                   <span className="text-sm tabular-nums text-ink-2">
                     {formatAmount(ing.quantity * scale, ing.unit, { system: units })}
@@ -606,64 +618,71 @@ export function CookMode({
             <Check className="h-8 w-8" aria-hidden />
           </motion.div>
           <h2 className="font-display text-2xl font-semibold tracking-tight">
-            Dinner&apos;s done.
+            {t("Dinner's done.")}
           </h2>
           <p className="mt-1 text-[0.9375rem] text-ink-2">{recipe.title}</p>
         </div>
         {alreadyDone ? (
           <p className="mb-4 text-center text-[0.9375rem] text-ink-2">
-            Already marked as cooked, so it won&apos;t be counted twice.
+            {t("Already marked as cooked, so it won't be counted twice.")}
           </p>
         ) : (
           <div className="mb-4 space-y-2">
             <div className="mb-3 space-y-2">
-              <p className="text-sm font-medium text-ink-2">How was it?</p>
+              <p className="text-sm font-medium text-ink-2">{t('How was it?')}</p>
               <RatingPicker value={rating} onChange={setRating} />
               <label className="block">
-                <span className="sr-only">A note for next time</span>
+                <span className="sr-only">{t('A note for next time')}</span>
                 <Input
                   value={note}
                   maxLength={500}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="A note for next time (optional)"
+                  placeholder={t('A note for next time (optional)')}
                 />
               </label>
             </div>
             <Toggle
               checked={usePantry}
               onChange={setUsePantry}
-              label="Take what I used out of my pantry"
+              label={t('Take what I used out of my pantry')}
             />
             <Toggle
               checked={leftovers}
               onChange={setLeftovers}
               label={
                 tomorrowTitle && leftovers
-                  ? `There are leftovers: have them tomorrow instead of ${tomorrowTitle}`
-                  : 'There are leftovers'
+                  ? t('There are leftovers: have them tomorrow instead of {tomorrowTitle}', {
+                      tomorrowTitle,
+                    })
+                  : t('There are leftovers')
               }
             />
             {!(date && entry) && (
               <p className="px-1 text-sm text-ink-3">
-                This will be logged as tonight&apos;s dinner.
+                {t("This will be logged as tonight's dinner.")}
               </p>
             )}
           </div>
         )}
         <Button size="lg" className="w-full" onClick={finish}>
-          {alreadyDone ? 'Back to Tonight' : 'Finish'}
+          {alreadyDone ? t('Back to Tonight') : t('Finish')}
         </Button>
       </Sheet>
 
-      <Sheet open={leaveOpen} onClose={() => setLeaveOpen(false)} title="A timer is still running">
+      <Sheet
+        open={leaveOpen}
+        onClose={() => setLeaveOpen(false)}
+        title={t('A timer is still running')}
+      >
         <p className="mb-5 text-ink-2">
-          If you leave, it keeps counting and your place is saved. Come back to this recipe to pick
-          up where you were.
+          {t(
+            'If you leave, it keeps counting and your place is saved. Come back to this recipe to pick up where you were.'
+          )}
         </p>
         <div className="flex flex-col gap-2">
-          <Button onClick={() => setLeaveOpen(false)}>Keep cooking</Button>
+          <Button onClick={() => setLeaveOpen(false)}>{t('Keep cooking')}</Button>
           <Button variant="ghost" onClick={close}>
-            Leave for now
+            {t('Leave for now')}
           </Button>
         </div>
       </Sheet>

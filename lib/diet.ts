@@ -1,3 +1,4 @@
+import { andList, t } from '@/lib/i18n'
 import type { Ingredient, Member, Recipe, Settings } from './types'
 
 // Allergens and diets. Recipes are checked from their ingredient names, so a recipe
@@ -21,23 +22,23 @@ export type AvoidId =
   | 'mild'
 
 export const allergenOptions: { id: AvoidId; label: string }[] = [
-  { id: 'peanut', label: 'Peanuts' },
-  { id: 'tree-nut', label: 'Tree nuts' },
-  { id: 'dairy', label: 'Dairy' },
-  { id: 'egg', label: 'Eggs' },
-  { id: 'gluten', label: 'Gluten' },
-  { id: 'soy', label: 'Soy' },
-  { id: 'sesame', label: 'Sesame' },
-  { id: 'fish', label: 'Fish' },
-  { id: 'shellfish', label: 'Shellfish' },
+  { id: 'peanut', label: t('Peanuts') },
+  { id: 'tree-nut', label: t('Tree nuts') },
+  { id: 'dairy', label: t('Dairy') },
+  { id: 'egg', label: t('Eggs') },
+  { id: 'gluten', label: t('Gluten') },
+  { id: 'soy', label: t('Soy') },
+  { id: 'sesame', label: t('Sesame') },
+  { id: 'fish', label: t('Fish') },
+  { id: 'shellfish', label: t('Shellfish') },
 ]
 
 export const dietOptions: { id: AvoidId; label: string }[] = [
-  { id: 'vegetarian', label: 'Vegetarian' },
-  { id: 'vegan', label: 'Vegan' },
-  { id: 'no-pork', label: 'No pork' },
-  { id: 'no-beef', label: 'No beef' },
-  { id: 'mild', label: 'Not spicy' },
+  { id: 'vegetarian', label: t('Vegetarian') },
+  { id: 'vegan', label: t('Vegan') },
+  { id: 'no-pork', label: t('No pork') },
+  { id: 'no-beef', label: t('No beef') },
+  { id: 'mild', label: t('Not spicy') },
 ]
 
 export const avoidLabel = (id: string) =>
@@ -239,9 +240,9 @@ const exceptions: Partial<Record<Tag, string[]>> = {
 }
 
 function has(text: string, tag: Tag) {
-  let t = ` ${text} `
-  for (const e of exceptions[tag] ?? []) t = t.split(e).join(' ')
-  return words[tag].some((w) => new RegExp(`(^|[^a-z])${w}(s|es)?([^a-z]|$)`).test(t))
+  let tItem = ` ${text} `
+  for (const e of exceptions[tag] ?? []) tItem = tItem.split(e).join(' ')
+  return words[tag].some((w) => new RegExp(`(^|[^a-z])${w}(s|es)?([^a-z]|$)`).test(tItem))
 }
 
 export function ingredientTags(i: Pick<Ingredient, 'name' | 'key'>): Set<Tag> {
@@ -290,12 +291,12 @@ export function conflicts(
   if (!avoid.length) return { blocking: [], leaveOut: [], culprits: [] }
   if (avoid.includes('mild') && recipe.tastes?.includes('spicy')) {
     blocking.add('mild')
-    culprits.add('chili heat')
+    culprits.add(t('chili heat'))
   }
   for (const ing of recipe.ingredients) {
     const tags = ingredientTags(ing)
     for (const rule of avoid) {
-      if (!blockedBy(rule).some((t) => tags.has(t))) continue
+      if (!blockedBy(rule).some((tItem) => tags.has(tItem))) continue
       if (ing.optional) leaveOut.add(ing.name)
       else {
         blocking.add(rule)
@@ -327,8 +328,8 @@ export function conflictText(c: Conflict) {
   const isDiet = (b: string) => dietOptions.some((d) => d.id === b)
   const allergens = c.blocking.filter((b) => !isDiet(b)).map((b) => avoidLabel(b).toLowerCase())
   const parts: string[] = []
-  if (allergens.length) parts.push(`Has ${allergens.join(' and ')}`)
+  if (allergens.length) parts.push(t('Has {v0}', { v0: andList(allergens) }))
   for (const d of c.blocking.filter(isDiet))
-    parts.push(d === 'mild' ? 'Spicy' : `Not ${avoidLabel(d).toLowerCase()}`)
+    parts.push(d === 'mild' ? t('Spicy') : t('Not {v0}', { v0: avoidLabel(d).toLowerCase() }))
   return parts.join(' · ')
 }

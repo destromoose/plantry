@@ -1,11 +1,14 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 // Household sync: keeps this phone and the other phones in a household on the same plan,
 // pantry, list, recipes and history. Data goes to Plantry's server only after someone taps
 // "Share with my household", and only to the household's code.
 
 import { create } from 'zustand'
 import { useStore, type PlantryState } from './store'
+import { localizeRecipes } from './seed/localize'
 import { cleanData } from './schema'
 import { docsEqual, emptyDoc, mergeDocs, toDoc, type SyncDoc } from './syncDoc'
 import { normalizeCode } from './syncCode'
@@ -83,7 +86,7 @@ function apply(doc: SyncDoc, meId?: string) {
     useStore.setState({
       settings,
       members: doc.members.map((m) => (m.id === meId ? { ...m, isMe: true } : m)),
-      recipes: doc.recipes.length ? doc.recipes : s.recipes,
+      recipes: doc.recipes.length ? localizeRecipes(doc.recipes) : s.recipes,
       pantry: doc.pantry,
       plan: doc.plan,
       shop: doc.shop,
@@ -148,11 +151,15 @@ async function run() {
     for (let attempt = 0; attempt < 4; attempt++) {
       const got = await api<Remote>(`/api/sync/${meta.code}`)
       if (got.status === 404) {
-        fail('This household is gone from the server. Share again to start a new one.')
+        fail(t('This household is gone from the server. Share again to start a new one.'))
         return
       }
       if (got.status === 503) {
-        useSync.setState({ status: 'error', unavailable: true, error: 'Sync is not set up here.' })
+        useSync.setState({
+          status: 'error',
+          unavailable: true,
+          error: t('Sync is not set up here.'),
+        })
         return
       }
       if (got.status !== 200 || !got.body) throw new Error(`pull ${got.status}`)
@@ -166,7 +173,7 @@ async function run() {
         })
         if (put.status === 409) continue // Another phone saved first: merge again.
         if (put.status === 413) {
-          fail('Too much data to share. Remove some photos or old recipes.')
+          fail(t('Too much data to share. Remove some photos or old recipes.'))
           return
         }
         if (put.status !== 200 || !put.body) throw new Error(`push ${put.status}`)
@@ -178,7 +185,7 @@ async function run() {
   } catch {
     useSync.setState({
       status: typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'error',
-      error: 'Could not reach the server. Changes stay on this phone and sync later.',
+      error: t('Could not reach the server. Changes stay on this phone and sync later.'),
     })
   }
 }
@@ -208,11 +215,11 @@ export async function startSharing(): Promise<string> {
   })
   if (res.status === 503) {
     useSync.setState({ unavailable: true })
-    throw new Error('Sharing is not set up on this server yet.')
+    throw new Error(t('Sharing is not set up on this server yet.'))
   }
-  if (res.status === 413) throw new Error('Too much data to share. Remove some photos first.')
+  if (res.status === 413) throw new Error(t('Too much data to share. Remove some photos first.'))
   if (res.status !== 200 || !res.body?.code)
-    throw new Error('Could not reach the server. Try again.')
+    throw new Error(t('Could not reach the server. Try again.'))
   const meId = useStore.getState().members.find((m) => m.isMe)?.id
   const lastSyncedAt = new Date().toISOString()
   writeMeta({ code: res.body.code, rev: res.body.rev, base: doc, meId, lastSyncedAt })
@@ -223,11 +230,11 @@ export async function startSharing(): Promise<string> {
 /** Look at a household before joining, to show who's in it. */
 export async function peekHousehold(input: string) {
   const code = normalizeCode(input)
-  if (!code) throw new Error('That code should be 12 letters and numbers.')
+  if (!code) throw new Error(t('That code should be 12 letters and numbers.'))
   const res = await api<Remote>(`/api/sync/${code}`)
-  if (res.status === 404) throw new Error('No household has that code. Check it and try again.')
-  if (res.status === 503) throw new Error('Sharing is not set up on this server yet.')
-  if (res.status !== 200 || !res.body) throw new Error('Could not reach the server. Try again.')
+  if (res.status === 404) throw new Error(t('No household has that code. Check it and try again.'))
+  if (res.status === 503) throw new Error(t('Sharing is not set up on this server yet.'))
+  if (res.status !== 200 || !res.body) throw new Error(t('Could not reach the server. Try again.'))
   return { code, rev: res.body.rev, doc: cleanDoc(res.body.doc) }
 }
 

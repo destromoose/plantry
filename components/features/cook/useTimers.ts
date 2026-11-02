@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface TimerState {
@@ -11,8 +13,8 @@ export interface TimerState {
   finished: boolean
 }
 
-export function remainingOf(t: TimerState, now: number): number {
-  return t.endsAt ? Math.max(0, t.endsAt - now) : t.remainingMs
+export function remainingOf(tItem: TimerState, now: number): number {
+  return tItem.endsAt ? Math.max(0, tItem.endsAt - now) : tItem.remainingMs
 }
 
 function beep() {
@@ -80,7 +82,7 @@ const RING_FOR_MS = 3 * 60 * 1000
  */
 export function useTimers(
   initial: Record<string, TimerState> = {},
-  labelOf: (id: string) => string = () => 'Your timer'
+  labelOf: (id: string) => string = () => t('Your timer')
 ) {
   const [timers, setTimers] = useState<Record<string, TimerState>>(initial)
   const [now, setNow] = useState(() => Date.now())
@@ -91,8 +93,8 @@ export function useTimers(
   labelRef.current = labelOf
   const ringStarted = useRef<number | null>(null)
 
-  const anyRunning = Object.values(timers).some((t) => t.endsAt !== null)
-  const anyRinging = Object.values(timers).some((t) => t.finished)
+  const anyRunning = Object.values(timers).some((tItem) => tItem.endsAt !== null)
+  const anyRinging = Object.values(timers).some((tItem) => tItem.finished)
 
   useEffect(() => {
     if (!anyRunning) return
@@ -100,20 +102,20 @@ export function useTimers(
       const n = Date.now()
       setNow(n)
       const done = Object.entries(timersRef.current).filter(
-        ([, t]) => t.endsAt !== null && t.endsAt <= n
+        ([, tItem]) => tItem.endsAt !== null && tItem.endsAt <= n
       )
       if (done.length) {
         const names = done.map(([id]) => labelRef.current(id)).join(', ')
         beep()
         vibrate()
         notify(names)
-        setAnnounce(`Timer done: ${names}`)
+        setAnnounce(t('Timer done: {names}', { names }))
         setTimers((prev) => {
           const next = { ...prev }
           for (const [id] of done) {
-            const t = next[id]
-            if (t && t.endsAt !== null && t.endsAt <= n)
-              next[id] = { ...t, endsAt: null, remainingMs: 0, finished: true }
+            const tItem = next[id]
+            if (tItem && tItem.endsAt !== null && tItem.endsAt <= n)
+              next[id] = { ...tItem, endsAt: null, remainingMs: 0, finished: true }
           }
           return next
         })
@@ -143,35 +145,38 @@ export function useTimers(
     setNow(n)
     const t0 = timersRef.current[id]
     const rem0 = t0 && !t0.finished && t0.remainingMs > 0 ? t0.remainingMs : minutes * 60_000
-    setAnnounce(`Timer started: ${Math.max(1, Math.round(rem0 / 60_000))} minutes`)
+    setAnnounce(t('Timer started: {v0} minutes', { v0: Math.max(1, Math.round(rem0 / 60_000)) }))
     setTimers((prev) => {
-      const t = prev[id] ?? {
+      const tItem = prev[id] ?? {
         durationMs: minutes * 60_000,
         remainingMs: minutes * 60_000,
         endsAt: null,
         finished: false,
       }
-      if (t.endsAt !== null) return prev
-      const rem = t.finished || t.remainingMs <= 0 ? t.durationMs : t.remainingMs
-      return { ...prev, [id]: { ...t, remainingMs: rem, endsAt: n + rem, finished: false } }
+      if (tItem.endsAt !== null) return prev
+      const rem = tItem.finished || tItem.remainingMs <= 0 ? tItem.durationMs : tItem.remainingMs
+      return { ...prev, [id]: { ...tItem, remainingMs: rem, endsAt: n + rem, finished: false } }
     })
   }, [])
 
   const pause = useCallback((id: string) => {
     const n = Date.now()
-    setAnnounce('Timer paused')
+    setAnnounce(t('Timer paused'))
     setTimers((prev) => {
-      const t = prev[id]
-      if (!t || t.endsAt === null) return prev
-      return { ...prev, [id]: { ...t, remainingMs: Math.max(0, t.endsAt - n), endsAt: null } }
+      const tItem = prev[id]
+      if (!tItem || tItem.endsAt === null) return prev
+      return {
+        ...prev,
+        [id]: { ...tItem, remainingMs: Math.max(0, tItem.endsAt - n), endsAt: null },
+      }
     })
   }, [])
 
   /** Back to the full time. Also how a ringing timer is dismissed. */
   const reset = useCallback((id: string) => {
     setTimers((prev) => {
-      const t = prev[id]
-      if (!t) return prev
+      const tItem = prev[id]
+      if (!tItem) return prev
       const next = { ...prev }
       delete next[id]
       return next

@@ -3,6 +3,7 @@
 // The shared document is the household's data minus anything that belongs to one phone
 // (mood, text size, language, which person "you" are). It is not the export format: export
 // and import stay exactly as they were.
+import { canonicalRecipes } from './seed/localize'
 //
 // Merging is three-way. Each phone remembers the last document it synced (the base). On
 // sync it takes the server's latest document and replays its own changes since the base on
@@ -79,7 +80,7 @@ export function toDoc(s: SyncSource): SyncDoc {
       delete copy.isMe
       return copy
     }),
-    recipes: s.recipes,
+    recipes: canonicalRecipes(s.recipes),
     pantry: s.pantry,
     plan: s.plan,
     shop: s.shop,

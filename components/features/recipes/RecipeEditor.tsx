@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -25,15 +27,15 @@ import { announce } from '@/lib/announce'
 import { allTastes, tasteLabels } from './tastes'
 
 const aisles: { id: Aisle; label: string }[] = [
-  { id: 'produce', label: 'Produce' },
-  { id: 'dairy', label: 'Dairy' },
-  { id: 'meat-fish', label: 'Meat and fish' },
-  { id: 'bakery', label: 'Bakery' },
-  { id: 'pantry', label: 'Pantry' },
-  { id: 'frozen', label: 'Frozen' },
-  { id: 'spices', label: 'Spices' },
-  { id: 'drinks', label: 'Drinks' },
-  { id: 'other', label: 'Other' },
+  { id: 'produce', label: t('Produce') },
+  { id: 'dairy', label: t('Dairy') },
+  { id: 'meat-fish', label: t('Meat and fish') },
+  { id: 'bakery', label: t('Bakery') },
+  { id: 'pantry', label: t('Pantry') },
+  { id: 'frozen', label: t('Frozen') },
+  { id: 'spices', label: t('Spices') },
+  { id: 'drinks', label: t('Drinks') },
+  { id: 'other', label: t('Other') },
 ]
 
 interface IngRow {
@@ -107,17 +109,17 @@ export function RecipeEditor({
     return (
       <EmptyState
         icon={UtensilsCrossed}
-        title="This one came with Plantry"
-        body="Make your own copy to change it. The original stays as it is."
+        title={t('This one came with Plantry')}
+        body={t('Make your own copy to change it. The original stays as it is.')}
         action={
           <Button
             onClick={() => {
               const r = addRecipe(copyOfRecipe(existing))
-              toast('Copy made. Change what you like.')
+              toast(t('Copy made. Change what you like.'))
               router.replace(`/recipes/new?id=${r.id}`)
             }}
           >
-            Make a copy
+            {t('Make a copy')}
           </Button>
         }
       />
@@ -127,14 +129,14 @@ export function RecipeEditor({
     return (
       <EmptyState
         icon={UtensilsCrossed}
-        title="That recipe isn't here"
-        body="It may have been deleted."
+        title={t("That recipe isn't here")}
+        body={t('It may have been deleted.')}
         action={
           <Link
             href="/recipes"
             className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
           >
-            Back to recipes
+            {t('Back to recipes')}
           </Link>
         }
       />
@@ -143,7 +145,7 @@ export function RecipeEditor({
 
   const badQty = ings.filter((i) => i.name.trim() && !qtyOk(i.quantity))
   const errors = {
-    title: !title.trim() ? 'Give it a name.' : '',
+    title: !title.trim() ? t('Give it a name.') : '',
     ingredients: !ings.some((i) => i.name.trim())
       ? 'Add at least one ingredient.'
       : badQty.length
@@ -173,19 +175,21 @@ export function RecipeEditor({
   function sortOut() {
     const text = pasteText.trim()
     if (!text) {
-      setPasteNote('Paste something first.')
+      setPasteNote(t('Paste something first.'))
       return
     }
     if (/^https?:\/\/\S+$/i.test(text)) {
       setPasteNote(
-        "Plantry can't fetch pages yet. Paste the recipe text instead and it'll sort it out."
+        t("Plantry can't fetch pages yet. Paste the recipe text instead and it'll sort it out.")
       )
       return
     }
     const parsed = parseRecipe(text)
     if (parsed.ingredients.length === 0 && parsed.steps.length === 0) {
       setPasteNote(
-        'Couldn\'t find ingredients or steps in that. Try adding "Ingredients" and "Method" headings.'
+        t(
+          'Couldn\'t find ingredients or steps in that. Try adding "Ingredients" and "Method" headings.'
+        )
       )
       return
     }
@@ -206,7 +210,7 @@ export function RecipeEditor({
     if (parsed.steps.length) setSteps(parsed.steps.map((s) => ({ id: uid('s'), text: s.text })))
     setPasteNote(null)
     setTab('type')
-    toast('Sorted. Check the details.')
+    toast(t('Sorted. Check the details.'))
   }
 
   function save() {
@@ -241,18 +245,18 @@ export function RecipeEditor({
       steps: steps
         .filter((s) => s.text.trim())
         .map((s) => {
-          const t = detectTimer(s.text)
-          return { id: s.id, text: s.text.trim(), ...(t ? { timerMinutes: t } : {}) }
+          const tItem = detectTimer(s.text)
+          return { id: s.id, text: s.text.trim(), ...(tItem ? { timerMinutes: tItem } : {}) }
         }),
     }
     if (data.totalMinutes < data.activeMinutes) data.totalMinutes = data.activeMinutes
     if (existing) {
       updateRecipe(existing.id, data)
-      toast('Recipe saved')
+      toast(t('Recipe saved'))
       router.replace(`/recipes/${existing.id}`)
     } else {
       const r = addRecipe(data)
-      toast('Recipe added')
+      toast(t('Recipe added'))
       router.replace(`/recipes/${r.id}`)
     }
   }
@@ -287,21 +291,21 @@ export function RecipeEditor({
   return (
     <div className="mx-auto max-w-2xl pb-10">
       <header className="flex items-center gap-3 pt-2">
-        <Button variant="ghost" size="icon" aria-label="Back" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" aria-label={t('Back')} onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" aria-hidden />
         </Button>
         <h1 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">
-          {existing ? 'Edit recipe' : 'New recipe'}
+          {existing ? t('Edit recipe') : t('New recipe')}
         </h1>
       </header>
 
       {!existing && (
-        <div className="mt-4 flex gap-2" role="group" aria-label="How to add">
+        <div className="mt-4 flex gap-2" role="group" aria-label={t('How to add')}>
           <Chip selected={tab === 'type'} onClick={() => setTab('type')}>
-            Type it
+            {t('Type it')}
           </Chip>
           <Chip selected={tab === 'paste'} onClick={() => setTab('paste')}>
-            Paste recipe text
+            {t('Paste recipe text')}
           </Chip>
         </div>
       )}
@@ -314,10 +318,11 @@ export function RecipeEditor({
           transition={settle}
           className="mt-5 space-y-3"
         >
-          <Label htmlFor="paste">Recipe text</Label>
+          <Label htmlFor="paste">{t('Recipe text')}</Label>
           <p className="-mt-1 text-sm text-ink-3">
-            Copy the recipe from a website or a note and paste it here. Plantry can&apos;t open
-            links yet.
+            {t(
+              "Copy the recipe from a website or a note and paste it here. Plantry can't open links yet."
+            )}
           </p>
           <Textarea
             id="paste"
@@ -327,16 +332,16 @@ export function RecipeEditor({
               setPasteNote(null)
             }}
             rows={12}
-            placeholder={
-              'Lemon pasta\n\nIngredients\n200 g spaghetti\n2 cloves garlic\n\nMethod\n1. Boil the pasta for 10 minutes.'
-            }
+            placeholder={t(
+              'Lemon pasta  Ingredients 200 g spaghetti 2 cloves garlic  Method 1. Boil the pasta for 10 minutes.'
+            )}
           />
           {pasteNote && (
             <p role="status" className="rounded-2xl bg-surface-2 px-4 py-3 text-sm text-ink-2">
               {pasteNote}
             </p>
           )}
-          <Button onClick={sortOut}>Sort it out</Button>
+          <Button onClick={sortOut}>{t('Sort it out')}</Button>
         </motion.section>
       ) : (
         <motion.form
@@ -353,7 +358,7 @@ export function RecipeEditor({
           noValidate
         >
           <div>
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t('Title')}</Label>
             <Input
               id="title"
               maxLength={80}
@@ -369,7 +374,7 @@ export function RecipeEditor({
             )}
           </div>
           <div>
-            <Label htmlFor="desc">Description</Label>
+            <Label htmlFor="desc">{t('Description')}</Label>
             <Textarea
               id="desc"
               rows={2}
@@ -379,7 +384,7 @@ export function RecipeEditor({
             />
           </div>
           <div>
-            <Label htmlFor="img">Image URL (optional)</Label>
+            <Label htmlFor="img">{t('Image URL (optional)')}</Label>
             <Input
               id="img"
               inputMode="url"
@@ -393,14 +398,14 @@ export function RecipeEditor({
             </div>
             {imageUrl.trim() && !isImageUrl(imageUrl) && (
               <p className="mt-1.5 text-sm text-ink-3">
-                Use a link that starts with https:// to show a picture.
+                {t('Use a link that starts with https:// to show a picture.')}
               </p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
-              <Label htmlFor="active">Active min</Label>
+              <Label htmlFor="active">{t('Active min')}</Label>
               <Input
                 id="active"
                 type="number"
@@ -412,7 +417,7 @@ export function RecipeEditor({
               />
             </div>
             <div>
-              <Label htmlFor="total">Total min</Label>
+              <Label htmlFor="total">{t('Total min')}</Label>
               <Input
                 id="total"
                 type="number"
@@ -424,24 +429,26 @@ export function RecipeEditor({
               />
             </div>
             <div className="col-span-2 sm:col-span-1">
-              <Label>Servings</Label>
-              <Stepper value={servings} onChange={setServings} max={24} label="Servings" />
+              <Label>{t('Servings')}</Label>
+              <Stepper value={servings} onChange={setServings} max={24} label={t('Servings')} />
             </div>
           </div>
 
           <div>
-            <Label>Tastes</Label>
+            <Label>{t('Tastes')}</Label>
             <div className="flex flex-wrap gap-2">
-              {allTastes.map((t) => (
+              {allTastes.map((tItem) => (
                 <Chip
-                  key={t}
+                  key={tItem}
                   size="sm"
-                  selected={tastes.includes(t)}
+                  selected={tastes.includes(tItem)}
                   onClick={() =>
-                    setTastes((c) => (c.includes(t) ? c.filter((x) => x !== t) : [...c, t]))
+                    setTastes((c) =>
+                      c.includes(tItem) ? c.filter((x) => x !== tItem) : [...c, tItem]
+                    )
                   }
                 >
-                  {tasteLabels[t]}
+                  {tasteLabels[tItem]}
                 </Chip>
               ))}
             </div>
@@ -449,15 +456,15 @@ export function RecipeEditor({
 
           <div className="grid items-end gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="weather">Weather lean</Label>
+              <Label htmlFor="weather">{t('Weather lean')}</Label>
               <Select
                 id="weather"
                 value={weather}
                 onChange={(e) => setWeather(e.target.value as 'any' | 'warm' | 'light')}
               >
-                <option value="any">Any weather</option>
-                <option value="warm">Warm, for cold days</option>
-                <option value="light">Light, for hot days</option>
+                <option value="any">{t('Any weather')}</option>
+                <option value="warm">{t('Warm, for cold days')}</option>
+                <option value="light">{t('Light, for hot days')}</option>
               </Select>
             </div>
             <button
@@ -467,7 +474,7 @@ export function RecipeEditor({
               onClick={() => setLeftovers((v) => !v)}
               className="flex h-12 items-center justify-between rounded-2xl border border-line bg-surface px-4 text-[0.9375rem]"
             >
-              Makes leftovers
+              {t('Makes leftovers')}
               <span
                 className={`relative h-6 w-10 rounded-pill transition-colors ${leftovers ? 'bg-accent' : 'bg-line'}`}
                 aria-hidden
@@ -483,7 +490,7 @@ export function RecipeEditor({
 
           <section aria-labelledby="ing-h">
             <SectionTitle>
-              <span id="ing-h">Ingredients</span>
+              <span id="ing-h">{t('Ingredients')}</span>
             </SectionTitle>
             <ul className="space-y-3">
               {ings.map((row, idx) => (
@@ -491,8 +498,8 @@ export function RecipeEditor({
                   <div className="flex gap-2">
                     <Input
                       id={`ing-name-${row.id}`}
-                      aria-label={`Ingredient ${idx + 1} name`}
-                      placeholder="Name"
+                      aria-label={t('Ingredient {v0} name', { v0: idx + 1 })}
+                      placeholder={t('Name')}
                       maxLength={60}
                       enterKeyHint="next"
                       value={row.name}
@@ -502,7 +509,7 @@ export function RecipeEditor({
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label={`Remove ingredient ${idx + 1}`}
+                      aria-label={t('Remove ingredient {v0}', { v0: idx + 1 })}
                       onClick={() =>
                         setIngs((c) =>
                           c.length > 1 ? c.filter((r) => r.id !== row.id) : [blankIng()]
@@ -515,9 +522,9 @@ export function RecipeEditor({
                   <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] gap-2">
                     <Input
                       id={`ing-qty-${row.id}`}
-                      aria-label={`Ingredient ${idx + 1} amount`}
+                      aria-label={t('Ingredient {v0} amount', { v0: idx + 1 })}
                       aria-invalid={tried && !!row.name.trim() && !qtyOk(row.quantity)}
-                      placeholder="Amount"
+                      placeholder={t('Amount')}
                       maxLength={12}
                       enterKeyHint="next"
                       value={row.quantity}
@@ -525,8 +532,8 @@ export function RecipeEditor({
                       onKeyDown={(e) => onIngEnter(e, idx)}
                     />
                     <Input
-                      aria-label={`Ingredient ${idx + 1} unit`}
-                      placeholder="Unit"
+                      aria-label={t('Ingredient {v0} unit', { v0: idx + 1 })}
+                      placeholder={t('Unit')}
                       maxLength={20}
                       enterKeyHint="next"
                       value={row.unit}
@@ -534,7 +541,7 @@ export function RecipeEditor({
                       onKeyDown={(e) => onIngEnter(e, idx)}
                     />
                     <Select
-                      aria-label={`Ingredient ${idx + 1} aisle`}
+                      aria-label={t('Ingredient {v0} aisle', { v0: idx + 1 })}
                       value={row.aisle}
                       onChange={(e) =>
                         patchIng(row.id, { aisle: e.target.value as Aisle, aislePicked: true })
@@ -561,17 +568,17 @@ export function RecipeEditor({
               className="mt-3"
               onClick={() => setIngs((c) => [...c, blankIng()])}
             >
-              <Plus className="h-4 w-4" aria-hidden /> Add ingredient
+              <Plus className="h-4 w-4" aria-hidden /> {t('Add ingredient')}
             </Button>
           </section>
 
           <section aria-labelledby="step-h">
             <SectionTitle>
-              <span id="step-h">Steps</span>
+              <span id="step-h">{t('Steps')}</span>
             </SectionTitle>
             <ol className="space-y-3">
               {steps.map((row, idx) => {
-                const t = detectTimer(row.text)
+                const tItem = detectTimer(row.text)
                 return (
                   <li key={row.id} className="flex gap-3">
                     <span
@@ -583,22 +590,23 @@ export function RecipeEditor({
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <Textarea
                         id={`step-${row.id}`}
-                        aria-label={`Step ${idx + 1}`}
+                        aria-label={t('Step {v0}', { v0: idx + 1 })}
                         maxLength={600}
                         rows={2}
                         value={row.text}
                         onChange={(e) => patchStep(row.id, e.target.value)}
                       />
-                      {t && (
+                      {tItem && (
                         <Tag className="gap-1">
-                          <Timer className="h-3 w-3" aria-hidden /> timer {t} min
+                          <Timer className="h-3 w-3" aria-hidden />{' '}
+                          {t('timer {tItem} min', { tItem })}
                         </Tag>
                       )}
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label={`Remove step ${idx + 1}`}
+                      aria-label={t('Remove step {v0}', { v0: idx + 1 })}
                       onClick={() =>
                         setSteps((c) =>
                           c.length > 1 ? c.filter((r) => r.id !== row.id) : [blankStep()]
@@ -618,13 +626,13 @@ export function RecipeEditor({
               className="mt-3"
               onClick={() => setSteps((c) => [...c, blankStep()])}
             >
-              <Plus className="h-4 w-4" aria-hidden /> Add step
+              <Plus className="h-4 w-4" aria-hidden /> {t('Add step')}
             </Button>
           </section>
 
           <div className="flex items-center gap-3 pt-2">
             <Button type="submit" size="lg">
-              {existing ? 'Save changes' : 'Save recipe'}
+              {existing ? t('Save changes') : t('Save recipe')}
             </Button>
             {tried && hasErrors && (
               <p className="text-sm text-danger">

@@ -1,5 +1,7 @@
 'use client'
 
+import { locale, t } from '@/lib/i18n'
+
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { NotebookPen } from 'lucide-react'
@@ -59,17 +61,19 @@ export function History() {
   if (cooked.length === 0) {
     return (
       <div className="space-y-5">
-        <PageHeader title="History" subtitle="Every dinner you cook, kept." />
+        <PageHeader title={t('History')} subtitle={t('Every dinner you cook, kept.')} />
         <EmptyState
           icon={NotebookPen}
-          title="Nothing cooked yet"
-          body="Finish a dinner in cook mode, or mark a night cooked on Week, and it shows up here with room for a note."
+          title={t('Nothing cooked yet')}
+          body={t(
+            'Finish a dinner in cook mode, or mark a night cooked on Week, and it shows up here with room for a note.'
+          )}
           action={
             <Link
               href="/"
               className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
             >
-              See tonight
+              {t('See tonight')}
             </Link>
           }
         />
@@ -81,22 +85,25 @@ export function History() {
     <div className="space-y-5 pb-8">
       <PageHeader
         className="mb-2"
-        title="History"
-        subtitle={`You decided dinner ${pluralize(cooked.length, 'time')}.`}
+        title={t('History')}
+        subtitle={t('You decided dinner {v0}.', { v0: pluralize(cooked.length, 'time') })}
       />
 
       <Card>
         <dl className="grid grid-cols-3 gap-3 text-center">
-          <Stat label="This month" value={thisMonth} />
-          <Stat label="Loved" value={cooked.filter((c) => c.rating === 'loved').length} />
-          <Stat label="Different dinners" value={new Set(cooked.map((c) => c.recipeId)).size} />
+          <Stat label={t('This month')} value={thisMonth} />
+          <Stat label={t('Loved')} value={cooked.filter((c) => c.rating === 'loved').length} />
+          <Stat
+            label={t('Different dinners')}
+            value={new Set(cooked.map((c) => c.recipeId)).size}
+          />
         </dl>
         {top.length > 0 && (
           <p className="mt-4 border-t border-line pt-3 text-[0.9375rem] text-ink-2">
-            Most cooked:{' '}
+            {t('Most cooked:')}{' '}
             {top
-              .filter((t) => byId.has(t.recipeId))
-              .map((t) => `${byId.get(t.recipeId)!.title} (${t.times})`)
+              .filter((tItem) => byId.has(tItem.recipeId))
+              .map((tItem) => `${byId.get(tItem.recipeId)!.title} (${tItem.times})`)
               .join(', ')}
             .
           </p>
@@ -105,7 +112,7 @@ export function History() {
 
       {comeback.length > 0 && (
         <Card>
-          <SectionTitle>Worth bringing back</SectionTitle>
+          <SectionTitle>{t('Worth bringing back')}</SectionTitle>
           <ul className="space-y-2">
             {comeback.map((id) => (
               <li key={id}>
@@ -115,7 +122,7 @@ export function History() {
                 >
                   <Thumb src={byId.get(id)?.imageUrl} className="h-12 w-12 rounded-xl" />
                   <span className="min-w-0 flex-1 truncate font-medium">{byId.get(id)?.title}</span>
-                  <Tag>Loved it</Tag>
+                  <Tag>{t('Loved it')}</Tag>
                 </Link>
               </li>
             ))}
@@ -123,16 +130,16 @@ export function History() {
         </Card>
       )}
 
-      <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
+      <div role="group" aria-label={t('Show')} className="flex flex-wrap gap-2">
         {(['all', 'loved', 'fine', 'not-again'] as Filter[]).map((f) => (
           <Chip key={f} size="sm" selected={filter === f} onClick={() => setFilter(f)}>
-            {f === 'all' ? 'All' : ratingLabels[f]}
+            {f === 'all' ? t('All') : ratingLabels[f]}
           </Chip>
         ))}
       </div>
 
       {months.length === 0 && (
-        <p className="px-1 text-[0.9375rem] text-ink-2">No dinners with that rating yet.</p>
+        <p className="px-1 text-[0.9375rem] text-ink-2">{t('No dinners with that rating yet.')}</p>
       )}
 
       {months.map((m) => (
@@ -153,20 +160,23 @@ export function History() {
                     type="button"
                     onClick={() => setEditing({ date: c.date, recipeId: c.recipeId })}
                     className="flex w-full items-center gap-3 p-3.5 text-left hover:bg-surface-2"
-                    aria-label={`${r?.title ?? 'A removed recipe'}, ${agoLabel(c.date, today)}. Rate or add a note`}
+                    aria-label={t('{v0}, {v1}. Rate or add a note', {
+                      v0: r?.title ?? t('A removed recipe'),
+                      v1: agoLabel(c.date, today),
+                    })}
                   >
                     <Thumb src={r?.imageUrl} className="h-12 w-12 rounded-xl" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-ink">
-                        {r?.title ?? 'A removed recipe'}
+                        {r?.title ?? t('A removed recipe')}
                       </span>
                       <span className="block text-sm text-ink-3">
-                        {fromDateKey(c.date).toLocaleDateString(undefined, {
+                        {fromDateKey(c.date).toLocaleDateString(locale(), {
                           weekday: 'short',
                           day: 'numeric',
                           month: 'short',
                         })}
-                        {who ? ` · ${who.name} cooked` : ''}
+                        {who ? t(' · {name} cooked', { name: who.name }) : ''}
                       </span>
                       {c.note && (
                         <span className="mt-0.5 block truncate text-sm italic text-ink-2">
@@ -180,7 +190,7 @@ export function History() {
                         c.rating === 'loved' ? 'font-medium text-ink' : 'text-ink-3'
                       )}
                     >
-                      {c.rating ? ratingLabels[c.rating] : 'Rate'}
+                      {c.rating ? ratingLabels[c.rating] : t('Rate')}
                     </span>
                   </button>
                 </li>
@@ -193,7 +203,7 @@ export function History() {
       <EditSheet
         key={editing ? `${editing.date}-${editing.recipeId}` : 'none'}
         open={!!editEntry}
-        title={editEntry ? (byId.get(editEntry.recipeId)?.title ?? 'This dinner') : ''}
+        title={editEntry ? (byId.get(editEntry.recipeId)?.title ?? t('This dinner')) : ''}
         rating={editEntry?.rating}
         note={editEntry?.note ?? ''}
         recipeId={editEntry?.recipeId}
@@ -202,7 +212,7 @@ export function History() {
           if (!editing) return
           rateCooked(editing.date, editing.recipeId, { rating, note })
           setEditing(null)
-          toast('Saved')
+          toast(t('Saved'))
         }}
       />
     </div>
@@ -248,22 +258,24 @@ function EditSheet({
       <div className="space-y-4">
         <RatingPicker value={rating} onChange={setRating} />
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-ink-2">Note for next time</span>
+          <span className="mb-1.5 block text-sm font-medium text-ink-2">
+            {t('Note for next time')}
+          </span>
           <Input
             value={note}
             maxLength={500}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Less chili, double the sauce…"
+            placeholder={t('Less chili, double the sauce…')}
           />
         </label>
         <div className="flex flex-col gap-2">
-          <Button onClick={() => onSave(rating, note)}>Save</Button>
+          <Button onClick={() => onSave(rating, note)}>{t('Save')}</Button>
           {recipeId && (
             <Link
               href={`/recipes/${recipeId}`}
               className="inline-flex h-11 items-center justify-center rounded-pill px-5 text-[0.9375rem] font-medium text-ink-2 hover:bg-surface-2"
             >
-              Open the recipe
+              {t('Open the recipe')}
             </Link>
           )}
         </div>

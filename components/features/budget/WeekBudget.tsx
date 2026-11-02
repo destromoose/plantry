@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { useStore } from '@/lib/store'
@@ -26,21 +28,21 @@ export function WeekBudget({ dates, className }: { dates: string[]; className?: 
       <p className="text-[0.9375rem] text-ink-2">
         {dinners ? (
           <>
-            About <span className="font-semibold text-ink">{money(total)}</span> for{' '}
-            {pluralize(dinners, 'planned dinner')}
+            {t('About')} <span className="font-semibold text-ink">{money(total)}</span>{' '}
+            {t('for {v0}', { v0: pluralize(dinners, 'planned dinner') })}
           </>
         ) : (
-          'Nothing planned yet'
+          t('Nothing planned yet')
         )}
         {budget > 0 &&
           (over
-            ? `, about ${money(total - budget)} over your ${money(budget)}.`
-            : `, ${money(budget - total)} left of your ${money(budget)}.`)}
+            ? t(', about {v0} over your {v1}.', { v0: money(total - budget), v1: money(budget) })
+            : t(', {v0} left of your {v1}.', { v0: money(budget - total), v1: money(budget) }))}
         {!budget && (
           <>
             .{' '}
             <Link href="/settings#budget" className="text-ink underline underline-offset-2">
-              Set a budget
+              {t('Set a budget')}
             </Link>
           </>
         )}
@@ -49,7 +51,7 @@ export function WeekBudget({ dates, className }: { dates: string[]; className?: 
         <div
           className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2"
           role="progressbar"
-          aria-label="Budget used"
+          aria-label={t('Budget used')}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(share * 100)}
@@ -62,7 +64,7 @@ export function WeekBudget({ dates, className }: { dates: string[]; className?: 
       )}
       {over && (
         <p className="mt-2 text-sm text-ink-3">
-          Fill my week picks cheaper dinners for the open nights while you have a budget set.
+          {t('Fill my week picks cheaper dinners for the open nights while you have a budget set.')}
         </p>
       )}
     </div>

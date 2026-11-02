@@ -1,5 +1,7 @@
 'use client'
 
+import { locale, t } from '@/lib/i18n'
+
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Plus, X } from 'lucide-react'
@@ -45,7 +47,7 @@ export function Household() {
   const cooks = members.filter((m) => m.cooks !== false)
   const avoidMember = members.find((m) => m.id === avoidFor)
 
-  const word = settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)
+  const word = t(settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1))
   const week = weekOf(today)
   const member = (id?: string) => members.find((m) => m.id === id)
   const recipeTitle = (id?: string) => recipes.find((r) => r.id === id)?.title
@@ -53,10 +55,11 @@ export function Household() {
 
   function describeDinner(date: string) {
     const e = dinner(date)
-    if (!e) return 'Open'
-    if (e.recipeId) return recipeTitle(e.recipeId) ?? 'Dinner'
-    if (e.leftoversOf) return `Leftovers: ${recipeTitle(e.leftoversOf) ?? 'last night'}`
-    return e.note ?? 'Open'
+    if (!e) return t('Open')
+    if (e.recipeId) return recipeTitle(e.recipeId) ?? t('Dinner')
+    if (e.leftoversOf)
+      return t('Leftovers: {v0}', { v0: recipeTitle(e.leftoversOf) ?? t('last night') })
+    return e.note ?? t('Open')
   }
 
   // Recap
@@ -76,14 +79,14 @@ export function Household() {
         title={word}
         subtitle={
           members.length > 1
-            ? 'Who cooks which night, and what everyone avoids.'
-            : 'Add the people you cook for, and what they avoid.'
+            ? t('Who cooks which night, and what everyone avoids.')
+            : t('Add the people you cook for, and what they avoid.')
         }
       />
 
       <section aria-labelledby="members-h">
         <SectionTitle>
-          <span id="members-h">Who&apos;s at the table</span>
+          <span id="members-h">{t("Who's at the table")}</span>
         </SectionTitle>
         <Card className="p-2">
           <ul>
@@ -94,7 +97,7 @@ export function Household() {
                   <Input
                     autoFocus
                     defaultValue={m.name}
-                    aria-label={`Rename ${m.name}`}
+                    aria-label={t('Rename {name}', { name: m.name })}
                     className="h-11"
                     onBlur={(e) => {
                       if (e.target.value.trim()) renameMember(m.id, e.target.value.trim())
@@ -110,12 +113,14 @@ export function Household() {
                     type="button"
                     onClick={() => setEditing(m.id)}
                     className="flex h-11 min-w-0 flex-1 items-center text-left font-medium"
-                    aria-label={`Rename ${m.name}`}
+                    aria-label={t('Rename {name}', { name: m.name })}
                   >
                     <span className="truncate">{m.name}</span>
-                    {m.isMe && <span className="ml-2 text-sm font-normal text-ink-3">you</span>}
+                    {m.isMe && (
+                      <span className="ml-2 text-sm font-normal text-ink-3">{t('you')}</span>
+                    )}
                     {m.cooks === false && (
-                      <span className="ml-2 text-sm font-normal text-ink-3">eats only</span>
+                      <span className="ml-2 text-sm font-normal text-ink-3">{t('eats only')}</span>
                     )}
                   </button>
                 )}
@@ -127,14 +132,19 @@ export function Household() {
                   onClick={() => setAvoidFor(m.id)}
                 >
                   {m.avoid?.length
-                    ? `Avoids ${m.avoid.length === 1 ? avoidLabel(m.avoid[0]).toLowerCase() : m.avoid.length}`
-                    : 'Details'}
+                    ? t('Avoids {v0}', {
+                        v0:
+                          m.avoid.length === 1
+                            ? avoidLabel(m.avoid[0]).toLowerCase()
+                            : m.avoid.length,
+                      })
+                    : t('Details')}
                 </Button>
                 {!m.isMe && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Remove ${m.name}`}
+                    aria-label={t('Remove {name}', { name: m.name })}
                     onClick={() => setRemoving({ id: m.id, name: m.name })}
                   >
                     <X className="h-5 w-5" />
@@ -149,19 +159,19 @@ export function Household() {
               e.preventDefault()
               if (!newName.trim()) return
               if (members.length >= MAX_PEOPLE) {
-                toast(`Up to ${MAX_PEOPLE} people for now.`)
+                toast(t('Up to {MAX_PEOPLE} people for now.', { MAX_PEOPLE }))
                 return
               }
               addMember(newName)
-              toast(`${newName.trim()} is in`)
+              toast(t('{v0} is in', { v0: newName.trim() }))
               setNewName('')
             }}
           >
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Add someone"
-              aria-label="Add someone"
+              placeholder={t('Add someone')}
+              aria-label={t('Add someone')}
               maxLength={40}
             />
             <Button
@@ -170,7 +180,7 @@ export function Household() {
               disabled={!newName.trim()}
               className="shrink-0"
             >
-              <Plus className="h-4 w-4" aria-hidden /> Add
+              <Plus className="h-4 w-4" aria-hidden /> {t('Add')}
             </Button>
           </form>
         </Card>
@@ -178,7 +188,7 @@ export function Household() {
 
       <section aria-labelledby="week-h">
         <SectionTitle>
-          <span id="week-h">This week</span>
+          <span id="week-h">{t('This week')}</span>
         </SectionTitle>
         <motion.ul
           variants={staggerContainer}
@@ -194,7 +204,11 @@ export function Household() {
                 <button
                   type="button"
                   onClick={() => setClaimDate(date)}
-                  aria-label={`${shortDay(date)}: ${describeDinner(date)}. ${cook ? `Cooking: ${cook.name}` : 'Nobody yet'}. Change who cooks.`}
+                  aria-label={t('{v0}: {v1}. {v2}. Change who cooks.', {
+                    v0: shortDay(date),
+                    v1: describeDinner(date),
+                    v2: cook ? t('Cooking: {name}', { name: cook.name }) : t('Nobody yet'),
+                  })}
                   className="flex min-h-[3.5rem] w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-surface-2"
                 >
                   <span
@@ -203,7 +217,7 @@ export function Household() {
                     {shortDay(date)}
                   </span>
                   <span
-                    className={`min-w-0 flex-1 truncate ${describeDinner(date) === 'Open' ? 'text-ink-3' : 'font-display text-lg'}`}
+                    className={`min-w-0 flex-1 truncate ${describeDinner(date) === t('Open') ? 'text-ink-3' : 'font-display text-lg'}`}
                   >
                     {describeDinner(date)}
                   </span>
@@ -224,14 +238,14 @@ export function Household() {
 
       <section aria-labelledby="handoffs-h">
         <SectionTitle>
-          <span id="handoffs-h">Hand-offs</span>
+          <span id="handoffs-h">{t('Hand-offs')}</span>
         </SectionTitle>
         <p className="-mt-2 mb-3 text-sm text-ink-3">
-          These stay on this device. Nothing is sent to anyone.
+          {t('These stay on this device. Nothing is sent to anyone.')}
         </p>
         {handoffs.length === 0 ? (
           <p className="card p-5 text-ink-2">
-            No hand-offs yet. On Tonight, open More and pick Ask someone else to cook.
+            {t('No hand-offs yet. On Tonight, open More and pick Ask someone else to cook.')}
           </p>
         ) : (
           <ul className="space-y-3">
@@ -243,10 +257,13 @@ export function Household() {
                   <li key={h.id} className="card flex items-center gap-3 p-4">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">
-                        {member(h.fromId)?.name ?? 'Someone'} handed{' '}
-                        {member(h.toId)?.name ?? 'someone'}{' '}
-                        {fromDateKey(h.date).toLocaleDateString(undefined, { weekday: 'long' })}
-                        &apos;s dinner
+                        {t("{v0} handed {v1} {v2} 's dinner", {
+                          v0: member(h.fromId)?.name ?? t('Someone'),
+                          v1: member(h.toId)?.name ?? t('Someone').toLowerCase(),
+                          v2: fromDateKey(h.date).toLocaleDateString(locale(), {
+                            weekday: 'long',
+                          }),
+                        })}
                       </p>
                       {title && <p className="font-display text-lg">{title}</p>}
                       {h.message && (
@@ -255,17 +272,17 @@ export function Household() {
                     </div>
                     {h.accepted ? (
                       <Tag>
-                        <Check className="mr-1 h-3 w-3" aria-hidden /> Accepted
+                        <Check className="mr-1 h-3 w-3" aria-hidden /> {t('Accepted')}
                       </Tag>
                     ) : (
                       <Button
                         size="sm"
                         onClick={() => {
                           acceptHandoff(h.id)
-                          toast('Handed over. Done.')
+                          toast(t('Handed over. Done.'))
                         }}
                       >
-                        Accept
+                        {t('Accept')}
                       </Button>
                     )}
                   </li>
@@ -278,19 +295,20 @@ export function Household() {
       <section aria-labelledby="recap-h">
         <Card>
           <SectionTitle>
-            <span id="recap-h">This week</span>
+            <span id="recap-h">{t('This week')}</span>
           </SectionTitle>
           <ul className="space-y-1.5 text-[0.9375rem] text-ink-2">
-            <li>You decided dinner {pluralize(decided, 'time')} so far.</li>
+            <li>{t('You decided dinner {v0} so far.', { v0: pluralize(decided, 'time') })}</li>
             {cooks.map((m) => (
               <li key={m.id}>
-                {m.name} cooked {cookedThisWeek.filter((c) => c.cookId === m.id).length}.
+                {t('{name} cooked', { name: m.name })}{' '}
+                {cookedThisWeek.filter((c) => c.cookId === m.id).length}.
               </li>
             ))}
             <li>
               {open === 0
-                ? 'Every night is spoken for.'
-                : `${pluralize(open, 'night')} still open.`}
+                ? t('Every night is spoken for.')
+                : t('{v0} still open.', { v0: pluralize(open, 'night') })}
             </li>
           </ul>
         </Card>
@@ -299,7 +317,7 @@ export function Household() {
       <Sheet
         open={!!claimDate}
         onClose={() => setClaimDate(null)}
-        title={claimDate ? `Who's cooking ${shortDay(claimDate)}?` : undefined}
+        title={claimDate ? t("Who's cooking {v0}?", { v0: shortDay(claimDate) }) : undefined}
       >
         <ul className="space-y-1">
           {cooks.map((m) => (
@@ -308,7 +326,7 @@ export function Household() {
                 type="button"
                 onClick={() => {
                   if (claimDate) claimNight(claimDate, m.id)
-                  toast(`${m.name} has it`)
+                  toast(t('{name} has it', { name: m.name }))
                   setClaimDate(null)
                 }}
                 className="flex min-h-[3.5rem] w-full items-center gap-3 rounded-2xl px-2 text-left hover:bg-surface-2"
@@ -316,7 +334,10 @@ export function Household() {
                 <Avatar member={m} />
                 <span className="font-medium">{m.name}</span>
                 {claimDate && dinner(claimDate)?.cookId === m.id && (
-                  <Check className="ml-auto h-4 w-4 text-secondary" aria-label="Current cook" />
+                  <Check
+                    className="ml-auto h-4 w-4 text-secondary"
+                    aria-label={t('Current cook')}
+                  />
                 )}
               </button>
             </li>
@@ -330,7 +351,7 @@ export function Household() {
               }}
               className="flex min-h-[3.5rem] w-full items-center rounded-2xl px-2 text-left text-ink-2 hover:bg-surface-2"
             >
-              Nobody yet
+              {t('Nobody yet')}
             </button>
           </li>
         </ul>
@@ -347,9 +368,9 @@ export function Household() {
               className="mb-6 flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-2 text-left"
             >
               <span>
-                <span className="block font-medium">Helps cook</span>
+                <span className="block font-medium">{t('Helps cook')}</span>
                 <span className="block text-sm text-ink-2">
-                  Off for someone who eats but doesn&apos;t cook, like a small child.
+                  {t("Off for someone who eats but doesn't cook, like a small child.")}
                 </span>
               </span>
               <span
@@ -361,16 +382,20 @@ export function Household() {
                 />
               </span>
             </button>
-            <h3 className="mb-1 font-semibold">Foods to avoid</h3>
+            <h3 className="mb-1 font-semibold">{t('Foods to avoid')}</h3>
             <p className="mb-4 text-ink-2">
-              Dinners with these are never suggested for anyone in your {settings.householdWord}.
+              {t('Dinners with these are never suggested for anyone in your {householdWord}.', {
+                householdWord: t(
+                  settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)
+                ).toLowerCase(),
+              })}
             </p>
             <AvoidPicker
               value={avoidMember.avoid ?? []}
               onChange={(v) => setMemberAvoid(avoidMember.id, v)}
             />
             <Button className="mt-6 w-full" onClick={() => setAvoidFor(null)}>
-              Done
+              {t('Done')}
             </Button>
           </>
         )}
@@ -379,10 +404,10 @@ export function Household() {
       <Sheet
         open={!!removing}
         onClose={() => setRemoving(null)}
-        title={`Remove ${removing?.name ?? ''}?`}
+        title={t('Remove {v0}?', { v0: removing?.name ?? '' })}
       >
         <p className="mb-5 text-ink-2">
-          Their claimed nights go back to open. Dinners stay planned.
+          {t('Their claimed nights go back to open. Dinners stay planned.')}
         </p>
         <div className="flex flex-col gap-2">
           <Button
@@ -395,10 +420,10 @@ export function Household() {
               setRemoving(null)
             }}
           >
-            Remove {removing?.name}
+            {t('Remove {name}', { name: removing?.name })}
           </Button>
           <Button variant="ghost" onClick={() => setRemoving(null)}>
-            Keep
+            {t('Keep')}
           </Button>
         </div>
       </Sheet>

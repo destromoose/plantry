@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
@@ -8,9 +10,9 @@ import { settle, tap, tapTransition } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export const energyOptions: { id: Energy; label: string; hint: string }[] = [
-  { id: 'up-for-it', label: 'Up for it', hint: 'Happy to cook 40 min' },
-  { id: 'quick', label: 'Something quick', hint: '20 minutes, tops' },
-  { id: 'cant-tonight', label: "Can't tonight", hint: "And that's fine" },
+  { id: 'up-for-it', label: t('Up for it'), hint: t('Happy to cook 40 min') },
+  { id: 'quick', label: t('Something quick'), hint: t('20 minutes, tops') },
+  { id: 'cant-tonight', label: t("Can't tonight"), hint: t("And that's fine") },
 ]
 
 export function EnergyPicker({
@@ -31,7 +33,7 @@ export function EnergyPicker({
         layout
         transition={settle}
         className="flex items-center gap-2"
-        aria-label="Your energy"
+        aria-label={t('Your energy')}
       >
         <span className="inline-flex h-9 items-center gap-1.5 rounded-pill bg-surface-2 px-3.5 text-sm font-medium text-ink">
           <Check className="h-4 w-4 text-secondary" aria-hidden />
@@ -42,7 +44,7 @@ export function EnergyPicker({
           onClick={() => setEditing(true)}
           className="h-11 rounded-pill px-3 text-sm font-medium text-ink-2 underline-offset-4 hover:text-ink hover:underline"
         >
-          Change
+          {t('Change')}
         </button>
       </motion.div>
     )
@@ -67,7 +69,9 @@ export function EnergyPicker({
   return (
     <motion.section layout transition={settle} aria-labelledby="energy-q">
       <h2 id="energy-q" className="mb-2 text-sm font-semibold text-ink-2">
-        How are you {label.toLowerCase() === 'tomorrow' ? 'feeling about tomorrow' : 'tonight'}?
+        {label.toLowerCase() === 'tomorrow'
+          ? t('How are you feeling about tomorrow?')
+          : t('How are you tonight?')}
       </h2>
       <div
         role="radiogroup"

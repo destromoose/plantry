@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Copy, RefreshCw, Share2, Users } from 'lucide-react'
@@ -13,11 +15,11 @@ import { toast } from '@/components/ui/Toast'
 function ago(iso?: string) {
   if (!iso) return ''
   const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000)
-  if (s < 60) return 'just now'
+  if (s < 60) return t('just now')
   const m = Math.round(s / 60)
-  if (m < 60) return `${m} min ago`
+  if (m < 60) return t('{m} min ago', { m })
   const h = Math.round(m / 60)
-  return h < 24 ? `${h} h ago` : new Date(iso).toLocaleDateString()
+  return h < 24 ? t('{h} h ago', { h }) : new Date(iso).toLocaleDateString()
 }
 
 /** Share the household's plan, pantry, list and recipes between phones. */
@@ -46,7 +48,7 @@ export function SyncCard() {
     setBusy(true)
     try {
       await startSharing()
-      toast('Shared. Send the code to the people you live with.')
+      toast(t('Shared. Send the code to the people you live with.'))
     } catch (e) {
       toast((e as Error).message, { tone: 'error' })
     } finally {
@@ -60,42 +62,47 @@ export function SyncCard() {
 
   async function invite() {
     if (!sync.code) return
-    const text = `Join our Plantry household: ${link} (code ${formatCode(sync.code)})`
+    const text = t('Join our Plantry household: {link} (code {v1})', {
+      link,
+      v1: formatCode(sync.code),
+    })
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Plantry', text, url: link })
+        await navigator.share({ title: t('Plantry'), text, url: link })
         return
       }
       await navigator.clipboard.writeText(text)
-      toast('Invite copied. Paste it into a message.')
+      toast(t('Invite copied. Paste it into a message.'))
     } catch (e) {
-      if ((e as Error).name !== 'AbortError') toast(`The code is ${formatCode(sync.code)}`)
+      if ((e as Error).name !== 'AbortError')
+        toast(t('The code is {v0}', { v0: formatCode(sync.code) }))
     }
   }
 
   const status =
     sync.status === 'syncing'
-      ? 'Syncing…'
+      ? t('Syncing…')
       : sync.status === 'offline'
-        ? 'Offline. Changes stay on this phone and sync when you are back online.'
+        ? t('Offline. Changes stay on this phone and sync when you are back online.')
         : sync.status === 'error'
-          ? (sync.error ?? 'Could not sync just now. It tries again by itself.')
+          ? (sync.error ?? t('Could not sync just now. It tries again by itself.'))
           : sync.lastSyncedAt
-            ? `Up to date, synced ${ago(sync.lastSyncedAt)}.`
-            : 'Up to date.'
+            ? t('Up to date, synced {v0}.', { v0: ago(sync.lastSyncedAt) })
+            : t('Up to date.')
 
   return (
     <Card id="sharing" className="scroll-mt-24">
-      <SectionTitle>Share with your household</SectionTitle>
+      <SectionTitle>{t('Share with your household')}</SectionTitle>
       {sync.code ? (
         <>
           <p className="text-[0.9375rem] text-ink-2">
-            This phone shares the plan, pantry, list, recipes and history. Other phones join with
-            this code:
+            {t(
+              'This phone shares the plan, pantry, list, recipes and history. Other phones join with this code:'
+            )}
           </p>
           <p
             className="my-4 select-all text-center font-display text-3xl font-semibold tabular-nums tracking-[0.08em]"
-            aria-label={`Household code ${sync.code.split('').join(' ')}`}
+            aria-label={t('Household code {v0}', { v0: sync.code.split('').join(' ') })}
           >
             {formatCode(sync.code)}
           </p>
@@ -105,15 +112,15 @@ export function SyncCard() {
                 <Share2 className="h-4 w-4" aria-hidden />
               ) : (
                 <Copy className="h-4 w-4" aria-hidden />
-              )}{' '}
-              Invite someone
+              )}
+              {t('Invite someone')}
             </Button>
             <Button
               variant="ghost"
               onClick={() => void syncNow()}
               disabled={sync.status === 'syncing'}
             >
-              <RefreshCw className="h-4 w-4" aria-hidden /> Sync now
+              <RefreshCw className="h-4 w-4" aria-hidden /> {t('Sync now')}
             </Button>
           </div>
           <p className="mt-3 text-sm text-ink-3" role="status">
@@ -126,47 +133,53 @@ export function SyncCard() {
               className="-ml-2 text-ink-2"
               onClick={() => setLeaving(true)}
             >
-              Stop sharing on this phone
+              {t('Stop sharing on this phone')}
             </Button>
           </div>
         </>
       ) : (
         <>
           <p className="text-[0.9375rem] text-ink-2">
-            Put the plan, pantry, list and recipes on everyone&apos;s phone. A change on one shows
-            up on the others within seconds.
+            {t(
+              "Put the plan, pantry, list and recipes on everyone's phone. A change on one shows up on the others within seconds."
+            )}
           </p>
           {sync.error && <p className="mt-2 text-sm text-danger">{sync.error}</p>}
           {enabled === false ? (
             <p className="mt-3 text-sm text-ink-3">
-              Sharing between phones isn&apos;t switched on for this copy of Plantry yet.
+              {t("Sharing between phones isn't switched on for this copy of Plantry yet.")}
             </p>
           ) : (
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="secondary" onClick={share} disabled={busy}>
                 <Users className="h-4 w-4" aria-hidden />{' '}
-                {busy ? 'Sharing…' : 'Share from this phone'}
+                {busy ? t('Sharing…') : t('Share from this phone')}
               </Button>
               <Link
                 href="/join"
                 className="inline-flex h-11 items-center rounded-pill px-5 text-[0.9375rem] font-medium text-ink-2 hover:bg-surface-2"
               >
-                I have a code
+                {t('I have a code')}
               </Link>
             </div>
           )}
           <p className="mt-3 text-sm text-ink-3">
-            Your household&apos;s data is kept on Plantry&apos;s server under a private 12-letter
-            code. Anyone with the code can see and change it, so only send it to people you live
-            with. No accounts, no email.
+            {t(
+              "Your household's data is kept on Plantry's server under a private 12-letter code. Anyone with the code can see and change it, so only send it to people you live with. No accounts, no email."
+            )}
           </p>
         </>
       )}
 
-      <Sheet open={leaving} onClose={() => setLeaving(false)} title="Stop sharing on this phone?">
+      <Sheet
+        open={leaving}
+        onClose={() => setLeaving(false)}
+        title={t('Stop sharing on this phone?')}
+      >
         <p className="mb-5 text-ink-2">
-          Everything stays on this phone, but it stops getting changes from the others. The other
-          phones keep sharing. You can join again with the code.
+          {t(
+            'Everything stays on this phone, but it stops getting changes from the others. The other phones keep sharing. You can join again with the code.'
+          )}
         </p>
         <div className="flex flex-col gap-2">
           <Button
@@ -174,13 +187,13 @@ export function SyncCard() {
             onClick={() => {
               leaveHousehold()
               setLeaving(false)
-              toast('Stopped sharing on this phone')
+              toast(t('Stopped sharing on this phone'))
             }}
           >
-            Stop sharing
+            {t('Stop sharing')}
           </Button>
           <Button variant="ghost" onClick={() => setLeaving(false)}>
-            Keep sharing
+            {t('Keep sharing')}
           </Button>
         </div>
       </Sheet>

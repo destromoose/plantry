@@ -1,5 +1,7 @@
 'use client'
 
+import { andList, t } from '@/lib/i18n'
+
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion'
@@ -56,11 +58,11 @@ export function TonightHero(props: HeroProps) {
     return (
       <EmptyState
         icon={UtensilsCrossed}
-        title="No recipes yet"
-        body="Add a recipe and Plantry can start deciding for you."
+        title={t('No recipes yet')}
+        body={t('Add a recipe and Plantry can start deciding for you.')}
         action={
           <Link href="/recipes" className={buttonVariants({ variant: 'primary' })}>
-            Open recipes
+            {t('Open recipes')}
           </Link>
         }
       />
@@ -70,9 +72,11 @@ export function TonightHero(props: HeroProps) {
   if (entry?.note && !planned && !leftoverOf) {
     return (
       <div className="card p-6">
-        <Eyebrow>Decided</Eyebrow>
+        <Eyebrow>{t('Decided')}</Eyebrow>
         <h2 className="mt-1 font-display text-fluid-xl font-semibold">{entry.note}</h2>
-        <p className="mt-1 text-[0.9375rem] text-ink-2">Dinner is handled. Nothing to wash.</p>
+        <p className="mt-1 text-[0.9375rem] text-ink-2">
+          {t('Dinner is handled. Nothing to wash.')}
+        </p>
         <Button
           variant="secondary"
           className="mt-5"
@@ -82,7 +86,7 @@ export function TonightHero(props: HeroProps) {
             setEnergy(targetDate, 'quick')
           }}
         >
-          Pick something to cook instead
+          {t('Pick something to cook instead')}
         </Button>
       </div>
     )
@@ -94,7 +98,7 @@ export function TonightHero(props: HeroProps) {
         <Link
           href={`/recipes/${leftoverOf.id}`}
           className="block"
-          aria-label={`Open ${leftoverOf.title}`}
+          aria-label={t('Open {title}', { title: leftoverOf.title })}
         >
           <Thumb
             src={leftoverOf.imageUrl}
@@ -103,14 +107,16 @@ export function TonightHero(props: HeroProps) {
           />
         </Link>
         <div className="flex-1">
-          <Eyebrow>Calm night</Eyebrow>
+          <Eyebrow>{t('Calm night')}</Eyebrow>
           <h2 className="mt-1 font-display text-fluid-xl font-semibold leading-tight">
-            Leftovers: {leftoverOf.title}
+            {t('Leftovers: {title}', { title: leftoverOf.title })}
           </h2>
-          <p className="mt-1 text-[0.9375rem] text-ink-2">Already cooked. Heat, plate, done.</p>
+          <p className="mt-1 text-[0.9375rem] text-ink-2">
+            {t('Already cooked. Heat, plate, done.')}
+          </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => clearPlanEntry(targetDate, 'dinner')}>
-              Cook something else
+              {t('Cook something else')}
             </Button>
           </div>
         </div>
@@ -129,8 +135,8 @@ export function TonightHero(props: HeroProps) {
     return (
       <EmptyState
         icon={UtensilsCrossed}
-        title="Nothing fits tonight"
-        body="Try a different energy level."
+        title={t('Nothing fits tonight')}
+        body={t('Try a different energy level.')}
       />
     )
   }
@@ -151,7 +157,7 @@ function Deck(props: HeroProps) {
 
   function shuffle(direction = 1) {
     if (ranked.length < 2) {
-      toast('That is the only one that fits tonight')
+      toast(t('That is the only one that fits tonight'))
       return
     }
     let nextSeen = seen.includes(scored.recipe.id) ? seen : [...seen, scored.recipe.id]
@@ -214,9 +220,11 @@ function Deck(props: HeroProps) {
           </WhilePresent>
         </motion.div>
       </AnimatePresence>
-      <p className="mt-3 text-center text-sm text-ink-2">Swipe the card sideways to shuffle</p>
+      <p className="mt-3 text-center text-sm text-ink-2">
+        {t('Swipe the card sideways to shuffle')}
+      </p>
       <span className="sr-only" aria-live="polite">
-        Showing {scored.recipe.title}
+        {t('Showing {title}', { title: scored.recipe.title })}
       </span>
       <span className="hidden">{targetDate}</span>
     </div>
@@ -275,16 +283,16 @@ function PlannedOrSuggested({
         }) === 'added'
       )
         added++
-    toast(added ? `${added} added to your list` : 'Already on your list')
+    toast(added ? t('{added} added to your list', { added }) : t('Already on your list'))
   }
 
   const cov = coverage(recipe, pantry)
   const coverLine =
     cov.missing.length === 0
-      ? 'You have everything'
+      ? t('You have everything')
       : cov.missing.length <= 2
-        ? `Only missing ${cov.missing.join(' and ')}`
-        : `Missing ${cov.missing.length} things`
+        ? t('Only missing {v0}', { v0: andList(cov.missing) })
+        : t('Missing {length} things', { length: cov.missing.length })
   const tags = (scored?.reasons ?? []).filter(
     (r) => !r.startsWith('Only missing') && r !== 'You have everything'
   )
@@ -292,13 +300,13 @@ function PlannedOrSuggested({
   const cookingFor = useStore((s) => s.settings.cookingFor)
   const handoffs = useStore((s) => s.handoffs)
   const note = handoffs.find((h) => h.date === targetDate)
-  const memberName = (id: string) => members.find((m) => m.id === id)?.name ?? 'Someone'
+  const memberName = (id: string) => members.find((m) => m.id === id)?.name ?? t('Someone')
   const canHandOff = members.filter((m) => m.cooks !== false).length > 1
 
   function lockIn() {
     setPlanEntry({ date: targetDate, slot: 'dinner', recipeId: recipe.id, cookId: entry?.cookId })
     setSeen([])
-    toast(targetDate === today ? 'Planned for tonight' : 'Planned for tomorrow')
+    toast(targetDate === today ? t('Planned for tonight') : t('Planned for tomorrow'))
   }
 
   return (
@@ -333,12 +341,14 @@ function PlannedOrSuggested({
             </Link>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
               <span className="inline-flex items-center gap-1">
-                <Clock className="h-4 w-4" aria-hidden /> {formatMinutes(recipe.activeMinutes)}{' '}
-                hands-on
+                <Clock className="h-4 w-4" aria-hidden />{' '}
+                {t('{v0} hands-on', { v0: formatMinutes(recipe.activeMinutes) })}
               </span>
               <span className="inline-flex items-center gap-1">
-                <Users className="h-4 w-4" aria-hidden /> For{' '}
-                {(entry?.recipeId === recipe.id && entry.servings) || cookingFor}
+                <Users className="h-4 w-4" aria-hidden />{' '}
+                {t('For {count}', {
+                  count: (entry?.recipeId === recipe.id && entry.servings) || cookingFor,
+                })}
               </span>
             </p>
             <AvoidWarning recipe={recipe} className="mt-3" />
@@ -348,7 +358,7 @@ function PlannedOrSuggested({
             size={48}
             stroke={5}
             tone={cov.missing.length === 0 ? 'secondary' : 'accent'}
-            label={`${cov.have} of ${cov.total} ingredients at home`}
+            label={t('{have} of {total} ingredients at home', { have: cov.have, total: cov.total })}
           >
             <span className="font-display text-sm font-semibold" aria-hidden>
               {cov.have}/{cov.total}
@@ -358,21 +368,22 @@ function PlannedOrSuggested({
 
         <p className="mt-3 text-[0.9375rem]">
           <span className="font-medium">
-            You have {cov.have} of {cov.total}.
+            {t('You have {have} of {total}.', { have: cov.have, total: cov.total })}
           </span>{' '}
           <span className="text-ink-2">{coverLine}.</span>
           {missingIngs.length > 0 && (
             <Button variant="ghost" size="sm" className="ml-1 text-accent" onClick={addMissing}>
-              <Plus className="h-3.5 w-3.5" aria-hidden /> Add {missingIngs.length} to list
+              <Plus className="h-3.5 w-3.5" aria-hidden />{' '}
+              {t('Add {length} to list', { length: missingIngs.length })}
             </Button>
           )}
         </p>
 
         {tags.length > 0 && (
-          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Why this one">
-            {tags.map((t) => (
-              <li key={t}>
-                <Tag>{t}</Tag>
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label={t('Why this one')}>
+            {tags.map((tItem) => (
+              <li key={tItem}>
+                <Tag>{tItem}</Tag>
               </li>
             ))}
           </ul>
@@ -381,16 +392,25 @@ function PlannedOrSuggested({
         {note ? (
           <div className="mt-3 rounded-2xl bg-surface-2 px-4 py-3 text-[0.9375rem]">
             <p className="font-medium">
-              {memberName(note.toId)} is cooking{note.recipeId ? '' : ' and picks what to make'}.
+              {t('{v0} is cooking', { v0: memberName(note.toId) })}
+              {note.recipeId ? '' : t(' and picks what to make')}.
             </p>
             {note.message && (
               <p className="mt-0.5 text-ink-2">
-                {memberName(note.fromId)} says: &ldquo;{note.message}&rdquo;
+                {t('{v0} says: “{message}”', {
+                  v0: memberName(note.fromId),
+                  message: note.message,
+                })}
               </p>
             )}
           </div>
         ) : (
-          planned && cook && <p className="mt-2 text-sm text-ink-3">{cook.name} is cooking.</p>
+          planned &&
+          cook && (
+            <p className="mt-2 text-sm text-ink-3">
+              {t('{name} is cooking.', { name: cook.name })}
+            </p>
+          )
         )}
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -399,23 +419,23 @@ function PlannedOrSuggested({
               href={`/cook/${recipe.id}?date=${targetDate}`}
               className={buttonVariants({ variant: 'primary', size: 'lg' })}
             >
-              Start cooking <ArrowRight className="h-4 w-4" aria-hidden />
+              {t('Start cooking')} <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           ) : (
             <Button size="lg" onClick={lockIn}>
-              <Lock className="h-4 w-4" aria-hidden /> Cook this{' '}
-              {targetDate === today ? 'tonight' : 'tomorrow'}
+              <Lock className="h-4 w-4" aria-hidden />{' '}
+              {targetDate === today ? t('Cook this tonight') : t('Cook this tomorrow')}
             </Button>
           )}
           {!planned && (
             <Button variant="secondary" size="lg" onClick={onShuffle}>
-              <RefreshCw className="h-4 w-4" aria-hidden /> Shuffle
+              <RefreshCw className="h-4 w-4" aria-hidden /> {t('Shuffle')}
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            aria-label="More options"
+            aria-label={t('More options')}
             className="ml-auto"
             onClick={() => setMore(true)}
           >
@@ -434,7 +454,7 @@ function PlannedOrSuggested({
                 setHandoff(true)
               }}
             >
-              <HandHeart className="h-4 w-4" aria-hidden /> Ask someone else to cook
+              <HandHeart className="h-4 w-4" aria-hidden /> {t('Ask someone else to cook')}
             </Button>
           )}
           {planned ? (
@@ -444,12 +464,12 @@ function PlannedOrSuggested({
                 setMore(false)
                 // Don't offer the same dish again straight away.
                 setSeen([...seen, recipe.id])
-                withUndo('Cleared tonight. Pick another.', () =>
+                withUndo(t('Cleared tonight. Pick another.'), () =>
                   clearPlanEntry(targetDate, 'dinner')
                 )
               }}
             >
-              Not feeling it
+              {t('Not feeling it')}
             </Button>
           ) : (
             <Button
@@ -459,7 +479,7 @@ function PlannedOrSuggested({
                 setSave(true)
               }}
             >
-              Save for another night
+              {t('Save for another night')}
             </Button>
           )}
           <Link
@@ -467,7 +487,7 @@ function PlannedOrSuggested({
             className={buttonVariants({ variant: 'ghost' })}
             onClick={() => setMore(false)}
           >
-            Open the recipe
+            {t('Open the recipe')}
           </Link>
         </div>
       </Sheet>
@@ -478,7 +498,7 @@ function PlannedOrSuggested({
         recipe={recipe}
         date={targetDate}
         planned={planned}
-        when={targetDate === today ? 'tonight' : 'tomorrow'}
+        when={targetDate === today ? t('tonight') : t('tomorrow')}
       />
       {!planned && (
         <SaveSheet
@@ -517,11 +537,13 @@ function CantTonight({
 
   return (
     <section className="card p-6" aria-labelledby="easy-way">
-      <Eyebrow>Can&apos;t tonight</Eyebrow>
+      <Eyebrow>{t("Can't tonight")}</Eyebrow>
       <h2 id="easy-way" className="mt-1 font-display text-fluid-xl font-semibold leading-tight">
-        Fair. Here&apos;s the easy way out.
+        {t("Fair. Here's the easy way out.")}
       </h2>
-      <p className="mt-1 text-[0.9375rem] text-ink-2">Pick whichever takes the least from you.</p>
+      <p className="mt-1 text-[0.9375rem] text-ink-2">
+        {t('Pick whichever takes the least from you.')}
+      </p>
 
       <div className="mt-5 space-y-3">
         {leftoverRecipe && (
@@ -529,14 +551,16 @@ function CantTonight({
             type="button"
             onClick={() => {
               setPlanEntry({ date: targetDate, slot: 'dinner', leftoversOf: leftoverRecipe.id })
-              toast('Leftovers it is')
+              toast(t('Leftovers it is'))
             }}
             className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-line bg-surface-2 p-3 text-left hover:border-ink-3"
           >
             <Thumb src={leftoverRecipe.imageUrl} className="h-12 w-12 rounded-xl" sizes="48px" />
             <span>
-              <span className="block font-medium">Leftovers</span>
-              <span className="block text-sm text-ink-2">{leftoverRecipe.title}, already made</span>
+              <span className="block font-medium">{t('Leftovers')}</span>
+              <span className="block text-sm text-ink-2">
+                {t('{title}, already made', { title: leftoverRecipe.title })}
+              </span>
             </span>
           </button>
         )}
@@ -549,7 +573,7 @@ function CantTonight({
                   type="button"
                   onClick={() => {
                     setPlanEntry({ date: targetDate, slot: 'dinner', recipeId: recipe.id })
-                    toast('Planned')
+                    toast(t('Planned'))
                   }}
                   className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-line bg-surface p-3 text-left hover:border-ink-3"
                 >
@@ -557,7 +581,7 @@ function CantTonight({
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{recipe.title}</span>
                     <span className="block text-sm text-ink-2">
-                      {formatMinutes(recipe.activeMinutes)} hands-on
+                      {t('{v0} hands-on', { v0: formatMinutes(recipe.activeMinutes) })}
                     </span>
                   </span>
                 </button>
@@ -569,8 +593,8 @@ function CantTonight({
         <button
           type="button"
           onClick={() => {
-            setPlanEntry({ date: targetDate, slot: 'dinner', note: 'Takeout' })
-            toast('Takeout, sorted')
+            setPlanEntry({ date: targetDate, slot: 'dinner', note: t('Takeout') })
+            toast(t('Takeout, sorted'))
           }}
           className={cn(
             'flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-dashed border-ink-3 p-3 text-left hover:bg-surface-2'
@@ -580,8 +604,8 @@ function CantTonight({
             <UtensilsCrossed className="h-5 w-5 text-ink-2" aria-hidden />
           </span>
           <span>
-            <span className="block font-medium">Order in tonight</span>
-            <span className="block text-sm text-ink-2">We&apos;ll mark tonight as takeout.</span>
+            <span className="block font-medium">{t('Order in tonight')}</span>
+            <span className="block text-sm text-ink-2">{t("We'll mark tonight as takeout.")}</span>
           </span>
         </button>
       </div>

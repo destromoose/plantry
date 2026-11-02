@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useMemo } from 'react'
 import { useStore } from '@/lib/store'
 import { nutritionOf, isReliable } from '@/lib/nutrition'
@@ -23,14 +25,14 @@ export function RecipeFacts({ recipe, servings }: { recipe: Recipe; servings: nu
   return (
     <section aria-labelledby="facts-h" className="card p-4">
       <h2 id="facts-h" className="sr-only">
-        Cost and nutrition
+        {t('Cost and nutrition')}
       </h2>
       {showCost && (
         <p className="text-[0.9375rem] text-ink-2">
-          About <span className="font-semibold text-ink">{money(cost.total)}</span> for {servings},{' '}
-          {money(cost.perServing)} a serving.
+          {t('About')} <span className="font-semibold text-ink">{money(cost.total)}</span>{' '}
+          {t('for {servings}, {v1} a serving.', { servings, v1: money(cost.perServing) })}
           {cost.toBuy > 0.05 && cost.toBuy < cost.total - 0.05 && (
-            <> You&apos;d spend about {money(cost.toBuy)} on what you don&apos;t have.</>
+            <> {t("You'd spend about {v0} on what you don't have.", { v0: money(cost.toBuy) })}</>
           )}
         </p>
       )}
@@ -50,8 +52,11 @@ export function RecipeFacts({ recipe, servings }: { recipe: Recipe; servings: nu
             <Fact label="fibre" value={`${Math.round(n.fibre)} g`} />
           </dl>
           <p className="mt-2 text-xs text-ink-3">
-            Per serving, roughly, from food tables
-            {isReliable(n) ? '' : ` (counted ${n.known} of ${n.total} ingredients)`}. Not a label.
+            {t('Per serving, roughly, from food tables')}
+            {isReliable(n)
+              ? ''
+              : t(' (counted {known} of {total} ingredients)', { known: n.known, total: n.total })}
+            {t('. Not a label.')}
           </p>
         </>
       )}

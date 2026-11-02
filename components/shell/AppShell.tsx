@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useRef } from 'react'
@@ -15,7 +17,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { cn } from '@/lib/utils'
+import { cn, pluralize } from '@/lib/utils'
 import { page, settle } from '@/lib/motion'
 import { Logo } from '@/components/ui/Logo'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -27,24 +29,24 @@ import { toast } from '@/components/ui/Toast'
 setWriteErrorListener((kind) =>
   toast(
     kind === 'full'
-      ? 'Out of space: this change was not saved. Export your data in Settings.'
-      : 'This browser is blocking storage, so changes are not saved.',
+      ? t('Out of space: this change was not saved. Export your data in Settings.')
+      : t('This browser is blocking storage, so changes are not saved.'),
     { tone: 'error', ms: 8000 }
   )
 )
 
 export const tabs = [
-  { href: '/', label: 'Tonight', icon: Sparkles },
-  { href: '/week', label: 'Week', icon: CalendarDays },
-  { href: '/recipes', label: 'Recipes', icon: BookOpen },
-  { href: '/pantry', label: 'Pantry', icon: Refrigerator },
-  { href: '/shop', label: 'Shop', icon: ShoppingBasket },
+  { href: '/', label: t('Tonight'), icon: Sparkles },
+  { href: '/week', label: t('Week'), icon: CalendarDays },
+  { href: '/recipes', label: t('Recipes'), icon: BookOpen },
+  { href: '/pantry', label: t('Pantry'), icon: Refrigerator },
+  { href: '/shop', label: t('Shop'), icon: ShoppingBasket },
 ] as const
 
 const secondary = [
-  { href: '/household', label: 'Household', icon: Users },
-  { href: '/history', label: 'History', icon: NotebookPen },
-  { href: '/settings', label: 'Settings', icon: SettingsIcon },
+  { href: '/household', label: t('Household'), icon: Users },
+  { href: '/history', label: t('History'), icon: NotebookPen },
+  { href: '/settings', label: t('Settings'), icon: SettingsIcon },
 ] as const
 
 /** Routes that take the whole screen with no tab bar. */
@@ -63,14 +65,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const { backupKey, droppedItems, memoryOnly } = useStorageStatus.getState()
     const err = { tone: 'error' as const, ms: 8000 }
     if (backupKey)
-      toast('Some saved data could not be read. A backup copy was kept on this device.', err)
+      toast(t('Some saved data could not be read. A backup copy was kept on this device.'), err)
     else if (droppedItems)
       toast(
-        `Skipped ${droppedItems} saved ${droppedItems === 1 ? 'entry' : 'entries'} that could not be read.`,
+        t('Skipped {v0} that could not be read.', {
+          v0: pluralize(droppedItems, 'saved entry', 'saved entries'),
+        }),
         err
       )
     if (memoryOnly)
-      toast('This browser blocks storage, so nothing is kept after you close the tab.', err)
+      toast(t('This browser blocks storage, so nothing is kept after you close the tab.'), err)
   }, [hydrated])
 
   useEffect(() => {
@@ -91,13 +95,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       firstPath.current = false
       return
     }
-    const t = setTimeout(() => {
+    const tItem = setTimeout(() => {
       const h = document.querySelector<HTMLElement>('#main h1')
       if (!h) return
       h.setAttribute('tabindex', '-1')
       h.focus({ preventScroll: true })
     }, 80)
-    return () => clearTimeout(t)
+    return () => clearTimeout(tItem)
   }, [pathname, hydrated])
 
   if (!hydrated) return <LoadingShell />
@@ -133,13 +137,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         href="#main"
         className="sr-only z-[90] rounded-pill bg-accent px-4 py-2 font-semibold text-accent-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
-        Skip to content
+        {t('Skip to content')}
       </a>
       {extras}
       <Sidebar pathname={pathname} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between px-5 pb-1 pt-5 md:hidden">
-          <Link href="/" className="text-ink" aria-label="Plantry home">
+          <Link href="/" className="text-ink" aria-label={t('Plantry home')}>
             <Logo />
           </Link>
           <div className="flex items-center gap-1">
@@ -187,17 +191,17 @@ function TabBar({ pathname }: { pathname: string }) {
   const active = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href))
   return (
     <nav
-      aria-label="Primary"
+      aria-label={t('Primary')}
       className="safe-bottom fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 md:hidden"
       style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
       <div className="glass flex w-full max-w-md items-center justify-between rounded-pill p-1.5">
-        {tabs.map((t) => {
-          const on = active(t.href)
+        {tabs.map((tItem) => {
+          const on = active(tItem.href)
           return (
             <Link
-              key={t.href}
-              href={t.href}
+              key={tItem.href}
+              href={tItem.href}
               aria-current={on ? 'page' : undefined}
               className={cn(
                 'relative flex h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-pill text-[0.6875rem] font-medium transition-colors',
@@ -211,8 +215,8 @@ function TabBar({ pathname }: { pathname: string }) {
                   className="absolute inset-0 rounded-pill bg-accent shadow-card"
                 />
               )}
-              <t.icon className="relative h-5 w-5" strokeWidth={on ? 2.4 : 2} />
-              <span className="relative">{t.label}</span>
+              <tItem.icon className="relative h-5 w-5" strokeWidth={on ? 2.4 : 2} />
+              <span className="relative">{tItem.label}</span>
             </Link>
           )
         })}
@@ -226,19 +230,19 @@ function Sidebar({ pathname }: { pathname: string }) {
   return (
     // A slim icon rail on tablets, the full list with labels on wide screens.
     <aside className="sticky top-0 hidden h-dvh w-16 shrink-0 flex-col py-8 md:flex lg:w-56">
-      <Link href="/" className="mb-8 px-3 text-ink" aria-label="Plantry home">
+      <Link href="/" className="mb-8 px-3 text-ink" aria-label={t('Plantry home')}>
         <Logo withWord={false} className="lg:hidden" />
         <Logo className="hidden lg:flex" />
       </Link>
-      <nav className="flex flex-col gap-1" aria-label="Primary">
-        {[...tabs, ...secondary].map((t, i) => {
-          const on = active(t.href)
+      <nav className="flex flex-col gap-1" aria-label={t('Primary')}>
+        {[...tabs, ...secondary].map((tItem, i) => {
+          const on = active(tItem.href)
           return (
             <Link
-              key={t.href}
-              href={t.href}
+              key={tItem.href}
+              href={tItem.href}
               aria-current={on ? 'page' : undefined}
-              title={t.label}
+              title={tItem.label}
               className={cn(
                 'relative flex h-11 items-center gap-3 rounded-pill px-3 text-[0.9375rem] font-medium transition-colors max-lg:justify-center',
                 on ? 'text-accent-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink',
@@ -252,14 +256,14 @@ function Sidebar({ pathname }: { pathname: string }) {
                   className="absolute inset-0 rounded-pill bg-accent shadow-card"
                 />
               )}
-              <t.icon className="relative h-5 w-5 shrink-0" />
-              <span className="relative max-lg:sr-only">{t.label}</span>
+              <tItem.icon className="relative h-5 w-5 shrink-0" />
+              <span className="relative max-lg:sr-only">{tItem.label}</span>
             </Link>
           )
         })}
       </nav>
       <p className="mt-auto hidden px-3 font-display text-sm italic text-ink-3 lg:block">
-        Dinner, decided.
+        {t('Dinner, decided.')}
       </p>
     </aside>
   )
@@ -271,7 +275,7 @@ function LoadingShell() {
     <div
       className="mx-auto flex min-h-dvh w-full max-w-7xl md:gap-6 md:px-6 lg:gap-10"
       aria-busy="true"
-      aria-label="Loading"
+      aria-label={t('Loading')}
     >
       <div className="hidden w-16 shrink-0 py-8 md:block lg:w-56">
         <div className="px-3 text-accent">

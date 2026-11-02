@@ -1,3 +1,5 @@
+import { getLang } from './i18n'
+
 // Amounts: convert, add up, subtract and print them so lists read like a person wrote them.
 
 export interface Amount {
@@ -77,9 +79,9 @@ export function compatible(a: string, b: string) {
 /** Convert b into a's unit. Only call when compatible. */
 function convert(q: number, from: string, to: string) {
   const f = unitInfo(from)
-  const t = unitInfo(to)
-  if (!f || !t) return q
-  return (q * f.factor) / t.factor
+  const tItem = unitInfo(to)
+  if (!f || !tItem) return q
+  return (q * f.factor) / tItem.factor
 }
 
 /** Add an amount to a list of amounts, merging where the units allow and keeping a new line otherwise. */
@@ -227,8 +229,34 @@ export function formatAmount(
   const num = niceNumber(n)
   if (!shown || lower === 'whole') return num
   const many = n > 1 + 1e-9
+  if (getLang() === 'es') {
+    const es = spanishUnits[shown.toLowerCase()]
+    if (es) return `${num} ${many ? es[1] : es[0]}`
+  }
   const word = many ? (plural[shown.toLowerCase()] ?? shown) : shown
   return `${num} ${word}`
+}
+
+/** Unit words in Spanish: [one, many]. Metric symbols stay as they are. */
+const spanishUnits: Record<string, [string, string]> = {
+  clove: ['diente', 'dientes'],
+  slice: ['rebanada', 'rebanadas'],
+  can: ['lata', 'latas'],
+  tin: ['lata', 'latas'],
+  bunch: ['manojo', 'manojos'],
+  piece: ['pieza', 'piezas'],
+  pack: ['paquete', 'paquetes'],
+  jar: ['frasco', 'frascos'],
+  head: ['cabeza', 'cabezas'],
+  sprig: ['ramita', 'ramitas'],
+  stalk: ['tallo', 'tallos'],
+  fillet: ['filete', 'filetes'],
+  handful: ['puñado', 'puñados'],
+  pinch: ['pizca', 'pizcas'],
+  cup: ['taza', 'tazas'],
+  quart: ['cuarto', 'cuartos'],
+  tbsp: ['cda', 'cdas'],
+  tsp: ['cdta', 'cdtas'],
 }
 
 export const formatAmounts = (

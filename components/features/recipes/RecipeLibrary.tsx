@@ -1,5 +1,7 @@
 'use client'
 
+import { t } from '@/lib/i18n'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -44,9 +46,10 @@ export function RecipeLibrary() {
   // "/" jumps to search, as on many sites.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement
+      const tItem = e.target as HTMLElement
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
-      if (t.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
+      if (tItem.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]'))
+        return
       e.preventDefault()
       searchRef.current?.focus()
     }
@@ -55,8 +58,8 @@ export function RecipeLibrary() {
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(query.trim().toLowerCase()), 180)
-    return () => clearTimeout(t)
+    const tItem = setTimeout(() => setDebounced(query.trim().toLowerCase()), 180)
+    return () => clearTimeout(tItem)
   }, [query])
 
   const filtered = useMemo(() => {
@@ -65,7 +68,7 @@ export function RecipeLibrary() {
       .filter(({ recipe, cov }) => {
         if (favOnly && !recipe.isFavorite) return false
         if (canMake && !(cov.missing.length === 0 && cov.total > 0)) return false
-        if (tastes.length && !tastes.every((t) => recipe.tastes.includes(t))) return false
+        if (tastes.length && !tastes.every((tItem) => recipe.tastes.includes(tItem))) return false
         if (debounced) {
           const hay = [recipe.title, recipe.description, ...recipe.ingredients.map((i) => i.name)]
             .join(' ')
@@ -89,11 +92,11 @@ export function RecipeLibrary() {
     <div className="pb-6">
       <PageHeader
         className="mb-0"
-        title="Recipes"
+        title={t('Recipes')}
         subtitle={`${recipes.length} saved`}
         actions={
           <Button onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" aria-hidden /> Add
+            <Plus className="h-4 w-4" aria-hidden /> {t('Add')}
           </Button>
         }
       />
@@ -107,8 +110,8 @@ export function RecipeLibrary() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search recipes or ingredients"
-          aria-label="Search recipes"
+          placeholder={t('Search recipes or ingredients')}
+          aria-label={t('Search recipes')}
           ref={searchRef}
           className="pl-11"
         />
@@ -117,7 +120,7 @@ export function RecipeLibrary() {
       <div
         className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:px-0"
         role="group"
-        aria-label="Filters"
+        aria-label={t('Filters')}
       >
         <Chip
           size="sm"
@@ -126,7 +129,7 @@ export function RecipeLibrary() {
           onClick={() => setCanMake((v) => !v)}
           className="shrink-0"
         >
-          Can make now
+          {t('Can make now')}
         </Chip>
         <Chip
           size="sm"
@@ -134,43 +137,45 @@ export function RecipeLibrary() {
           onClick={() => setFavOnly((v) => !v)}
           className="shrink-0"
         >
-          <Heart className="h-3.5 w-3.5" aria-hidden /> Favorites
+          <Heart className="h-3.5 w-3.5" aria-hidden /> {t('Favorites')}
         </Chip>
-        {allTastes.map((t) => (
+        {allTastes.map((tItem) => (
           <Chip
-            key={t}
+            key={tItem}
             size="sm"
-            selected={tastes.includes(t)}
+            selected={tastes.includes(tItem)}
             onClick={() =>
-              setTastes((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]))
+              setTastes((cur) =>
+                cur.includes(tItem) ? cur.filter((x) => x !== tItem) : [...cur, tItem]
+              )
             }
             className="shrink-0"
           >
-            {tasteLabels[t]}
+            {tasteLabels[tItem]}
           </Chip>
         ))}
       </div>
 
       <p className="sr-only" aria-live="polite">
-        {filtered.length === 1 ? '1 recipe' : `${filtered.length} recipes`}
+        {filtered.length === 1 ? t('1 recipe') : `${filtered.length} recipes`}
       </p>
       <div className="mt-5">
         {filtered.length === 0 ? (
           <EmptyState
             icon={SearchX}
-            title="Nothing matches"
+            title={t('Nothing matches')}
             body={
               hasFilters
-                ? 'Try fewer filters, or a different word.'
-                : 'Add your first recipe to get going.'
+                ? t('Try fewer filters, or a different word.')
+                : t('Add your first recipe to get going.')
             }
             action={
               hasFilters ? (
                 <Button variant="secondary" onClick={clear}>
-                  Clear filters
+                  {t('Clear filters')}
                 </Button>
               ) : (
-                <Button onClick={() => router.push('/recipes/new')}>Add a recipe</Button>
+                <Button onClick={() => router.push('/recipes/new')}>{t('Add a recipe')}</Button>
               )
             }
           />
@@ -225,14 +230,14 @@ export function RecipeLibrary() {
                               cov.missing.length === 0 ? 'bg-secondary' : 'bg-ink-3/60'
                             )}
                           />
-                          {cov.have} of {cov.total} at home
+                          {t('{have} of {total} at home', { have: cov.have, total: cov.total })}
                         </span>
                       </p>
                       <AvoidBadge recipe={recipe} />
                       {recipe.tastes.length > 0 && (
                         <div className="flex flex-wrap gap-1 pt-0.5">
-                          {recipe.tastes.slice(0, 2).map((t) => (
-                            <Tag key={t}>{tasteLabels[t]}</Tag>
+                          {recipe.tastes.slice(0, 2).map((tItem) => (
+                            <Tag key={tItem}>{tasteLabels[tItem]}</Tag>
                           ))}
                         </div>
                       )}
@@ -244,8 +249,8 @@ export function RecipeLibrary() {
                     className="absolute right-2 top-2"
                     aria-label={
                       recipe.isFavorite
-                        ? `Remove ${recipe.title} from favorites`
-                        : `Add ${recipe.title} to favorites`
+                        ? t('Remove {title} from favorites', { title: recipe.title })
+                        : t('Add {title} to favorites', { title: recipe.title })
                     }
                     aria-pressed={recipe.isFavorite}
                     onClick={(e) => {
@@ -267,16 +272,16 @@ export function RecipeLibrary() {
         {filtered.length > shown && (
           <div className="mt-6 flex flex-col items-center gap-1">
             <Button variant="secondary" onClick={() => setShown((n) => n + PAGE)}>
-              Show more
+              {t('Show more')}
             </Button>
             <p className="text-sm text-ink-3">
-              Showing {shown} of {filtered.length}
+              {t('Showing {shown} of {length}', { shown, length: filtered.length })}
             </p>
           </div>
         )}
       </div>
 
-      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="Add a recipe">
+      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={t('Add a recipe')}>
         <div className="space-y-2">
           <Button
             variant="secondary"
@@ -284,7 +289,7 @@ export function RecipeLibrary() {
             className="w-full justify-start"
             onClick={() => router.push('/recipes/new')}
           >
-            <PencilLine className="h-5 w-5" aria-hidden /> Type it in
+            <PencilLine className="h-5 w-5" aria-hidden /> {t('Type it in')}
           </Button>
           <Button
             variant="secondary"
@@ -292,7 +297,7 @@ export function RecipeLibrary() {
             className="w-full justify-start"
             onClick={() => router.push('/recipes/new?tab=link')}
           >
-            <Link2 className="h-5 w-5" aria-hidden /> Paste recipe text
+            <Link2 className="h-5 w-5" aria-hidden /> {t('Paste recipe text')}
           </Button>
         </div>
       </Sheet>

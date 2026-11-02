@@ -1,3 +1,5 @@
+import { esKeys } from './i18n/esKeys'
+import { locale, t, tn } from '@/lib/i18n'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { formatAmount } from './quantity'
@@ -98,6 +100,7 @@ export function keyOf(name: string): string {
     .trim()
     .replace(/\s+/g, ' ')
   if (!k) return lower.replace(/\s+/g, ' ')
+  if (esKeys[k]) return esKeys[k]
   if (!/^[a-z ]+$/.test(k)) return k
   const words = k
     .replace(/free range/g, '')
@@ -160,21 +163,21 @@ export function weekOf(key: string): string[] {
 
 export function dayLabel(key: string, today: string): string {
   const diff = daysBetween(today, key)
-  if (diff === 0) return 'Today'
-  if (diff === 1) return 'Tomorrow'
-  if (diff === -1) return 'Yesterday'
-  return fromDateKey(key).toLocaleDateString(undefined, { weekday: 'long' })
+  if (diff === 0) return t('Today')
+  if (diff === 1) return t('Tomorrow')
+  if (diff === -1) return t('Yesterday')
+  return fromDateKey(key).toLocaleDateString(locale(), { weekday: 'long' })
 }
 
 export function shortDay(key: string): string {
-  return fromDateKey(key).toLocaleDateString(undefined, { weekday: 'short' })
+  return fromDateKey(key).toLocaleDateString(locale(), { weekday: 'short' })
 }
 
 export function formatMinutes(min: number): string {
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60)
   const m = min % 60
-  return m ? `${h} h ${m} min` : `${h} h`
+  return m ? t('{h} h {m} min', { h, m }) : `${h} h`
 }
 
 /** Kept for existing callers; see lib/quantity.ts. */
@@ -182,8 +185,9 @@ export function formatQuantity(q?: number, unit?: string): string {
   return formatAmount(q, unit)
 }
 
+/** "1 thing", "3 things"; in Spanish "1 cosa", "3 cosas". */
 export function pluralize(n: number, word: string, plural = word + 's'): string {
-  return `${n} ${n === 1 ? word : plural}`
+  return tn(n, word, plural)
 }
 
 export function clamp(n: number, lo: number, hi: number) {
