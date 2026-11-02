@@ -155,6 +155,7 @@ const describing = new Set(
     'large small medium big extra fresh freshly dried ground unsalted salted plain natural ' +
     'fat free low full reduced organic free range boneless skinless and or skin on bone in ' +
     'thumb sized piece pieces of bunch handful can cans tin tins jar pack packet bag ' +
+    'sharp aged block shredded ' +
     'chopped diced sliced minced grated crushed finely roughly thinly halved x mild hot ' +
     'ripe raw cooked uncooked frozen good quality lean mature'
   ).split(' ')
@@ -213,6 +214,9 @@ const aliases: Record<string, string> = {
   'king prawn': 'prawn',
   cheese: 'cheddar',
   'cheddar cheese': 'cheddar',
+  'feta cheese': 'feta',
+  'mozzarella cheese': 'mozzarella',
+  'mozzarella ball': 'mozzarella',
   'parmesan cheese': 'parmesan',
   'smoked paprika': 'paprika',
   'stock cube': 'stock',
@@ -248,12 +252,11 @@ export function looseKey(name: string): string | undefined {
   const words = keyOf(name.replace(/-/g, ' '))
     .split(' ')
     .filter((w) => w && !describing.has(w) && !/^\d/.test(w))
-  for (let i = 0; i < words.length; i++) {
-    const tail = keyOf(words.slice(i).join(' '))
-    const k = aliases[tail] ?? tail
-    if (factsTable[k]) return k
-  }
-  return undefined
+  // The whole remaining name only: "almond milk" must not fall back to milk, nor
+  // "cream cheese" to cheddar. Unknown is better than wrong.
+  const rest = keyOf(words.join(' '))
+  const k = aliases[rest] ?? rest
+  return factsTable[k] ? k : undefined
 }
 
 // Spices, herbs and the like: real ingredients, but too little to change the numbers.

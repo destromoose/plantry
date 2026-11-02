@@ -263,7 +263,8 @@ export function RecipeEditor({
     if (parsed.activeMinutes) setActive(String(parsed.activeMinutes))
     if (parsed.totalMinutes) setTotal(String(parsed.totalMinutes))
     if (parsed.steps.length) setSteps(parsed.steps.map((s) => ({ id: uid('s'), text: s.text })))
-    if (parsed.sourceUrl) setSource({ source: parsed.source, sourceUrl: parsed.sourceUrl })
+    // A new fill replaces where the recipe came from, so a paste never inherits an older link.
+    setSource(parsed.sourceUrl ? { source: parsed.source, sourceUrl: parsed.sourceUrl } : {})
     setFilledFrom({
       tab: tab === 'type' ? 'link' : tab,
       label: parsed.source
@@ -358,11 +359,7 @@ export function RecipeEditor({
       )
       return
     }
-    applyParsed(
-      stuckUrl && !source.sourceUrl
-        ? { ...parsed, source: hostOf(stuckUrl), sourceUrl: stuckUrl }
-        : parsed
-    )
+    applyParsed(stuckUrl ? { ...parsed, source: hostOf(stuckUrl), sourceUrl: stuckUrl } : parsed)
     setPasteNote(null)
     toast(t('Sorted. Check the details.'))
   }

@@ -113,6 +113,21 @@ describe('imported ingredient names', () => {
       'plain flour',
     ])
       expect(has(n), n).toBe(true)
+    // A distinctive first word must not be dropped to reach a generic food.
+    for (const n of [
+      'almond milk',
+      'oat milk',
+      'cream cheese',
+      'cottage cheese',
+      'almond butter',
+      'ice cream',
+      'coconut cream',
+    ])
+      expect(factsFor({ key: keyOf(n), name: n }) === factsFor({ key: 'milk' }), n).toBe(false)
+    expect(factsFor({ key: keyOf('cream cheese'), name: 'cream cheese' })).toBeUndefined()
+    expect(factsFor({ key: keyOf('feta cheese'), name: 'feta cheese' })).toBe(
+      factsFor({ key: 'feta' })
+    )
     expect(isTrace('garam masala')).toBe(true)
     expect(isTrace('1 tsp ground turmeric'.replace(/^\S+ \S+ /, ''))).toBe(true)
     expect(isTrace('chicken')).toBe(false)

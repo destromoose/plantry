@@ -1,7 +1,7 @@
 // "Save to Plantry" from the page you're reading. Some recipe sites refuse to let
 // servers read them, but they still publish the recipe for search engines inside the
 // page. A bookmark button runs in the cook's own browser, picks up that recipe block
-// (or the page text when there is none) and opens Plantry with it in the link's #hash,
+// and the page text, in case that block can't be read, and opens Plantry with it in the link's #hash,
 // which never reaches a server.
 
 import { extractRecipe, hostOf, type ImportedRecipe } from './importRecipe'
@@ -17,13 +17,13 @@ interface Capture {
   ld?: string[]
   /** og:image. */
   im?: string
-  /** Page text, only when there's no recipe block. */
+  /** Page text, used when the recipe block can't be read. */
   tx?: string
 }
 
 /** The bookmark's code. `origin` is where this Plantry is served from. */
 export function bookmarkletCode(origin: string): string {
-  const js = `(()=>{const d={u:location.href};const l=[...document.querySelectorAll('script[type="application/ld+json"]')].map(e=>e.textContent||'').filter(x=>/Recipe/.test(x));if(l.length)d.ld=l;else d.tx=(document.querySelector('article,main')||document.body).innerText.slice(0,15000);const m=document.querySelector('meta[property="og:image"]');if(m)d.im=m.content;const w=window.open(${JSON.stringify(origin + '/recipes/new#' + CAPTURE_KEY + '=')}+encodeURIComponent(JSON.stringify(d)),'_blank');if(!w)location.href=${JSON.stringify(origin + '/recipes/new#' + CAPTURE_KEY + '=')}+encodeURIComponent(JSON.stringify(d))})()`
+  const js = String.raw`(()=>{const d={u:location.href};const l=[...document.querySelectorAll('script[type="application/ld+json"]')].map(e=>e.textContent||'').filter(x=>/"@type"\s*:\s*(\[[^\]]*)?"Recipe"/.test(x));if(l.length)d.ld=l;d.tx=(document.querySelector('article,main')||document.body).innerText.slice(0,12000);const m=document.querySelector('meta[property="og:image"]');if(m)d.im=m.content;const w=window.open(${JSON.stringify(origin + '/recipes/new#' + CAPTURE_KEY + '=')}+encodeURIComponent(JSON.stringify(d)),'_blank');if(!w)location.href=${JSON.stringify(origin + '/recipes/new#' + CAPTURE_KEY + '=')}+encodeURIComponent(JSON.stringify(d))})()`
   return `javascript:${js}`
 }
 

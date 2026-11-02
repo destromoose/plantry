@@ -40,6 +40,24 @@ describe('Save to Plantry bookmark', () => {
     expect(r?.source).toBe('blog.example')
   })
 
+  it('uses the page text when the recipe block is unreadable', () => {
+    const r = readCapture(
+      hashOf({
+        u: 'https://blog.example/soup',
+        ld: ['{"@type":"Recipe","name":"x"'],
+        tx: 'Soup\nIngredients\n2 carrots\nMethod\n1. Simmer.',
+      })
+    )
+    expect(r?.ingredients.length).toBe(1)
+  })
+
+  it('sends only real Recipe blocks, and the page text too', () => {
+    const code = bookmarkletCode('https://plantry.example')
+    expect(code).toContain(String.raw`/"@type"\s*:\s*(\[[^\]]*)?"Recipe"/`)
+    expect(code).toMatch(/d\.tx=/)
+    expect(code).not.toMatch(/else d\.tx/)
+  })
+
   it('ignores anything else', () => {
     expect(readCapture('#other')).toBeNull()
     expect(readCapture(`#${CAPTURE_KEY}=%7Bbroken`)).toBeNull()
