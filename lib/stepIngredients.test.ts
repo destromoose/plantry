@@ -33,3 +33,17 @@ describe('ingredientsInStep', () => {
     expect(ingredientsInStep('Bring to a boil. Season with salty water.', list)).toEqual([])
   })
 })
+
+describe('short last words', () => {
+  it('matches "the oil" to sunflower oil', () => {
+    const oil = {
+      id: 'o',
+      name: 'sunflower oil',
+      key: 'sunflower oil',
+      quantity: 2,
+      unit: 'tbsp',
+      aisle: 'pantry' as const,
+    }
+    expect(ingredientsInStep('Heat the oil in a pan.', [oil])).toEqual([oil])
+  })
+})

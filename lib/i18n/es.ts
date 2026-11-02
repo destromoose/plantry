@@ -910,4 +910,40 @@ export const es: Record<string, string> = {
   'Once the new icon is on your home screen, you can delete the old one.':
     'Cuando el ícono nuevo esté en tu pantalla de inicio, puedes borrar el viejo.',
   'Got it': 'Entendido',
+  'That site doesn’t let apps read its pages. Here are two ways to bring it in anyway.':
+    'Ese sitio no deja que las apps lean sus páginas. Aquí tienes dos formas de traerla igual.',
+  'Couldn’t find a recipe on that page. Copy the text and paste it here.':
+    'No encontramos una receta en esa página. Copia el texto y pégalo aquí.',
+  'Open the recipe, select all of it, copy, then paste it here and tap Sort it out.':
+    'Abre la receta, selecciónala toda, cópiala, pégala aquí y toca Ordenar.',
+  'Copy and paste': 'Copiar y pegar',
+  'Open the recipe, select it all and copy. Plantry sorts out the rest and keeps the link.':
+    'Abre la receta, selecciónala toda y cópiala. Plantry ordena el resto y guarda el enlace.',
+  'Paste what I copied': 'Pegar lo que copié',
+  'Couldn’t copy. Press and hold the button instead.':
+    'No se pudo copiar. Mantén pulsado el botón.',
+  'Save from any site with one tap': 'Guarda desde cualquier sitio con un toque',
+  'Add a Save to Plantry button to your browser.':
+    'Añade un botón Guardar en Plantry a tu navegador.',
+  'On a computer': 'En una computadora',
+  'Drag this button to your bookmarks bar. On any recipe page, click it and the recipe opens here.':
+    'Arrastra este botón a tu barra de marcadores. En cualquier página de recetas, haz clic y la receta se abre aquí.',
+  'Drag it to your bookmarks bar, then use it on a recipe page.':
+    'Arrástralo a tu barra de marcadores y úsalo en una página de recetas.',
+  'Save to Plantry': 'Guardar en Plantry',
+  'On a phone': 'En un teléfono',
+  'Copy the button’s code.': 'Copia el código del botón.',
+  'Bookmark this page, then edit the bookmark.':
+    'Guarda esta página en marcadores y luego edita el marcador.',
+  'Name it Save to Plantry and paste the code in as its address.':
+    'Llámalo Guardar en Plantry y pega el código como su dirección.',
+  'On a recipe page, open your bookmarks and tap it.':
+    'En una página de recetas, abre tus marcadores y tócalo.',
+  Copied: 'Copiado',
+  'Copy the code': 'Copiar el código',
+  'Filled in from {v0}. Check it over, then save.': 'Rellenado desde {v0}. Revísalo y guárdalo.',
+  'Filled in from your text. Check it over, then save.':
+    'Rellenado desde tu texto. Revísalo y guárdalo.',
+  'Try another link': 'Probar otro enlace',
+  'Back to the text': 'Volver al texto',
 }

@@ -8,6 +8,9 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft,
+  Check,
+  ClipboardPaste,
+  ExternalLink,
   Globe,
   Link2,
   Loader2,
@@ -21,6 +24,8 @@ import type { Aisle, Recipe, Taste } from '@/lib/types'
 import { keyOf, uid } from '@/lib/utils'
 import { detectTimer, parseRecipe, type ParsedRecipe } from '@/lib/parseRecipe'
 import { findUrl, hostOf, type ImportedRecipe } from '@/lib/importRecipe'
+import { CAPTURE_KEY, readCapture } from '@/lib/pageCapture'
+import { SaveButtonHelp } from './SaveButtonHelp'
 import { settle } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { Chip, Tag } from '@/components/ui/Chip'
@@ -81,6 +86,7 @@ const importErrors: Record<string, string> = {
   ),
   'too-large': t('That page is too big to read. Copy the text and use Paste instead.'),
   'not-a-page': t('That link isn’t a web page. Copy the text and use Paste instead.'),
+  blocked: t('That site doesn’t let apps read its pages. Here are two ways to bring it in anyway.'),
 }
 
 export function RecipeEditor({
@@ -107,11 +113,15 @@ export function RecipeEditor({
   const [linkUrl, setLinkUrl] = useState(shared ?? '')
   const [linkBusy, setLinkBusy] = useState(false)
   const [linkNote, setLinkNote] = useState<string | null>(null)
+  /** The page Plantry couldn't read, so the cook can copy it or use the bookmark. */
+  const [stuckUrl, setStuckUrl] = useState<string | null>(null)
   const [source, setSource] = useState<{ source?: string; sourceUrl?: string }>({
     source: existing?.source,
     sourceUrl: existing?.sourceUrl,
   })
   const [pasteNote, setPasteNote] = useState<string | null>(null)
+  /** Where the form was just filled from, so the tab row can say so instead. */
+  const [filledFrom, setFilledFrom] = useState<{ tab: Tab; label: string } | null>(null)
 
   const [title, setTitle] = useState(existing?.title ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
@@ -145,7 +155,22 @@ export function RecipeEditor({
   // A link shared into Plantry from another app starts importing straight away.
   const autoStarted = useRef(false)
   useEffect(() => {
-    if (shared && !existing && !autoStarted.current) {
+    if (autoStarted.current || existing) return
+    // The Save to Plantry bookmark hands over the page in the #hash.
+    if (location.hash.startsWith(`#${CAPTURE_KEY}=`)) {
+      autoStarted.current = true
+      const got = readCapture(location.hash)
+      history.replaceState(null, '', location.pathname + location.search)
+      if (got) {
+        applyParsed(got)
+        toast(t('Saved from {v0}. Check the details.', { v0: got.source ?? '' }))
+      } else {
+        setTab('paste')
+        setPasteNote(t('Couldn’t find a recipe on that page. Copy the text and paste it here.'))
+      }
+      return
+    }
+    if (shared && !autoStarted.current) {
       autoStarted.current = true
       void importLink(shared)
     }
@@ -239,6 +264,12 @@ export function RecipeEditor({
     if (parsed.totalMinutes) setTotal(String(parsed.totalMinutes))
     if (parsed.steps.length) setSteps(parsed.steps.map((s) => ({ id: uid('s'), text: s.text })))
     if (parsed.sourceUrl) setSource({ source: parsed.source, sourceUrl: parsed.sourceUrl })
+    setFilledFrom({
+      tab: tab === 'type' ? 'link' : tab,
+      label: parsed.source
+        ? t('Filled in from {v0}. Check it over, then save.', { v0: parsed.source })
+        : t('Filled in from your text. Check it over, then save.'),
+    })
     setTab('type')
   }
 
@@ -258,6 +289,7 @@ export function RecipeEditor({
     }
     setLinkBusy(true)
     setLinkNote(null)
+    setStuckUrl(null)
     try {
       const res = await fetch(`/api/import?url=${encodeURIComponent(url)}`)
       const body = (await res.json().catch(() => ({}))) as {
@@ -265,6 +297,7 @@ export function RecipeEditor({
         error?: string
       }
       if (!res.ok || !body.recipe) {
+        if (body.error !== 'bad-url' && body.error !== 'private') setStuckUrl(url)
         setLinkNote(
           importErrors[body.error ?? ''] ??
             t('Couldn’t reach {v0}. Try again, or copy the text and use Paste.', {
@@ -276,6 +309,7 @@ export function RecipeEditor({
       applyParsed(body.recipe)
       toast(t('Saved from {v0}. Check the details.', { v0: body.recipe.source }))
     } catch {
+      setStuckUrl(url)
       setLinkNote(
         t('Couldn’t reach {v0}. Try again, or copy the text and use Paste.', { v0: hostOf(url) })
       )
@@ -284,8 +318,27 @@ export function RecipeEditor({
     }
   }
 
-  function sortOut() {
-    const text = pasteText.trim()
+  /** Brings in what the cook copied from a page Plantry couldn't read. */
+  async function pasteCopied() {
+    let text = ''
+    try {
+      text = (await navigator.clipboard?.readText?.()) ?? ''
+    } catch {
+      /* not allowed; fall through to the paste box */
+    }
+    setTab('paste')
+    if (text.trim() && !/^https?:\/\/\S+$/i.test(text.trim())) {
+      setPasteText(text)
+      sortOut(text)
+    } else {
+      setPasteNote(
+        t('Open the recipe, select all of it, copy, then paste it here and tap Sort it out.')
+      )
+    }
+  }
+
+  function sortOut(raw = pasteText) {
+    const text = raw.trim()
     if (!text) {
       setPasteNote(t('Paste something first.'))
       return
@@ -305,7 +358,11 @@ export function RecipeEditor({
       )
       return
     }
-    applyParsed(parsed)
+    applyParsed(
+      stuckUrl && !source.sourceUrl
+        ? { ...parsed, source: hostOf(stuckUrl), sourceUrl: stuckUrl }
+        : parsed
+    )
     setPasteNote(null)
     toast(t('Sorted. Check the details.'))
   }
@@ -397,18 +454,35 @@ export function RecipeEditor({
         </h1>
       </header>
 
-      {!existing && (
-        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label={t('How to add')}>
-          <Chip selected={tab === 'link'} onClick={() => setTab('link')}>
-            {t('From a link')}
-          </Chip>
-          <Chip selected={tab === 'paste'} onClick={() => setTab('paste')}>
-            {t('Paste recipe text')}
-          </Chip>
-          <Chip selected={tab === 'type'} onClick={() => setTab('type')}>
-            {t('Type it')}
-          </Chip>
-        </div>
+      {!existing && filledFrom && tab === 'type' ? (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={settle}
+          className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1"
+        >
+          <p className="flex items-start gap-2 text-[0.9375rem] text-ink-2">
+            <Check className="mt-1 h-4 w-4 shrink-0 text-accent" aria-hidden />
+            {filledFrom.label}
+          </p>
+          <Button variant="ghost" size="sm" onClick={() => setTab(filledFrom.tab)}>
+            {filledFrom.tab === 'link' ? t('Try another link') : t('Back to the text')}
+          </Button>
+        </motion.div>
+      ) : (
+        !existing && (
+          <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label={t('How to add')}>
+            <Chip selected={tab === 'link'} onClick={() => setTab('link')}>
+              {t('From a link')}
+            </Chip>
+            <Chip selected={tab === 'paste'} onClick={() => setTab('paste')}>
+              {t('Paste recipe text')}
+            </Chip>
+            <Chip selected={tab === 'type'} onClick={() => setTab('type')}>
+              {t('Type it')}
+            </Chip>
+          </div>
+        )
       )}
 
       {tab === 'link' ? (
@@ -472,6 +546,37 @@ export function RecipeEditor({
               {linkBusy ? t('Reading the page…') : t('Get the recipe')}
             </Button>
           </form>
+          {stuckUrl && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={settle}
+              className="space-y-3 rounded-3xl border border-line bg-surface p-4"
+            >
+              <p className="font-medium">{t('Copy and paste')}</p>
+              <p className="-mt-2 text-sm text-ink-2">
+                {t(
+                  'Open the recipe, select it all and copy. Plantry sorts out the rest and keeps the link.'
+                )}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={stuckUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 items-center gap-2 rounded-pill bg-surface-2 px-5 text-[0.9375rem] font-medium hover:bg-line/60"
+                >
+                  <ExternalLink className="h-4 w-4" aria-hidden />
+                  {t('Open the recipe')}
+                </a>
+                <Button variant="secondary" onClick={() => void pasteCopied()}>
+                  <ClipboardPaste className="h-4 w-4" aria-hidden />
+                  {t('Paste what I copied')}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+          <SaveButtonHelp open={!!stuckUrl} />
           <p className="pt-2 text-sm text-ink-3">
             {t(
               'On a phone, you can also share a recipe page to Plantry from your browser once Plantry is on your home screen.'
@@ -507,7 +612,7 @@ export function RecipeEditor({
               {pasteNote}
             </p>
           )}
-          <Button onClick={sortOut}>{t('Sort it out')}</Button>
+          <Button onClick={() => sortOut()}>{t('Sort it out')}</Button>
         </motion.section>
       ) : (
         <motion.form

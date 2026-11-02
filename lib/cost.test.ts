@@ -93,3 +93,28 @@ describe('cost', () => {
     expect(guessCurrency('ES')).toBe('EUR')
   })
 })
+
+describe('imported ingredient names', () => {
+  it('finds facts for everyday UK and US names', async () => {
+    const { factsFor, isTrace } = await import('./ingredientFacts')
+    const { keyOf } = await import('./utils')
+    const has = (name: string) => !!factsFor({ key: keyOf(name), name })
+    for (const n of [
+      'sunflower oil',
+      'garlic cloves',
+      'can chopped tomatoes',
+      'skinless and boneless chicken thighs',
+      'fat-free Greek yogurt',
+      'ground almonds',
+      'basmati rice',
+      'double cream',
+      'large free-range eggs',
+      'spaghetti',
+      'plain flour',
+    ])
+      expect(has(n), n).toBe(true)
+    expect(isTrace('garam masala')).toBe(true)
+    expect(isTrace('1 tsp ground turmeric'.replace(/^\S+ \S+ /, ''))).toBe(true)
+    expect(isTrace('chicken')).toBe(false)
+  })
+})
