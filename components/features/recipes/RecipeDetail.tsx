@@ -310,6 +310,19 @@ export function RecipeDetail({ id }: { id: string }) {
               </li>
             ))}
           </ol>
+          {recipe.sourceUrl && /^https?:\/\//i.test(recipe.sourceUrl) && (
+            <p className="mt-8 text-sm text-ink-3">
+              {t('Saved from')}{' '}
+              <a
+                href={recipe.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="font-medium text-ink-2 underline decoration-line underline-offset-4 hover:text-ink"
+              >
+                {recipe.source || recipe.sourceUrl}
+              </a>
+            </p>
+          )}
         </motion.section>
       </motion.div>
 

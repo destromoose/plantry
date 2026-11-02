@@ -170,6 +170,61 @@ try {
       if (await startTimer.count()) await startTimer.first().click()
       await page.waitForTimeout(600)
       await page.screenshot({ path: `e2e/screenshots/${name}-17-cook-step2.png` })
+
+      // Save a recipe from a link. The page fetch is stubbed: sandboxes can't reach recipe sites.
+      await page.route('**/api/import?*', (route) =>
+        route.fulfill({
+          json: {
+            recipe: {
+              title: 'Summer meatballs & spaghetti',
+              description: 'A quick meal for two.',
+              servings: 2,
+              activeMinutes: 10,
+              totalMinutes: 30,
+              ingredients: [
+                { name: 'olive oil', quantity: 2, unit: 'tbsp' },
+                { name: 'onion', quantity: 1, unit: '' },
+                { name: 'spaghetti', quantity: 200, unit: 'g' },
+              ],
+              steps: [
+                { text: 'Heat the olive oil and soften the onion for 5 minutes.', timerMinutes: 5 },
+                { text: 'Boil the spaghetti for 10 minutes and toss everything together.' },
+              ],
+              source: 'bbcgoodfood.com',
+              sourceUrl: 'https://www.bbcgoodfood.com/recipes/summer-meatballs',
+            },
+          },
+        })
+      )
+      await page.goto(`${BASE}/recipes/new?tab=link`)
+      await page
+        .getByLabel('Recipe link')
+        .fill('https://www.bbcgoodfood.com/recipes/summer-meatballs')
+      await page.screenshot({ path: `e2e/screenshots/${name}-18-import-link.png` })
+      await page.getByRole('button', { name: 'Get the recipe' }).click()
+      await page.waitForTimeout(600)
+      if ((await page.getByLabel('Title').inputValue()) !== 'Summer meatballs & spaghetti')
+        throw new Error('link import did not fill the form')
+      await page.screenshot({
+        path: `e2e/screenshots/${name}-19-import-filled.png`,
+        fullPage: true,
+      })
+      await page.getByRole('button', { name: /^Save/ }).last().click()
+      await page.waitForURL(/\/recipes\/(?!new)/)
+      await page.waitForTimeout(600)
+      if (!(await page.getByRole('link', { name: 'bbcgoodfood.com' }).count()))
+        throw new Error('saved recipe does not link back to its source')
+      const imported = page.url().split('/').pop()
+      await page.goto(`${BASE}/cook/${imported}`)
+      await page.waitForTimeout(700)
+      if (!(await page.getByRole('list', { name: 'For this step' }).count()))
+        throw new Error('cook mode does not show the ingredients for the step')
+      await page.screenshot({ path: `e2e/screenshots/${name}-20-cook-step-ingredients.png` })
+      await page.keyboard.press('ArrowRight')
+      await page.waitForTimeout(400)
+      await page.getByRole('button', { name: 'Done' }).click()
+      await page.waitForTimeout(350)
+      await page.screenshot({ path: `e2e/screenshots/${name}-21-cook-finish.png` })
     }
 
     // Night mood.

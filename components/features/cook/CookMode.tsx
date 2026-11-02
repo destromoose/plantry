@@ -23,6 +23,7 @@ import { announce as say } from '@/lib/announce'
 import { addDays, toDateKey } from '@/lib/utils'
 import { clearCookSession, loadCookSession, saveCookSession } from '@/lib/cookSession'
 import { cautionsFor, needsGrownUp } from '@/lib/safety'
+import { ingredientsInStep } from '@/lib/stepIngredients'
 import { withUndo } from '@/lib/undo'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { Stepper } from '@/components/ui/Stepper'
@@ -496,6 +497,11 @@ export function CookMode({
               <p className="font-display text-fluid-step font-medium leading-tight tracking-tight">
                 {withTemperatures(step.text, units)}
               </p>
+              <StepIngredients
+                items={ingredientsInStep(step.text, recipe.ingredients)}
+                scale={scale}
+                units={units}
+              />
               <StepCautions text={step.text} own={step.caution} kids={kids} />
             </div>
             {step.timerMinutes ? (
@@ -609,14 +615,23 @@ export function CookMode({
 
       <Sheet open={finishOpen} onClose={() => setFinishOpen(false)}>
         <div className="flex flex-col items-center pb-4 text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={checkPop}
-            className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-secondary-ink"
-          >
-            <Check className="h-8 w-8" aria-hidden />
-          </motion.div>
+          <div className="relative mb-4 h-16 w-16">
+            {finishOpen && <Burst />}
+            <motion.div
+              initial={{ scale: 0, rotate: -30 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={checkPop}
+              className="relative flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-secondary-ink"
+            >
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ ...checkPop, delay: 0.12 }}
+              >
+                <Check className="h-8 w-8" aria-hidden />
+              </motion.span>
+            </motion.div>
+          </div>
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             {t("Dinner's done.")}
           </h2>
@@ -686,6 +701,73 @@ export function CookMode({
           </Button>
         </div>
       </Sheet>
+    </div>
+  )
+}
+
+/** The amounts this step needs, so nobody has to scroll back to the list mid-stir. */
+function StepIngredients({
+  items,
+  scale,
+  units,
+}: {
+  items: { id: string; name: string; quantity: number; unit: string }[]
+  scale: number
+  units: ReturnType<typeof useUnits>
+}) {
+  if (items.length === 0) return null
+  return (
+    <ul className="flex flex-wrap gap-2 pt-1" aria-label={t('For this step')}>
+      {items.map((i, n) => {
+        const amount = i.quantity ? formatAmount(i.quantity * scale, i.unit, { system: units }) : ''
+        return (
+          <motion.li
+            key={i.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...settle, delay: 0.08 + n * 0.04 }}
+            className="inline-flex items-baseline gap-1.5 rounded-pill border border-line bg-surface px-3 py-1.5 text-[0.9375rem]"
+          >
+            {amount && <span className="font-semibold tabular-nums">{amount}</span>}
+            <span className="text-ink-2">{i.name.toLowerCase()}</span>
+          </motion.li>
+        )
+      })}
+    </ul>
+  )
+}
+
+const burstTones = [
+  'bg-terracotta',
+  'bg-saffron',
+  'bg-sage',
+  'bg-plum',
+  'bg-accent',
+  'bg-secondary',
+]
+
+/** A small, quick bloom of confetti behind the check when dinner is done. */
+function Burst() {
+  const bits = Array.from({ length: 14 }, (_, i) => {
+    const angle = (i / 14) * Math.PI * 2 + (i % 2 ? 0.2 : -0.1)
+    const dist = 58 + (i % 3) * 14
+    return { i, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, round: i % 3 !== 0 }
+  })
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      {bits.map((b) => (
+        <motion.span
+          key={b.i}
+          initial={{ x: 0, y: 0, scale: 0, opacity: 1, rotate: 0 }}
+          animate={{ x: b.x, y: b.y, scale: [0, 1, 0.6], opacity: [1, 1, 0], rotate: b.i * 40 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.05 + (b.i % 4) * 0.02 }}
+          className={cn(
+            'absolute left-1/2 top-1/2 -ml-1 -mt-1',
+            b.round ? 'h-2 w-2 rounded-full' : 'h-1.5 w-3 rounded-sm',
+            burstTones[b.i % burstTones.length]
+          )}
+        />
+      ))}
     </div>
   )
 }

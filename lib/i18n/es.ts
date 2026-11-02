@@ -839,4 +839,36 @@ export const es: Record<string, string> = {
   '{v0} · {have} of {total}': '{v0} · {have} de {total}',
   '{v0}, {v1}. Rate or add a note': '{v0}, {v1}. Valora o añade una nota',
   '{v0}: {v1}. {v2}. Change who cooks.': '{v0}: {v1}. {v2}. Cambiar quién cocina.',
+  'For this step': 'Para este paso',
+  'Saved from': 'Guardada de',
+  'That doesn’t look like a web link. It should start with https://':
+    'Eso no parece un enlace web. Debe empezar por https://',
+  'That page couldn’t be found. Check the link and try again.':
+    'No se encontró esa página. Revisa el enlace y vuelve a intentarlo.',
+  'That page doesn’t share its recipe in a way Plantry can read. Copy the text and use Paste instead.':
+    'Esa página no comparte su receta de una forma que Plantry pueda leer. Copia el texto y usa Pegar.',
+  'That page is too big to read. Copy the text and use Paste instead.':
+    'Esa página es demasiado grande para leerla. Copia el texto y usa Pegar.',
+  'That link isn’t a web page. Copy the text and use Paste instead.':
+    'Ese enlace no es una página web. Copia el texto y usa Pegar.',
+  'Paste a link first.': 'Primero pega un enlace.',
+  'You’re offline. Reading a link needs the internet.':
+    'Estás sin conexión. Para leer un enlace hace falta internet.',
+  'Couldn’t reach {v0}. Try again, or copy the text and use Paste.':
+    'No se pudo abrir {v0}. Vuelve a intentarlo, o copia el texto y usa Pegar.',
+  'Saved from {v0}. Check the details.': 'Guardada de {v0}. Revisa los detalles.',
+  'From a link': 'Desde un enlace',
+  'Recipe link': 'Enlace de la receta',
+  'Paste a link from almost any recipe site. Plantry keeps the ingredients and steps, and leaves the life story behind.':
+    'Pega un enlace de casi cualquier web de recetas. Plantry se queda con los ingredientes y los pasos, y deja fuera la historia de la abuela.',
+  'Reading the page…': 'Leyendo la página…',
+  'Get the recipe': 'Traer la receta',
+  'On a phone, you can also share a recipe page to Plantry from your browser once Plantry is on your home screen.':
+    'En el móvil también puedes compartir una receta con Plantry desde el navegador, cuando Plantry esté en tu pantalla de inicio.',
+  'Copy the recipe from a website or a note and paste it here.':
+    'Copia la receta de una web o una nota y pégala aquí.',
+  'Save from a website': 'Guardar de una web',
+  'Ready by {time} if you start now': 'Lista a las {time} si empiezas ya',
+  '{total} ingredients.': '{total} ingredientes.',
+  'Tell Plantry what you have': 'Dile a Plantry qué tienes',
 }

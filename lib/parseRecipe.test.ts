@@ -110,3 +110,38 @@ describe('recipe details in pasted text', () => {
     expect(r.ingredients).toHaveLength(1)
   })
 })
+
+describe('web-style ingredient lines', () => {
+  it('reads long unit names and spaced fractions', () => {
+    expect(parseIngredientLine('1 tablespoon lemon juice')).toEqual({
+      name: 'lemon juice',
+      quantity: 1,
+      unit: 'tbsp',
+    })
+    expect(parseIngredientLine('2 Teaspoons cumin')?.unit).toBe('tsp')
+    expect(parseIngredientLine('1 ½ cups rice')).toEqual({
+      name: 'rice',
+      quantity: 1.5,
+      unit: 'cups',
+    })
+    expect(parseIngredientLine('500grams beef')?.unit).toBe('g')
+    expect(parseIngredientLine('2 pounds potatoes')?.unit).toBe('lb')
+  })
+})
+
+describe('import-style lines', () => {
+  it('leaves amounts blank when there is no number, takes the low end of ranges', () => {
+    expect(parseIngredientLine('Kosher salt')).toEqual({
+      name: 'Kosher salt',
+      quantity: 0,
+      unit: '',
+    })
+    expect(parseIngredientLine('2 to 2 1/4 pounds chicken wings')).toEqual({
+      name: 'chicken wings',
+      quantity: 2,
+      unit: 'lb',
+    })
+    expect(parseIngredientLine('1 onion finely chopped')?.name).toBe('onion')
+    expect(parseIngredientLine('1 tsp kosher salt; or table salt')?.name).toBe('kosher salt')
+  })
+})

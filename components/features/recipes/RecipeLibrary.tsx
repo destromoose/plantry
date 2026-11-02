@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Heart, Link2, PencilLine, Plus, Search, SearchX } from 'lucide-react'
+import { Heart, ClipboardPaste, Link2, PencilLine, Plus, Search, SearchX } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { AvoidBadge } from '@/components/features/household/AvoidWarning'
 import { coverage } from '@/lib/suggest'
@@ -284,20 +284,27 @@ export function RecipeLibrary() {
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={t('Add a recipe')}>
         <div className="space-y-2">
           <Button
+            size="lg"
+            className="w-full justify-start"
+            onClick={() => router.push('/recipes/new?tab=link')}
+          >
+            <Link2 className="h-5 w-5" aria-hidden /> {t('Save from a website')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full justify-start"
+            onClick={() => router.push('/recipes/new?tab=paste')}
+          >
+            <ClipboardPaste className="h-5 w-5" aria-hidden /> {t('Paste recipe text')}
+          </Button>
+          <Button
             variant="secondary"
             size="lg"
             className="w-full justify-start"
             onClick={() => router.push('/recipes/new')}
           >
             <PencilLine className="h-5 w-5" aria-hidden /> {t('Type it in')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            className="w-full justify-start"
-            onClick={() => router.push('/recipes/new?tab=link')}
-          >
-            <Link2 className="h-5 w-5" aria-hidden /> {t('Paste recipe text')}
           </Button>
         </div>
       </Sheet>

@@ -1,6 +1,7 @@
 'use client'
 
-import { andList, t } from '@/lib/i18n'
+import { andList, locale, t } from '@/lib/i18n'
+import { useAppContext } from '@/components/shell/Providers'
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -13,6 +14,7 @@ import {
   MoreHorizontal,
   Plus,
   RefreshCw,
+  Timer,
   Users,
   UtensilsCrossed,
 } from 'lucide-react'
@@ -287,6 +289,16 @@ function PlannedOrSuggested({
   }
 
   const cov = coverage(recipe, pantry)
+  // With nothing in the pantry yet, "You have 0 of 10" only scolds. Say what helps instead.
+  const pantryEmpty = pantry.length === 0
+  const { now } = useAppContext()
+  const readyBy =
+    targetDate === today
+      ? new Date(new Date(now).getTime() + recipe.totalMinutes * 60_000).toLocaleTimeString(
+          locale(),
+          { hour: 'numeric', minute: '2-digit' }
+        )
+      : undefined
   const coverLine =
     cov.missing.length === 0
       ? t('You have everything')
@@ -313,7 +325,7 @@ function PlannedOrSuggested({
     <article className="card overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <Link
         href={`/recipes/${recipe.id}`}
-        className="relative block aspect-[16/9] max-h-[32vh] w-full bg-surface-2 sm:max-h-[420px] lg:aspect-auto lg:h-full lg:max-h-none lg:min-h-[340px]"
+        className="relative block aspect-[2/1] max-h-[26vh] w-full bg-surface-2 sm:max-h-[420px] lg:aspect-auto lg:h-full lg:max-h-none lg:min-h-[340px]"
         aria-hidden
         tabIndex={-1}
         draggable={false}
@@ -350,27 +362,52 @@ function PlannedOrSuggested({
                   count: (entry?.recipeId === recipe.id && entry.servings) || cookingFor,
                 })}
               </span>
+              {readyBy && (
+                <span className="inline-flex items-center gap-1 font-medium text-ink">
+                  <Timer className="h-4 w-4" aria-hidden />{' '}
+                  {t('Ready by {time} if you start now', { time: readyBy })}
+                </span>
+              )}
             </p>
             <AvoidWarning recipe={recipe} className="mt-3" />
           </div>
-          <ProgressRing
-            value={cov.total ? cov.have / cov.total : 0}
-            size={48}
-            stroke={5}
-            tone={cov.missing.length === 0 ? 'secondary' : 'accent'}
-            label={t('{have} of {total} ingredients at home', { have: cov.have, total: cov.total })}
-          >
-            <span className="font-display text-sm font-semibold" aria-hidden>
-              {cov.have}/{cov.total}
-            </span>
-          </ProgressRing>
+          {!pantryEmpty && (
+            <ProgressRing
+              value={cov.total ? cov.have / cov.total : 0}
+              size={48}
+              stroke={5}
+              tone={cov.missing.length === 0 ? 'secondary' : 'accent'}
+              label={t('{have} of {total} ingredients at home', {
+                have: cov.have,
+                total: cov.total,
+              })}
+            >
+              <span className="font-display text-sm font-semibold" aria-hidden>
+                {cov.have}/{cov.total}
+              </span>
+            </ProgressRing>
+          )}
         </div>
 
         <p className="mt-3 text-[0.9375rem]">
-          <span className="font-medium">
-            {t('You have {have} of {total}.', { have: cov.have, total: cov.total })}
-          </span>{' '}
-          <span className="text-ink-2">{coverLine}.</span>
+          {pantryEmpty ? (
+            <span className="text-ink-2">
+              {t('{total} ingredients.', { total: cov.total })}{' '}
+              <Link
+                href="/pantry"
+                className="font-medium text-ink underline decoration-line underline-offset-4"
+              >
+                {t('Tell Plantry what you have')}
+              </Link>
+            </span>
+          ) : (
+            <>
+              <span className="font-medium">
+                {t('You have {have} of {total}.', { have: cov.have, total: cov.total })}
+              </span>{' '}
+              <span className="text-ink-2">{coverLine}.</span>
+            </>
+          )}
           {missingIngs.length > 0 && (
             <Button variant="ghost" size="sm" className="ml-1 text-accent" onClick={addMissing}>
               <Plus className="h-3.5 w-3.5" aria-hidden />{' '}
