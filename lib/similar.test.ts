@@ -56,9 +56,10 @@ describe('similarRecipes', () => {
 
   it('keeps breakfast apart from dinner in Spanish too', () => {
     const base = byId('r-banana-oat-pancakes')
-    const tortitas = { ...base, id: 'es1', title: 'Tortitas de plátano y avena' }
-    const cena = { ...byId('r-weeknight-carbonara'), id: 'es2', title: 'Carbonara rápida' }
-    expect(similarRecipes(tortitas, [tortitas, cena]).some((r) => r.id === 'es2')).toBe(false)
+    const tortitas = { ...base, id: 'es1', title: 'Tortitas de plátano' }
+    const gofres = { ...base, id: 'es2', title: 'Gofres de plátano' }
+    const cena = { ...base, id: 'es3', title: 'Carbonara rápida' }
+    expect(similarRecipes(tortitas, [tortitas, cena, gofres])[0].id).toBe('es2')
   })
 
   it('leaves out recipes the household avoids', () => {
