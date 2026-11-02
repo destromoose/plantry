@@ -9,14 +9,17 @@ export function SectionTitle({
   children,
   className,
   action,
+  as: Tag = 'h2',
 }: {
   children: React.ReactNode
   className?: string
   action?: React.ReactNode
+  /** h3 when the section sits under a page-level group heading. */
+  as?: 'h2' | 'h3'
 }) {
   return (
     <div className={cn('mb-3 flex items-end justify-between gap-3', className)}>
-      <h2 className="font-display text-xl font-semibold tracking-tight text-ink">{children}</h2>
+      <Tag className="font-display text-xl font-semibold tracking-tight text-ink">{children}</Tag>
       {action}
     </div>
   )
