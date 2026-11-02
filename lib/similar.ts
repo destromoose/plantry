@@ -25,7 +25,11 @@ const families: [string, RegExp, 'all' | 'title'][] = [
     'all',
   ],
   ['southeast-asian', /\b(coconut milk|fish sauce|lemongrass|thai|curry paste|peanuts?)\b/i, 'all'],
-  ['south-asian', /\b(garam masala|curry powder|turmeric|lentils?|dal|naan|paneer)\b/i, 'all'],
+  [
+    'south-asian',
+    /\b(garam masala|curry powder|turmeric|lentils?|dal|naan|paneer|chickpea curry|cauliflower curry|tikka|korma|biryani)\b/i,
+    'all',
+  ],
   [
     'latin',
     /\b(tortillas?|tacos?|fajitas?|burritos?|black beans?|chipotle|quesadillas?|salsa|enchiladas?)\b/i,
@@ -41,7 +45,7 @@ const families: [string, RegExp, 'all' | 'title'][] = [
     /\b(feta|couscous|tzatziki|chickpeas?|shakshuka|olives|halloumi|za.?atar)\b/i,
     'all',
   ],
-  ['breakfast', /\b(pancakes?|oats|porridge|granola|waffles?|french toast)\b/i, 'all'],
+  ['breakfast', /\b(pancakes?|oats?|oatmeal|porridge|granola|waffles?|french toast)\b/i, 'all'],
   ['soup', /\b(soup|stew|chili|dal)\b/i, 'title'],
 ]
 
