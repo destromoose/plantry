@@ -14,24 +14,42 @@ function mainKeys(r: Recipe): Set<string> {
   )
 }
 
-/** Kitchens a dish leans toward, guessed from its title and ingredients. */
-const families: [string, RegExp][] = [
+/**
+ * Kitchens a dish leans toward, guessed from its title and ingredients. Whole words
+ * only, so olive oil, chili flakes and goat cheese don't count as olives, chili or oats.
+ */
+const families: [string, RegExp, 'all' | 'title'][] = [
   [
     'east-asian',
-    /soy sauce|ginger|sesame|noodle|fried rice|stir-fry|teriyaki|hoisin|miso|bok choy/i,
+    /\b(soy sauce|ginger|sesame|noodles?|fried rice|stir-fry|teriyaki|hoisin|miso|bok choy)\b/i,
+    'all',
   ],
-  ['southeast-asian', /coconut milk|fish sauce|lemongrass|thai|curry paste|peanut/i],
-  ['south-asian', /garam masala|curry powder|turmeric|lentil|dal|chickpea curry|naan|paneer/i],
-  ['latin', /tortilla|taco|fajita|burrito|black bean|chipotle|quesadilla|salsa|enchilada/i],
-  ['italian', /pasta|spaghetti|penne|parmesan|risotto|mozzarella|basil|gnocchi|carbonara/i],
-  ['mediterranean', /feta|couscous|oregano|tzatziki|chickpea|shakshuka|olive|halloumi|za.?atar/i],
-  ['breakfast', /pancake|oat|granola|waffle|french toast/i],
-  ['soup', /soup|stew|chili|dal/i],
+  ['southeast-asian', /\b(coconut milk|fish sauce|lemongrass|thai|curry paste|peanuts?)\b/i, 'all'],
+  ['south-asian', /\b(garam masala|curry powder|turmeric|lentils?|dal|naan|paneer)\b/i, 'all'],
+  [
+    'latin',
+    /\b(tortillas?|tacos?|fajitas?|burritos?|black beans?|chipotle|quesadillas?|salsa|enchiladas?)\b/i,
+    'all',
+  ],
+  [
+    'italian',
+    /\b(pasta|spaghetti|penne|parmesan|risotto|mozzarella|gnocchi|carbonara|ragu)\b/i,
+    'all',
+  ],
+  [
+    'mediterranean',
+    /\b(feta|couscous|tzatziki|chickpeas?|shakshuka|olives|halloumi|za.?atar)\b/i,
+    'all',
+  ],
+  ['breakfast', /\b(pancakes?|oats|porridge|granola|waffles?|french toast)\b/i, 'all'],
+  ['soup', /\b(soup|stew|chili|dal)\b/i, 'title'],
 ]
 
 function familiesOf(r: Recipe): Set<string> {
-  const text = [r.title, ...r.ingredients.flatMap((i) => [i.name, i.key])].join(' · ')
-  return new Set(families.filter(([, re]) => re.test(text)).map(([f]) => f))
+  const all = [r.title, ...r.ingredients.flatMap((i) => [i.name, i.key])].join(' · ')
+  return new Set(
+    families.filter(([, re, where]) => re.test(where === 'title' ? r.title : all)).map(([f]) => f)
+  )
 }
 
 /**

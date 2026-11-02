@@ -43,6 +43,8 @@ describe('unit systems', () => {
     expect(formatAmount(400, 'ml', { system: 'imperial' })).toBe('1¾ cups')
     expect(formatAmount(30, 'ml', { system: 'imperial' })).toBe('2 tbsp')
     expect(formatAmount(2, 'tbsp', { system: 'imperial' })).toBe('2 tbsp')
+    expect(formatAmount(1, 'pint', { system: 'imperial' })).toBe('1 pint')
+    expect(formatAmount(1, 'pint', { system: 'metric' })).toBe('480 ml')
     expect(formatAmount(3, 'clove', { system: 'imperial' })).toBe('3 cloves')
   })
   it('shows imperial amounts in metric kitchens', () => {

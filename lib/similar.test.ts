@@ -31,6 +31,29 @@ describe('similarRecipes', () => {
     expect(pancakes.some((r) => /carbonara|mac/i.test(r.title))).toBe(false)
   })
 
+  it('does not read olive oil as olives or chili flakes as a chili', () => {
+    const base = byId('r-chicken-fajitas')
+    const make = (id: string, title: string, names: string[]) => ({
+      ...base,
+      id,
+      title,
+      tastes: [],
+      ingredients: names.map((n, i) => ({
+        id: `${id}${i}`,
+        name: n,
+        key: n,
+        quantity: 1,
+        unit: '',
+        aisle: 'pantry' as const,
+      })),
+    })
+    const a = make('a', 'Plain toast', ['olive oil', 'chili flakes', 'goat cheese'])
+    const b = make('b', 'Green beans', ['olive oil', 'chili flakes', 'goat cheese'])
+    const c = make('c', 'Olive tapenade', ['olives', 'chili', 'oats'])
+    expect(similarRecipes(a, [a, c])).toHaveLength(0)
+    expect(similarRecipes(a, [a, b]).length).toBeLessThanOrEqual(1)
+  })
+
   it('leaves out recipes the household avoids', () => {
     const carb = byId('r-weeknight-carbonara')
     const out = similarRecipes(carb, seedRecipes, ['vegetarian'])

@@ -125,7 +125,7 @@ export function toSystem(a: Amount, system: UnitSystem): Amount {
   if (!info) return a
   const f = info.factor
   const imperialMass = f === 28.35 || f === 453.6
-  const imperialVolume = f === 29.57 || f === 240 || f === 960
+  const imperialVolume = [29.57, 240, 480, 960, 3840].includes(f)
   const base = a.quantity * info.factor // grams or millilitres
   if (system === 'metric') {
     if (info.dim === 'mass') {
