@@ -153,6 +153,8 @@ export function Onboarding() {
     step === 'who' ? 'Add your name to continue.' : step === 'taste' ? 'Pick at least one.' : ''
 
   function next() {
+    // Already finishing: a second tap must not finish again.
+    if (finishing.current) return
     if (!canNext) {
       setTried(true)
       return
@@ -163,7 +165,12 @@ export function Onboarding() {
       clearDraft()
       // Take the step entries off history first, then finish, so Back from Tonight doesn't land
       // here. Finishing after the rewind also keeps the shell's redirect from racing it.
+      // Runs once: on the rewind's popstate, or after a short wait if that never fires.
+      let ran = false
       const finish = () => {
+        if (ran) return
+        ran = true
+        window.removeEventListener('popstate', finish)
         complete({
           members: names.map((name) => ({ name: name.trim().slice(0, 40) })),
           tastes,
@@ -175,11 +182,8 @@ export function Onboarding() {
       const n = depth.current
       depth.current = 0
       if (n > 0) {
-        const done = () => {
-          window.removeEventListener('popstate', done)
-          finish()
-        }
-        window.addEventListener('popstate', done)
+        window.addEventListener('popstate', finish)
+        window.setTimeout(finish, 600)
         window.history.go(-n)
       } else finish()
     }
