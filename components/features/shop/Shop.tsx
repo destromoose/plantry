@@ -261,7 +261,8 @@ function amountText(i: ShopItem) {
     ...(i.quantity ? [{ quantity: i.quantity, unit: i.unit ?? '' }] : []),
     ...(i.more ?? []),
   ]
-  return formatAmounts(list, { forShopping: true })
+  // Read once per render: the list remounts when units change in Settings.
+  return formatAmounts(list, { forShopping: true, system: useStore.getState().settings.units })
 }
 
 /** The add box keeps its own state, so typing doesn't redraw the whole list. */

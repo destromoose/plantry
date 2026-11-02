@@ -272,7 +272,22 @@ export function Settings() {
         </p>
       </Card>
 
-      {/* Units stay hidden until amounts can actually be converted. */}
+      <Card>
+        <SectionTitle>Units</SectionTitle>
+        <Choice
+          label="Units"
+          value={settings.units}
+          onChange={(v) => update({ units: v })}
+          options={[
+            { id: 'metric', label: 'Grams and millilitres' },
+            { id: 'imperial', label: 'Cups, ounces and °F' },
+          ]}
+        />
+        <p className="mt-3 text-sm text-ink-3">
+          Recipes, the list and oven temperatures switch over. Spoons and counted things stay as they
+          are.
+        </p>
+      </Card>
 
       <Card>
         <SectionTitle>Words</SectionTitle>

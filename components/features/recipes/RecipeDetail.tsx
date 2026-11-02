@@ -1,5 +1,7 @@
 'use client'
 
+import { formatAmount, withTemperatures } from '@/lib/quantity'
+import { useUnits } from '@/lib/useUnits'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -22,7 +24,6 @@ import {
 import { copyOfRecipe } from '@/lib/recipeCopy'
 import { useStore } from '@/lib/store'
 import { loadCookSession } from '@/lib/cookSession'
-import { withFahrenheit } from '@/lib/safety'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
 import {
@@ -30,7 +31,6 @@ import {
   addDays,
   dayLabel,
   formatMinutes,
-  formatQuantity,
   pluralize,
   toDateKey,
 } from '@/lib/utils'
@@ -55,6 +55,7 @@ export function RecipeDetail({ id }: { id: string }) {
   const deleteRecipe = useStore((s) => s.deleteRecipe)
   const addRecipe = useStore((s) => s.addRecipe)
   const cookingFor = useStore((s) => s.settings.cookingFor)
+  const units = useUnits()
 
   const [servings, setServings] = useState<number | null>(null)
   useEffect(() => {
@@ -260,7 +261,7 @@ export function RecipeDetail({ id }: { id: string }) {
                     </span>
                   )}
                   <span className="shrink-0 text-sm tabular-nums text-ink-2">
-                    {formatQuantity(ing.quantity * scale, ing.unit)}
+                    {formatAmount(ing.quantity * scale, ing.unit, { system: units })}
                   </span>
                 </li>
               )
@@ -288,7 +289,7 @@ export function RecipeDetail({ id }: { id: string }) {
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-base leading-relaxed">{withFahrenheit(step.text)}</p>
+                  <p className="text-base leading-relaxed">{withTemperatures(step.text, units)}</p>
                   {step.timerMinutes && (
                     <Tag className="mt-2 gap-1">
                       <Timer className="h-3 w-3" aria-hidden /> {step.timerMinutes} min

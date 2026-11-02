@@ -1,5 +1,7 @@
 'use client'
 
+import { formatAmount, withTemperatures } from '@/lib/quantity'
+import { useUnits } from '@/lib/useUnits'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -18,12 +20,12 @@ import { useStore } from '@/lib/store'
 import { announce as say } from '@/lib/announce'
 import { addDays, toDateKey } from '@/lib/utils'
 import { clearCookSession, loadCookSession, saveCookSession } from '@/lib/cookSession'
-import { cautionsFor, needsGrownUp, withFahrenheit } from '@/lib/safety'
+import { cautionsFor, needsGrownUp } from '@/lib/safety'
 import { withUndo } from '@/lib/undo'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { Stepper } from '@/components/ui/Stepper'
 import { useTapGuard } from '@/lib/useTapGuard'
-import { cn, formatQuantity, pluralize } from '@/lib/utils'
+import { cn, pluralize } from '@/lib/utils'
 import { checkPop, settle } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -106,6 +108,7 @@ export function CookMode({
   )
   const markCooked = useStore((s) => s.markCooked)
   const cookingFor = useStore((s) => s.settings.cookingFor)
+  const units = useUnits()
   const setPlanServings = useStore((s) => s.setServings)
   const setPlanEntry = useStore((s) => s.setPlanEntry)
   const kids = useStore((s) => s.settings.cookingWithKids)
@@ -469,7 +472,7 @@ export function CookMode({
                 Step {index + 1} of {steps.length}
               </Eyebrow>
               <p className="font-display text-fluid-step font-medium leading-tight tracking-tight">
-                {withFahrenheit(step.text)}
+                {withTemperatures(step.text, units)}
               </p>
               <StepCautions text={step.text} own={step.caution} kids={kids} />
             </div>
@@ -572,7 +575,7 @@ export function CookMode({
                     {ing.optional && ' (optional)'}
                   </span>
                   <span className="text-sm tabular-nums text-ink-2">
-                    {formatQuantity(ing.quantity * scale, ing.unit)}
+                    {formatAmount(ing.quantity * scale, ing.unit, { system: units })}
                   </span>
                 </button>
               </li>
