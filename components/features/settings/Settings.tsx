@@ -13,6 +13,7 @@ import { useAppContext } from '@/components/shell/Providers'
 import { tasteOptions } from '@/components/features/onboarding/Onboarding'
 import { Button } from '@/components/ui/Button'
 import { Card, SectionTitle } from '@/components/ui/Card'
+import { InstallCard } from '@/components/shell/InstallCard'
 import { Chip } from '@/components/ui/Chip'
 import { Sheet } from '@/components/ui/Sheet'
 import { AvoidPicker } from '@/components/features/household/AvoidPicker'
@@ -290,6 +291,8 @@ export function Settings() {
           ]}
         />
       </Card>
+
+      <InstallCard />
 
       <Card>
         <SectionTitle>Your data</SectionTitle>

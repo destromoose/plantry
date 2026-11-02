@@ -4,6 +4,7 @@ import './globals.css'
 import { Providers } from '@/components/shell/Providers'
 import { AppShell } from '@/components/shell/AppShell'
 import { ErrorBoundary } from '@/components/shell/ErrorBoundary'
+import { ServiceWorker } from '@/components/shell/ServiceWorker'
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -24,6 +25,13 @@ export const metadata: Metadata = {
     'The app that answers "what\'s for dinner?" before you ask. Built from your pantry, your energy, and the day outside.',
   applicationName: 'Plantry',
   appleWebApp: { capable: true, title: 'Plantry', statusBarStyle: 'default' },
+  icons: {
+    icon: [
+      { url: '/icons/favicon-48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
+  },
 }
 
 export const viewport: Viewport = {
@@ -56,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AppShell>{children}</AppShell>
           </Providers>
         </ErrorBoundary>
+        <ServiceWorker />
       </body>
     </html>
   )
