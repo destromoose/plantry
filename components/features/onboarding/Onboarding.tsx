@@ -78,7 +78,10 @@ export function Onboarding() {
   const heading = useRef<HTMLHeadingElement>(null)
   const idx = steps.indexOf(step)
 
+  // Set while finishing, so the history rewind below doesn't change steps or save a draft.
+  const finishing = useRef(false)
   useEffect(() => {
+    if (finishing.current) return
     saveDraft({ step, names, tastes, avoid, picked: [...picked] })
   }, [step, names, tastes, avoid, picked])
 
@@ -96,7 +99,10 @@ export function Onboarding() {
     // Step back through history when we added the entry, so Back and the phone agree.
     if (depth.current > 0) window.history.back()
     else {
-      setStepState(steps[idx - 1])
+      // Restored from a draft with no entries of our own: change this entry in place.
+      const prev = steps[idx - 1]
+      window.history.replaceState({ ...window.history.state, onboarding: prev, depth: 0 }, '')
+      setStepState(prev)
       setTried(false)
     }
   }
@@ -104,6 +110,7 @@ export function Onboarding() {
     // Mark the entry we started on, so stepping back to it restores a step restored from a draft.
     window.history.replaceState({ ...window.history.state, onboarding: step, depth: 0 }, '')
     const onPop = (e: PopStateEvent) => {
+      if (finishing.current) return
       const st = e.state as { onboarding?: (typeof steps)[number]; depth?: number } | null
       const s = st?.onboarding
       depth.current = st?.depth ?? 0
@@ -152,24 +159,29 @@ export function Onboarding() {
     }
     if (idx < steps.length - 1) setStep(steps[idx + 1])
     else {
+      finishing.current = true
       clearDraft()
-      complete({
-        members: names.map((name) => ({ name: name.trim().slice(0, 40) })),
-        tastes,
-        avoid,
-        pantryNames: [...picked],
-      })
-      // Take the step entries off history first, so Back from Tonight doesn't land here.
+      // Take the step entries off history first, then finish, so Back from Tonight doesn't land
+      // here. Finishing after the rewind also keeps the shell's redirect from racing it.
+      const finish = () => {
+        complete({
+          members: names.map((name) => ({ name: name.trim().slice(0, 40) })),
+          tastes,
+          avoid,
+          pantryNames: [...picked],
+        })
+        router.replace('/')
+      }
       const n = depth.current
       depth.current = 0
       if (n > 0) {
         const done = () => {
           window.removeEventListener('popstate', done)
-          router.replace('/')
+          finish()
         }
         window.addEventListener('popstate', done)
         window.history.go(-n)
-      } else router.replace('/')
+      } else finish()
     }
   }
 
