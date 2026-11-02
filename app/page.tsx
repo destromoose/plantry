@@ -1,3 +1,5 @@
+import { Tonight } from '@/components/features/tonight/Tonight'
+
 export default function Page() {
-  return <div className="py-10 text-ink-3">Coming up: tonight</div>
+  return <Tonight />
 }

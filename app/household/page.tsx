@@ -1,3 +1,5 @@
+import { Household } from '@/components/features/household/Household'
+
 export default function Page() {
-  return <div className="py-10 text-ink-3">Coming up: household</div>
+  return <Household />
 }

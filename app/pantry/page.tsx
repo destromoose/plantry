@@ -1,3 +1,5 @@
+import { Pantry } from '@/components/features/pantry/Pantry'
+
 export default function Page() {
-  return <div className="py-10 text-ink-3">Coming up: pantry</div>
+  return <Pantry />
 }

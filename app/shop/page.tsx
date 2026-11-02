@@ -1,3 +1,5 @@
+import { Shop } from '@/components/features/shop/Shop'
+
 export default function Page() {
-  return <div className="py-10 text-ink-3">Coming up: shop</div>
+  return <Shop />
 }
