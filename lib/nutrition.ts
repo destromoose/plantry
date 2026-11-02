@@ -1,7 +1,7 @@
 // Rough nutrition per serving, from the ingredient facts table.
 
 import type { Recipe } from './types'
-import { factsFor, gramsOf } from './ingredientFacts'
+import { factsFor, gramsOf, isTrace } from './ingredientFacts'
 
 export interface Nutrition {
   kcal: number
@@ -23,7 +23,11 @@ export function nutritionOf(recipe: Recipe): Nutrition {
     out.total++
     const f = factsFor(ing)
     const g = f && gramsOf(ing.quantity, ing.unit, f)
-    if (!f || g === undefined) continue
+    if (!f || g === undefined) {
+      // Salt, spices and herbs count as known: they barely move the numbers.
+      if (isTrace(ing.name)) out.known++
+      continue
+    }
     out.known++
     const k = g / 100
     out.kcal += f.kcal * k

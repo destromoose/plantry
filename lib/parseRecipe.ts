@@ -89,15 +89,26 @@ export function detectTimer(text: string): number | undefined {
   const num = String.raw`(\d+(?:[.,]\d+)?|\d*[½¼¾⅓⅔])`
   const range = String.raw`${num}(?:\s*(?:-|–|to)\s*${num})?`
   const read = (a?: string, b?: string) => toNumber(b ?? a ?? '')
-  let total = 0
-  const hours = text.match(new RegExp(`${range}\\s*(?:hours?|hrs?)\\b`, 'i'))
-  if (hours) total += read(hours[1], hours[2]) * 60
-  const mins = text.match(new RegExp(`${range}\\s*(?:minutes?|mins?)\\b`, 'i'))
-  if (mins) total += read(mins[1], mins[2])
-  if (!hours && !mins) {
-    const secs = text.match(new RegExp(`${range}\\s*(?:seconds?|secs?)\\b`, 'i'))
-    if (secs) total += read(secs[1], secs[2]) / 60
+  // A step can name several times ("fry for 5 mins, then simmer for 25-30 mins").
+  // The longest is the one worth a timer; "1 hour 15 minutes" counts as one time.
+  const re = new RegExp(`${range}\\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\\b`, 'gi')
+  const times: number[] = []
+  let lastHourEnd = -1
+  for (const m of text.matchAll(re)) {
+    const n = read(m[1], m[2])
+    const unit = m[3].toLowerCase()
+    const at = m.index ?? 0
+    if (unit.startsWith('h')) {
+      times.push(n * 60)
+      lastHourEnd = at + m[0].length
+    } else if (unit.startsWith('m')) {
+      const gap = text.slice(lastHourEnd, at)
+      if (lastHourEnd >= 0 && /^[\s,]*(?:and\s*)?$/i.test(gap)) times[times.length - 1] += n
+      else times.push(n)
+      lastHourEnd = -1
+    } else times.push(n / 60)
   }
+  const total = times.length ? Math.max(...times) : 0
   return total > 0 && total < 600 ? Math.round(total * 100) / 100 : undefined
 }
 

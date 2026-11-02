@@ -58,7 +58,7 @@ function wordsFor(ing: Ingredient): string[] {
   if (ing.key) out.add(ing.key.toLowerCase())
   // "red onion" is "the onion" in a step; "chicken thighs" may be "the chicken".
   const last = parts[parts.length - 1]
-  if (last && last.length >= 4) out.add(last)
+  if (last && last.length >= 3) out.add(last)
   if (parts.length >= 2 && parts[0].length >= 4) out.add(parts[0])
   return [...out].filter(Boolean)
 }

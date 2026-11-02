@@ -6,6 +6,8 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { useSync } from '@/lib/sync'
+import { SyncCard } from '@/components/features/sync/SyncCard'
 import { MAX_PEOPLE } from '@/components/features/onboarding/Onboarding'
 import { withUndo } from '@/lib/undo'
 import { avoidLabel } from '@/lib/diet'
@@ -25,6 +27,7 @@ import { fromDateKey, pluralize, shortDay, weekOf } from '@/lib/utils'
 export function Household() {
   const settings = useStore((s) => s.settings)
   const members = useStore((s) => s.members)
+  const syncCode = useSync((s) => s.code)
   const plan = useStore((s) => s.plan)
   const recipes = useStore((s) => s.recipes)
   const handoffs = useStore((s) => s.handoffs)
@@ -241,7 +244,14 @@ export function Household() {
           <span id="handoffs-h">{t('Hand-offs')}</span>
         </SectionTitle>
         <p className="-mt-2 mb-3 text-sm text-ink-3">
-          {t('These stay on this device. Nothing is sent to anyone.')}
+          {syncCode
+            ? t('Hand-offs are shared with everyone in your household.')
+            : t('Hand-offs show up on other phones once your household shares.')}{' '}
+          {!syncCode && (
+            <a href="#sharing" className="font-medium text-ink underline underline-offset-4">
+              {t('Set up sharing')}
+            </a>
+          )}
         </p>
         {handoffs.length === 0 ? (
           <p className="card p-5 text-ink-2">
@@ -312,6 +322,10 @@ export function Household() {
             </li>
           </ul>
         </Card>
+      </section>
+
+      <section id="sharing" aria-label={t('Share with your household')} className="scroll-mt-24">
+        <SyncCard />
       </section>
 
       <Sheet

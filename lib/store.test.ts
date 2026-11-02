@@ -317,3 +317,15 @@ describe('new starter recipes', () => {
     expect(again.recipes.map((r) => r.id)).not.toContain(seedAdded[SEED_VERSION][0])
   })
 })
+
+describe('starter photos', () => {
+  it('updates a saved starter recipe to the current photo', () => {
+    const load = (state: unknown) =>
+      useStore.persist.getOptions().merge!(state, useStore.getState()) as ReturnType<
+        typeof useStore.getState
+      >
+    const old = { ...seedRecipes[0], imageUrl: 'https://images.unsplash.com/photo-old' }
+    const s = load({ settings: useStore.getState().settings, recipes: [old] })
+    expect(s.recipes[0].imageUrl).toBe(seedRecipes[0].imageUrl)
+  })
+})

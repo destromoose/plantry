@@ -71,7 +71,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Lemony chickpea skillet',
       description:
         'Chickpeas simmered with cumin and garlic, wilted spinach, and a salty crumble of feta on top.',
-      photo: '1540189549336-e6e99c3679fe',
+      photo: '1612700722193-f0410adb8949',
       active: 20,
       total: 30,
       servings: 4,
@@ -900,7 +900,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Potato and kale soup',
       description:
         'A rustic, filling soup of soft potato, paprika and chickpeas, with kale folded in at the end.',
-      photo: '1547592166-23ac45744acd',
+      photo: '1616501268826-ee9731c915d4',
       active: 20,
       total: 45,
       servings: 4,

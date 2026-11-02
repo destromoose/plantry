@@ -19,7 +19,8 @@ export function RecipeFacts({ recipe, servings }: { recipe: Recipe; servings: nu
   const n = useMemo(() => nutritionOf(recipe), [recipe])
   const money = (x: number) => formatMoney(x, settings.currency)
   const showCost = cost.known > 0 && cost.known / cost.count >= 0.6
-  const showNutrition = settings.showNutrition && n.known > 0
+  // Totals from a few ingredients mislead (a curry at 30 kcal), so wait for most of them.
+  const showNutrition = settings.showNutrition && n.total > 0 && n.known / n.total >= 0.6
 
   if (!showCost && !showNutrition) return null
   return (

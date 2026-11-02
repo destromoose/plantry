@@ -85,6 +85,8 @@ export async function fetchPublicPage(raw: string): Promise<{ html: string; url:
         url = new URL(loc, u).toString()
         continue
       }
+      // 401/402/403/429/451: the site turns away apps (often a bot wall), so a retry won't help.
+      if ([401, 402, 403, 429, 451].includes(res.status)) throw new FetchRefused('blocked')
       if (!res.ok) throw new FetchRefused(res.status === 404 ? 'not-found' : 'unreachable')
       const type = res.headers.get('content-type') ?? ''
       if (type && !/html|xml/i.test(type)) throw new FetchRefused('not-a-page')

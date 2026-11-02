@@ -145,3 +145,11 @@ describe('import-style lines', () => {
     expect(parseIngredientLine('1 tsp kosher salt; or table salt')?.name).toBe('kosher salt')
   })
 })
+
+describe('detectTimer with several times', () => {
+  it('picks the longest', () => {
+    expect(detectTimer('Fry for 5 mins, then add the tomatoes and simmer for 25-30 mins.')).toBe(30)
+    expect(detectTimer('Rest 10 minutes, then roast for 1 hour 15 minutes')).toBe(75)
+    expect(detectTimer('Stir for 30 seconds, then cook 2 minutes')).toBe(2)
+  })
+})

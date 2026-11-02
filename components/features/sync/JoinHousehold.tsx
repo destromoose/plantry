@@ -13,6 +13,7 @@ import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
+import { MAX_PEOPLE } from '@/components/features/onboarding/Onboarding'
 import { toast } from '@/components/ui/Toast'
 
 type Peek = Awaited<ReturnType<typeof peekHousehold>>
@@ -28,6 +29,8 @@ export function JoinHousehold() {
   const [code, setCode] = useState(params.get('code') ?? '')
   const [peek, setPeek] = useState<Peek | null>(null)
   const [me, setMe] = useState<string | undefined>()
+  /** Set when the person isn't on the list yet. */
+  const [newName, setNewName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const tried = useRef(false)
@@ -36,7 +39,10 @@ export function JoinHousehold() {
     setBusy(true)
     setError(null)
     try {
-      setPeek(await peekHousehold(input))
+      const found = await peekHousehold(input)
+      setPeek(found)
+      // A household with nobody named yet: this phone's person is the first.
+      setNewName(found.doc.members.length ? null : '')
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -56,7 +62,7 @@ export function JoinHousehold() {
 
   function join() {
     if (!peek) return
-    joinHousehold(peek, me)
+    joinHousehold(peek, newName === null ? me : undefined, newName ?? undefined)
     toast(t('Joined. This phone now shares with your household.'))
     router.replace('/')
   }
@@ -132,13 +138,42 @@ export function JoinHousehold() {
                     role="radio"
                     aria-checked={me === m.id}
                     aria-pressed={undefined}
-                    selected={me === m.id}
-                    onClick={() => setMe(me === m.id ? undefined : m.id)}
+                    selected={newName === null && me === m.id}
+                    onClick={() => {
+                      setNewName(null)
+                      setMe(me === m.id ? undefined : m.id)
+                    }}
                   >
                     {m.name}
                   </Chip>
                 ))}
+                {d!.members.length < MAX_PEOPLE && (
+                  <Chip
+                    role="radio"
+                    aria-checked={newName !== null}
+                    aria-pressed={undefined}
+                    selected={newName !== null}
+                    onClick={() => setNewName(newName === null ? '' : null)}
+                  >
+                    {t('Someone new')}
+                  </Chip>
+                )}
               </div>
+            </div>
+          )}
+          {(newName !== null || d!.members.length === 0) && (
+            <div>
+              <label htmlFor="new-name" className="mb-2 block text-sm font-medium text-ink-2">
+                {t('Your name')}
+              </label>
+              <Input
+                id="new-name"
+                value={newName ?? ''}
+                onChange={(e) => setNewName(e.target.value)}
+                maxLength={40}
+                autoComplete="given-name"
+                autoFocus={d!.members.length > 0}
+              />
             </div>
           )}
           {onboarded && hasData && (
@@ -149,7 +184,7 @@ export function JoinHousehold() {
             </p>
           )}
           <div className="flex flex-col gap-2">
-            <Button size="lg" onClick={join}>
+            <Button size="lg" onClick={join} disabled={newName !== null && !newName.trim()}>
               {t('Join')}
             </Button>
             <Button variant="ghost" onClick={() => setPeek(null)}>

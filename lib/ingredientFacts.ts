@@ -121,6 +121,8 @@ const rows: Record<string, Row> = {
   'red lentil': [358, 24, 63, 2, 11, 0.5],
   'vegetable oil': [884, 0, 0, 100, 0, 0.3, undefined, 13.5],
   'coconut oil': [862, 0, 0, 100, 0, 1.3, undefined, 13.5],
+  almond: [579, 21, 22, 50, 12.5, 2.2, 1.2],
+  'curry paste': [190, 3, 15, 13, 4, 2.0],
 }
 
 export const factsTable: Record<string, Facts> = Object.fromEntries(
@@ -141,7 +143,141 @@ export const factsTable: Record<string, Facts> = Object.fromEntries(
 
 /** Facts for an ingredient, by its key or, failing that, its name. */
 export function factsFor(ing: { key: string; name?: string }): Facts | undefined {
-  return factsTable[ing.key] ?? (ing.name ? factsTable[keyOf(ing.name)] : undefined)
+  const direct = factsTable[ing.key] ?? factsTable[aliases[ing.key] ?? '']
+  if (direct || !ing.name) return direct
+  const k = looseKey(ing.name)
+  return k ? factsTable[k] : undefined
+}
+
+// Words that describe an ingredient without changing what it is, for nutrition.
+const describing = new Set(
+  (
+    'large small medium big extra fresh freshly dried ground unsalted salted plain natural ' +
+    'fat free low full reduced organic free range boneless skinless and or skin on bone in ' +
+    'thumb sized piece pieces of bunch handful can cans tin tins jar pack packet bag ' +
+    'sharp aged block shredded ' +
+    'chopped diced sliced minced grated crushed finely roughly thinly halved x mild hot ' +
+    'ripe raw cooked uncooked frozen good quality lean mature'
+  ).split(' ')
+)
+
+// Other names for things the table knows. Keys are what keyOf gives after describing
+// words are dropped.
+const aliases: Record<string, string> = {
+  'sunflower oil': 'vegetable oil',
+  'rapeseed oil': 'vegetable oil',
+  'canola oil': 'vegetable oil',
+  'groundnut oil': 'vegetable oil',
+  'peanut oil': 'vegetable oil',
+  'garlic clove': 'garlic',
+  spaghetti: 'pasta',
+  penne: 'pasta',
+  fusilli: 'pasta',
+  linguine: 'pasta',
+  macaroni: 'pasta',
+  rigatoni: 'pasta',
+  tagliatelle: 'pasta',
+  orzo: 'pasta',
+  'basmati rice': 'rice',
+  'jasmine rice': 'rice',
+  'long grain rice': 'rice',
+  'arborio rice': 'rice',
+  'risotto rice': 'rice',
+  'double cream': 'cream',
+  'heavy cream': 'cream',
+  'single cream': 'cream',
+  'whipping cream': 'cream',
+  'tomato puree': 'tomato paste',
+  'chopped tomato': 'canned tomato',
+  'plum tomato': 'canned tomato',
+  'greek yogurt': 'yogurt',
+  'greek yoghurt': 'yogurt',
+  yoghurt: 'yogurt',
+  'brown sugar': 'sugar',
+  'brown soft sugar': 'sugar',
+  'caster sugar': 'sugar',
+  'granulated sugar': 'sugar',
+  'icing sugar': 'sugar',
+  'all purpose flour': 'flour',
+  'self raising flour': 'flour',
+  'bread flour': 'flour',
+  'egg noodle': 'noodle',
+  'rice noodle': 'noodle',
+  chilli: 'jalapeno',
+  'red chilli': 'jalapeno',
+  'green chilli': 'jalapeno',
+  chile: 'jalapeno',
+  coriander: 'cilantro',
+  'minced beef': 'ground beef',
+  'pork mince': 'ground pork',
+  shrimp: 'prawn',
+  'king prawn': 'prawn',
+  cheese: 'cheddar',
+  'cheddar cheese': 'cheddar',
+  'feta cheese': 'feta',
+  'mozzarella cheese': 'mozzarella',
+  'mozzarella ball': 'mozzarella',
+  'parmesan cheese': 'parmesan',
+  'smoked paprika': 'paprika',
+  'stock cube': 'stock',
+  'chicken stock': 'stock',
+  'vegetable stock': 'stock',
+  'beef stock': 'stock',
+  broth: 'stock',
+  'chicken broth': 'stock',
+  'red onion': 'onion',
+  'white onion': 'onion',
+  'yellow onion': 'onion',
+  shallot: 'onion',
+  'red pepper': 'bell pepper',
+  'green pepper': 'bell pepper',
+  'yellow pepper': 'bell pepper',
+  'baby spinach': 'spinach',
+  'sweet corn': 'corn',
+  sweetcorn: 'corn',
+  'chicken thigh fillet': 'chicken thigh',
+  'chicken breast fillet': 'chicken breast',
+  'salmon fillet': 'salmon',
+  'extra virgin olive oil': 'olive oil',
+  'olive oil spray': 'olive oil',
+  'whole milk': 'milk',
+  'semi skimmed milk': 'milk',
+  'skimmed milk': 'milk',
+  'creme fraiche': 'sour cream',
+  'tinned tomato': 'canned tomato',
+}
+
+/** A key the facts table knows, found by dropping describing words and trying aliases. */
+export function looseKey(name: string): string | undefined {
+  const words = keyOf(name.replace(/-/g, ' '))
+    .split(' ')
+    .filter((w) => w && !describing.has(w) && !/^\d/.test(w))
+  // The whole remaining name only: "almond milk" must not fall back to milk, nor
+  // "cream cheese" to cheddar. Unknown is better than wrong.
+  const rest = keyOf(words.join(' '))
+  const k = aliases[rest] ?? rest
+  return factsTable[k] ? k : undefined
+}
+
+// Spices, herbs and the like: real ingredients, but too little to change the numbers.
+const trace = new Set(
+  (
+    'turmeric|garam masala|curry powder|chilli powder|chili powder|cayenne|cinnamon|nutmeg|' +
+    'cumin seed|coriander seed|fennel seed|mustard seed|bay leaf|bay leave|thyme|rosemary|' +
+    'sage|basil|mint|dill|chive|tarragon|water|ice|baking powder|baking soda|' +
+    'bicarbonate of soda|vanilla extract|vanilla|saffron|cardamom|star anise|allspice|' +
+    'five spice|sumac|zaatar|italian seasoning|mixed herb|herbes de provence|cajun seasoning|' +
+    'ground coriander|ground ginger|clove|sea salt|kosher salt|pepper|white pepper|' +
+    'yeast|lemon zest|lime zest|gelatin|food coloring|cooking spray'
+  ).split('|')
+)
+
+/** True for seasonings so small they don't change nutrition. */
+export function isTrace(name: string): boolean {
+  const k = keyOf(name.replace(/-/g, ' '))
+  if (trace.has(k)) return true
+  const words = k.split(' ').filter((w) => !describing.has(w))
+  return trace.has(words.join(' ')) || trace.has(words.slice(-2).join(' '))
 }
 
 /** Grams in an amount of this ingredient, or undefined when it can't be told. */
