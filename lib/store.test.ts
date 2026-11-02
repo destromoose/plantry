@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useStore } from './store'
 import type { Aisle, Recipe } from './types'
 
-function recipe(id: string, ings: { key: string; quantity?: number; aisle?: Aisle }[], leftovers = false): Recipe {
+function recipe(
+  id: string,
+  ings: { key: string; quantity?: number; aisle?: Aisle }[],
+  leftovers = false
+): Recipe {
   return {
     id,
     title: id,
@@ -34,11 +38,19 @@ beforeEach(() => {
 
 describe('completeOnboarding', () => {
   it('creates members with colors and pantry items', () => {
-    s().completeOnboarding({ members: [{ name: 'Ana' }, { name: 'Ben' }], tastes: ['cozy'], pantryNames: ['Olive oil', 'Eggs'] })
+    s().completeOnboarding({
+      members: [{ name: 'Ana' }, { name: 'Ben' }],
+      tastes: ['cozy'],
+      pantryNames: ['Olive oil', 'Eggs'],
+    })
     expect(s().members).toHaveLength(2)
     expect(s().members.every((m) => !!m.color)).toBe(true)
     expect(s().members[0].isMe).toBe(true)
-    expect(s().pantry.map((p) => p.key).sort()).toEqual(['egg', 'olive oil'])
+    expect(
+      s()
+        .pantry.map((p) => p.key)
+        .sort()
+    ).toEqual(['egg', 'olive oil'])
     expect(s().settings.onboarded).toBe(true)
   })
 })
@@ -48,7 +60,10 @@ describe('generateShop', () => {
     useStore.setState({
       recipes: [
         recipe('r1', [{ key: 'tomato', quantity: 2 }, { key: 'basil' }]),
-        recipe('r2', [{ key: 'tomato', quantity: 3 }, { key: 'rice', aisle: 'pantry' }]),
+        recipe('r2', [
+          { key: 'tomato', quantity: 3 },
+          { key: 'rice', aisle: 'pantry' },
+        ]),
       ],
       plan: [
         { id: 'a', date: '2026-11-03', slot: 'dinner', recipeId: 'r1' },
@@ -57,7 +72,9 @@ describe('generateShop', () => {
     })
     s().addPantryItem({ name: 'Rice' })
     s().generateShop(['2026-11-03', '2026-11-04'])
-    const keys = s().shop.map((i) => i.key).sort()
+    const keys = s()
+      .shop.map((i) => i.key)
+      .sort()
     expect(keys).toEqual(['basil', 'tomato'])
     const tomato = s().shop.find((i) => i.key === 'tomato')!
     expect(tomato.quantity).toBe(5)

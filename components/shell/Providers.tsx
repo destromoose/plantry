@@ -41,7 +41,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   // Weather, only when the user opted in on the Tonight screen.
   useEffect(() => {
-    if (!settings.weatherEnabled || typeof navigator === 'undefined' || !navigator.geolocation) return
+    if (!settings.weatherEnabled || typeof navigator === 'undefined' || !navigator.geolocation)
+      return
     const stale = !weather || Date.now() - new Date(weather.fetchedAt).getTime() > 60 * 60 * 1000
     if (!stale) return
     navigator.geolocation.getCurrentPosition(
@@ -64,7 +65,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     if (meta) meta.setAttribute('content', context.mood === 'night' ? '#1E1620' : '#FAF4EA')
   }, [context.mood])
 
-  const reduced = settings.reducedMotion === 'on' ? 'always' : settings.reducedMotion === 'off' ? 'never' : 'user'
+  const reduced =
+    settings.reducedMotion === 'on' ? 'always' : settings.reducedMotion === 'off' ? 'never' : 'user'
 
   return (
     <ContextCtx.Provider value={context}>

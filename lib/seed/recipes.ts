@@ -40,7 +40,7 @@ function build(m: Meta, ings: Ing[], steps: StepIn[]): Recipe {
   const stepList: Step[] = steps.map((s, i) =>
     typeof s === 'string'
       ? { id: `${m.id}-s${i + 1}`, text: s }
-      : { id: `${m.id}-s${i + 1}`, text: s[0], timerMinutes: s[1] },
+      : { id: `${m.id}-s${i + 1}`, text: s[0], timerMinutes: s[1] }
   )
   return {
     id: m.id,
@@ -66,7 +66,8 @@ export const seedRecipes: Recipe[] = [
     {
       id: 'r-lemony-chickpea-skillet',
       title: 'Lemony chickpea skillet',
-      description: 'Chickpeas simmered with cumin and garlic, wilted spinach, and a salty crumble of feta on top.',
+      description:
+        'Chickpeas simmered with cumin and garlic, wilted spinach, and a salty crumble of feta on top.',
       photo: '1540189549336-e6e99c3679fe',
       active: 20,
       total: 30,
@@ -95,14 +96,15 @@ export const seedRecipes: Recipe[] = [
       ['Simmer, mashing a few chickpeas against the pan, for 10 minutes until saucy.', 10],
       'Stir in the spinach a handful at a time until wilted, then add the zest and juice of the lemon.',
       'Crumble the feta over the top, scatter with parsley and bring the whole pan to the table.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-spinach-feta-quesadillas',
       title: 'Spinach and feta quesadillas',
-      description: 'Crisp tortillas folded around melting cheddar, salty feta and a good handful of spinach.',
+      description:
+        'Crisp tortillas folded around melting cheddar, salty feta and a good handful of spinach.',
       photo: '1565299624946-b28f40a0ae38',
       active: 10,
       total: 15,
@@ -125,9 +127,12 @@ export const seedRecipes: Recipe[] = [
       'Toss the cheeses, spinach, scallions and paprika together in a bowl.',
       'Spread a quarter of the filling over half of each tortilla and fold over.',
       'Melt a little butter in a large nonstick pan over medium heat.',
-      ['Cook two quesadillas at a time for 3 minutes per side, pressing down, until crisp and golden.', 3],
+      [
+        'Cook two quesadillas at a time for 3 minutes per side, pressing down, until crisp and golden.',
+        3,
+      ],
       'Cut into wedges and serve with spoonfuls of yogurt.',
-    ],
+    ]
   ),
 
   build(
@@ -162,14 +167,15 @@ export const seedRecipes: Recipe[] = [
       'Mash the avocado with the juice of one lime and a pinch of salt.',
       'Warm the tortillas in a dry pan or wrapped in foil in the oven.',
       'Fill the tortillas with sweet potato, beans and avocado, then top with yogurt and cilantro.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-red-lentil-dal',
       title: 'Red lentil dal with rice',
-      description: 'A soft, golden pot of lentils and tomato, finished with lemon and good for three dinners.',
+      description:
+        'A soft, golden pot of lentils and tomato, finished with lemon and good for three dinners.',
       photo: '1574484284002-952d92456975',
       active: 20,
       total: 45,
@@ -194,21 +200,28 @@ export const seedRecipes: Recipe[] = [
     ],
     [
       'Rinse the red lentils in a sieve until the water runs mostly clear.',
-      ['Soften the chopped onion in the olive oil in a large pot over medium heat for 8 minutes.', 8],
+      [
+        'Soften the chopped onion in the olive oil in a large pot over medium heat for 8 minutes.',
+        8,
+      ],
       'Add the garlic, grated ginger, cumin and chili flakes and stir for 1 minute.',
       'Add the lentils, canned tomatoes, coconut milk and 600 ml of water, and bring to a boil.',
-      ['Reduce to a simmer and cook, stirring now and then, for 20 minutes until the lentils collapse.', 20],
+      [
+        'Reduce to a simmer and cook, stirring now and then, for 20 minutes until the lentils collapse.',
+        20,
+      ],
       'Cook the rice according to the packet while the dal simmers.',
       'Season with salt and the juice of the lemon. Add a splash of water if it has thickened too far.',
       'Serve over rice with cilantro. Leftovers thicken overnight and keep for 4 days.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-thai-coconut-tofu-curry',
       title: 'Thai coconut tofu curry',
-      description: 'Golden tofu and crisp peppers in a fragrant green curry, ready in the time the rice takes.',
+      description:
+        'Golden tofu and crisp peppers in a fragrant green curry, ready in the time the rice takes.',
       photo: '1455619452474-d2be8b1e70cd',
       active: 25,
       total: 35,
@@ -232,21 +245,25 @@ export const seedRecipes: Recipe[] = [
     ],
     [
       'Start the rice according to the packet. Press the tofu between towels for 5 minutes, then cut into cubes.',
-      ['Fry the tofu in the oil in a wide pan over medium-high heat for 8 minutes, turning until golden. Remove to a plate.', 8],
+      [
+        'Fry the tofu in the oil in a wide pan over medium-high heat for 8 minutes, turning until golden. Remove to a plate.',
+        8,
+      ],
       'In the same pan, fry the garlic, ginger and curry paste for 1 minute.',
       'Pour in the coconut milk and a splash of water, scraping up the browned bits.',
       'Add the sliced peppers and zucchini, then return the tofu to the pan.',
       ['Simmer for 10 minutes until the vegetables are just tender.', 10],
       'Season with soy sauce and lime juice, then taste and adjust.',
       'Serve over rice with cilantro.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-loaded-avocado-egg-toast',
       title: 'Loaded avocado and egg toast',
-      description: 'Thick toast, mashed avocado, a runny egg and tomatoes blistered in the same pan.',
+      description:
+        'Thick toast, mashed avocado, a runny egg and tomatoes blistered in the same pan.',
       photo: '1588166524941-3bf61a9c41db',
       active: 10,
       total: 10,
@@ -272,14 +289,15 @@ export const seedRecipes: Recipe[] = [
       ['Fry the eggs for 3 minutes, until the whites are set and the yolks still run.', 3],
       'Pile the avocado on the toast, then top with tomatoes and an egg.',
       'Finish with chili flakes, crumbled feta if you have it, and black pepper.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-egg-fried-rice',
       title: 'Egg fried rice with peas',
-      description: 'Day-old rice, soft egg and sweet peas fried hot with soy and a drop of sesame oil.',
+      description:
+        'Day-old rice, soft egg and sweet peas fried hot with soy and a drop of sesame oil.',
       photo: '1512621776951-a57141f2eefd',
       active: 12,
       total: 15,
@@ -306,14 +324,15 @@ export const seedRecipes: Recipe[] = [
       'Add the rice and peas, breaking up any clumps, and keep it moving.',
       ['Fry for 3 minutes until the rice is hot and starting to crisp.', 3],
       'Return the eggs, add the soy sauce and sesame oil, and toss through the sliced scallions.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-baked-tomato-feta-pasta',
       title: 'Baked tomato and feta pasta',
-      description: 'Cherry tomatoes burst around a block of feta in the oven, then get tossed through pasta.',
+      description:
+        'Cherry tomatoes burst around a block of feta in the oven, then get tossed through pasta.',
       photo: '1473093226795-af9932fe5856',
       active: 15,
       total: 50,
@@ -338,11 +357,14 @@ export const seedRecipes: Recipe[] = [
       'Heat the oven to 200C. Put the cherry tomatoes and whole garlic cloves in a baking dish.',
       'Nestle the block of feta in the middle and pour the olive oil over everything. Add the chili flakes, oregano and salt.',
       ['Bake for 35 minutes until the tomatoes have burst and the feta is soft and golden.', 35],
-      ['Cook the pasta in well-salted water for 10 minutes, saving a mug of the cooking water before draining.', 10],
+      [
+        'Cook the pasta in well-salted water for 10 minutes, saving a mug of the cooking water before draining.',
+        10,
+      ],
       'Mash the feta and tomatoes together in the dish to make a sauce, squashing the garlic in.',
       'Fold in the pasta, the spinach and a splash of pasta water until glossy.',
       'Serve with grated parmesan. It reheats well with a little water.',
-    ],
+    ]
   ),
 
   build(
@@ -373,21 +395,25 @@ export const seedRecipes: Recipe[] = [
     ],
     [
       'Dice the onion and carrot. Melt the butter with the olive oil in a large pot over medium heat.',
-      ['Cook the onion and carrot for 10 minutes until soft, adding the garlic for the last minute.', 10],
+      [
+        'Cook the onion and carrot for 10 minutes until soft, adding the garlic for the last minute.',
+        10,
+      ],
       'Add the canned tomatoes, stock and oregano, then bring to a boil.',
       ['Simmer for 20 minutes, then blend until smooth with a stick blender.', 20],
       'Season with salt and pepper. A pinch of sugar or a little honey rounds out the tomatoes if they taste sharp.',
       'Heat the grill. Spread the bread with mustard, cover with grated cheddar and set on a tray.',
       ['Grill the toasts for 4 minutes until bubbling and browned at the edges.', 4],
       'Ladle the soup into bowls and serve with the toasts alongside.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-crispy-chickpea-tahini-bowl',
       title: 'Crispy chickpea tahini bowl',
-      description: 'Quinoa with paprika-crisped chickpeas, cool cucumber and a lemony tahini sauce.',
+      description:
+        'Quinoa with paprika-crisped chickpeas, cool cucumber and a lemony tahini sauce.',
       photo: '1546069901-ba9599a7e63c',
       active: 20,
       total: 30,
@@ -408,21 +434,28 @@ export const seedRecipes: Recipe[] = [
       ['Parsley', 'parsley', 0.5, 'bunch', PR, true],
     ],
     [
-      ['Rinse the quinoa and simmer it in 300 ml of salted water, covered, for 15 minutes. Leave it to steam off the heat.', 15],
+      [
+        'Rinse the quinoa and simmer it in 300 ml of salted water, covered, for 15 minutes. Leave it to steam off the heat.',
+        15,
+      ],
       'Drain the chickpeas and pat them very dry with a towel.',
-      ['Fry the chickpeas in the olive oil over medium-high heat, shaking the pan, for 12 minutes until crisp. Add the paprika and salt in the last minute.', 12],
+      [
+        'Fry the chickpeas in the olive oil over medium-high heat, shaking the pan, for 12 minutes until crisp. Add the paprika and salt in the last minute.',
+        12,
+      ],
       'Whisk the tahini with the lemon juice, the grated garlic and enough cold water to make a pourable sauce.',
       'Chop the cucumber and halve the tomatoes.',
       'Divide the quinoa between bowls and top with cucumber, tomatoes and chickpeas.',
       'Drizzle with the tahini sauce and scatter with parsley.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-chili-garlic-spaghetti',
       title: 'Chili garlic spaghetti with spinach',
-      description: 'Pasta in a quick sauce of golden garlic, olive oil and chili, with lemon to brighten it.',
+      description:
+        'Pasta in a quick sauce of golden garlic, olive oil and chili, with lemon to brighten it.',
       photo: '1563379926898-05f4575a45d8',
       active: 12,
       total: 20,
@@ -441,21 +474,25 @@ export const seedRecipes: Recipe[] = [
       ['Parsley', 'parsley', 0.5, 'bunch', PR, true],
     ],
     [
-      ['Cook the pasta in well-salted boiling water for 10 minutes, saving a mug of the water before draining.', 10],
+      [
+        'Cook the pasta in well-salted boiling water for 10 minutes, saving a mug of the water before draining.',
+        10,
+      ],
       'While it cooks, slice the garlic as thinly as you can.',
       'Warm the olive oil in a wide pan over low heat. Add the garlic and chili flakes.',
       'Cook gently for 3 minutes, until the garlic is pale gold and not a shade darker.',
       'Add the drained pasta and a splash of pasta water and toss over the heat until glossy.',
       'Fold in the spinach until it wilts, then add the lemon zest and juice.',
       'Serve with plenty of parmesan, parsley and black pepper.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-sheet-pan-salmon-potatoes',
       title: 'Sheet-pan mustard salmon and potatoes',
-      description: 'Salmon glazed with mustard and honey over crisp lemony potatoes, all on one tray.',
+      description:
+        'Salmon glazed with mustard and honey over crisp lemony potatoes, all on one tray.',
       photo: '1559847844-5315695dadae',
       active: 15,
       total: 40,
@@ -482,14 +519,15 @@ export const seedRecipes: Recipe[] = [
       'Push the potatoes aside, add the zucchini and the salmon, and brush the salmon with the mustard glaze.',
       ['Roast for 12 minutes, until the salmon flakes easily.', 12],
       'Squeeze over the remaining lemon, scatter with parsley and serve from the tray.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-teriyaki-salmon-rice-bowl',
       title: 'Teriyaki salmon rice bowl',
-      description: 'Glossy soy and honey salmon over rice with cucumber, avocado and pickled ginger crunch.',
+      description:
+        'Glossy soy and honey salmon over rice with cucumber, avocado and pickled ginger crunch.',
       photo: '1540914124281-342587941389',
       active: 20,
       total: 30,
@@ -511,14 +549,17 @@ export const seedRecipes: Recipe[] = [
       ['Scallions', 'scallion', 2, 'whole', PR, true],
     ],
     [
-      ['Rinse the rice and cook it according to the packet, about 12 minutes, then rest it covered.', 12],
+      [
+        'Rinse the rice and cook it according to the packet, about 12 minutes, then rest it covered.',
+        12,
+      ],
       'Stir together the soy sauce, honey, grated ginger and garlic for the glaze.',
       'Slice the cucumber and toss it with the vinegar and a pinch of salt. Slice the avocado.',
       'Pat the salmon dry and cut into four pieces. Sear in a hot oiled pan, skin side down first, for 3 minutes.',
       'Flip the salmon, pour in the glaze and let it bubble.',
       ['Cook for 3 more minutes, spooning the glaze over the fish until sticky.', 3],
       'Spoon the rice into bowls with the salmon, cucumber and avocado. Drizzle with sesame oil and scatter with scallions.',
-    ],
+    ]
   ),
 
   build(
@@ -547,20 +588,24 @@ export const seedRecipes: Recipe[] = [
     ],
     [
       'Whisk the juice of both limes with the soy sauce, honey, sesame oil and chili flakes.',
-      ['Cook the noodles in boiling water for 4 minutes, then drain and rinse under cold water.', 4],
+      [
+        'Cook the noodles in boiling water for 4 minutes, then drain and rinse under cold water.',
+        4,
+      ],
       'Cut the carrot into thin matchsticks. Mince the garlic.',
       'Heat a splash of oil in a hot pan and add the prawns with the garlic.',
       ['Sear for 3 minutes, turning once, until pink and curled.', 3],
       'Toss the noodles, carrot and prawns with the dressing.',
       'Serve at once with cilantro on top.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-lemon-oregano-chicken-tray-bake',
       title: 'Lemon oregano chicken tray bake',
-      description: 'Crisp-skinned chicken thighs roasted on potatoes and onions, with tomatoes bursting at the end.',
+      description:
+        'Crisp-skinned chicken thighs roasted on potatoes and onions, with tomatoes bursting at the end.',
       photo: '1504674900247-0877df9cc836',
       active: 15,
       total: 60,
@@ -590,14 +635,15 @@ export const seedRecipes: Recipe[] = [
       ['Roast for 40 minutes, until the chicken skin is deep golden.', 40],
       ['Scatter the tomatoes over the tray and roast for 10 more minutes until they burst.', 10],
       'Rest for 5 minutes, then top with feta and parsley and squeeze over the roasted lemon.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-peanut-chicken-noodles',
       title: 'Peanut chicken noodles',
-      description: 'Tender chicken and noodles in a creamy peanut and lime sauce, with crunchy carrot and cucumber.',
+      description:
+        'Tender chicken and noodles in a creamy peanut and lime sauce, with crunchy carrot and cucumber.',
       photo: '1529042410759-befb1204b468',
       active: 25,
       total: 30,
@@ -622,18 +668,22 @@ export const seedRecipes: Recipe[] = [
     [
       'Whisk the peanut butter, soy sauce, lime juice, honey, grated ginger, garlic and chili flakes with 4 tablespoons of hot water.',
       'Slice the chicken into thin strips and season with salt. Cut the carrots and cucumber into matchsticks.',
-      ['Fry the chicken in a hot oiled pan for 8 minutes, turning, until cooked through and golden.', 8],
+      [
+        'Fry the chicken in a hot oiled pan for 8 minutes, turning, until cooked through and golden.',
+        8,
+      ],
       ['Cook the noodles in boiling water for 4 minutes, then drain.', 4],
       'Toss the noodles and chicken with the peanut sauce, loosening with a splash of water.',
       'Fold through the carrot and cucumber and scatter with scallions.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-chicken-shawarma-bowls',
       title: 'Chicken shawarma bowls',
-      description: 'Spiced yogurt-marinated chicken over rice with cucumber, tomato and a garlicky tahini drizzle.',
+      description:
+        'Spiced yogurt-marinated chicken over rice with cucumber, tomato and a garlicky tahini drizzle.',
       photo: '1593560708920-61dd98c46a07',
       active: 25,
       total: 50,
@@ -661,17 +711,21 @@ export const seedRecipes: Recipe[] = [
       ['Toss the boneless chicken thighs in the marinade and leave for 15 minutes.', 15],
       'Cook the rice according to the packet.',
       'Heat a heavy pan over medium-high heat and cook the chicken in a single layer.',
-      ['Cook for 10 minutes, turning once, until charred in places and cooked through. Slice into strips.', 10],
+      [
+        'Cook for 10 minutes, turning once, until charred in places and cooked through. Slice into strips.',
+        10,
+      ],
       'Stir the tahini, remaining yogurt, remaining garlic and the juice of the second lemon with a splash of water into a sauce.',
       'Chop the cucumber and tomatoes. Build bowls of rice, chicken and salad, then drizzle with the sauce and scatter with parsley.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-paprika-chicken-and-rice',
       title: 'Paprika chicken and rice',
-      description: 'Browned chicken thighs cooked down with rice, peppers and peas in a single pan.',
+      description:
+        'Browned chicken thighs cooked down with rice, peppers and peas in a single pan.',
       photo: '1432139555190-58524dae6a55',
       active: 20,
       total: 50,
@@ -694,20 +748,27 @@ export const seedRecipes: Recipe[] = [
     ],
     [
       'Season the chicken with salt, pepper and half the paprika. Dice the onion and slice the peppers.',
-      ['Brown the chicken in the oil in a wide lidded pan for 8 minutes, skin side down. Set it aside.', 8],
+      [
+        'Brown the chicken in the oil in a wide lidded pan for 8 minutes, skin side down. Set it aside.',
+        8,
+      ],
       'Cook the onion, peppers and garlic in the chicken fat for 5 minutes, then stir in the rest of the paprika and the rice.',
       'Pour in the stock and bring to a boil, then nestle the chicken back on top.',
-      ['Cover and simmer on low for 20 minutes, until the rice is tender and the stock absorbed.', 20],
+      [
+        'Cover and simmer on low for 20 minutes, until the rice is tender and the stock absorbed.',
+        20,
+      ],
       'Scatter the frozen peas over the top, replace the lid and leave off the heat.',
       ['Rest for 5 minutes, then squeeze over the lemon and add parsley.', 5],
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-black-bean-beef-chili',
       title: 'Black bean beef chili',
-      description: 'A thick, smoky pot of beef, beans and tomato that tastes even better the next day.',
+      description:
+        'A thick, smoky pot of beef, beans and tomato that tastes even better the next day.',
       photo: '1543339308-43e59d6b73a6',
       active: 20,
       total: 60,
@@ -732,20 +793,27 @@ export const seedRecipes: Recipe[] = [
     ],
     [
       'Dice the onion and pepper and mince the garlic.',
-      ['Brown the beef in a large heavy pot over high heat for 8 minutes, breaking it up. Drain off excess fat.', 8],
+      [
+        'Brown the beef in a large heavy pot over high heat for 8 minutes, breaking it up. Drain off excess fat.',
+        8,
+      ],
       'Add the onion and pepper and cook for 5 minutes until soft, then stir in the garlic, cumin, paprika and chili flakes for 1 minute.',
       'Pour in the canned tomatoes and stock, add the drained black beans and bring to a boil.',
-      ['Reduce the heat and simmer, partly covered, for 35 minutes, stirring now and then, until thick.', 35],
+      [
+        'Reduce the heat and simmer, partly covered, for 35 minutes, stirring now and then, until thick.',
+        35,
+      ],
       'Season well with salt and pepper.',
       'Ladle into bowls and top with grated cheddar and a spoonful of yogurt. Cool leftovers quickly and refrigerate.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-slow-simmered-beef-ragu',
       title: 'Slow-simmered beef ragu',
-      description: 'Beef, carrot and celery cooked down in tomato until deep and savory, tossed with pasta.',
+      description:
+        'Beef, carrot and celery cooked down in tomato until deep and savory, tossed with pasta.',
       photo: '1476124369491-e7addf5db371',
       active: 30,
       total: 90,
@@ -769,21 +837,25 @@ export const seedRecipes: Recipe[] = [
     ],
     [
       'Finely chop the onion, carrot and celery.',
-      ['Soften the vegetables in the olive oil in a large pot over medium heat for 10 minutes.', 10],
+      [
+        'Soften the vegetables in the olive oil in a large pot over medium heat for 10 minutes.',
+        10,
+      ],
       'Push them aside, turn up the heat and brown the beef well, breaking it into small pieces. Add the garlic and oregano.',
       'Add the canned tomatoes and stock, season with salt, and bring to a gentle bubble.',
       ['Simmer, partly covered, for 45 minutes, stirring now and then, until rich and thick.', 45],
       ['Cook the pasta in well-salted water for 10 minutes.', 10],
       'Toss the drained pasta with a generous amount of ragu and serve with grated parmesan.',
       'Freeze any extra sauce in portions for up to 3 months.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-ginger-pork-stir-fry',
       title: 'Ginger pork stir-fry',
-      description: 'Minced pork browned hard with ginger, garlic and soy, with crunchy peppers over rice.',
+      description:
+        'Minced pork browned hard with ginger, garlic and soy, with crunchy peppers over rice.',
       photo: '1484723091739-30a097e8f929',
       active: 20,
       total: 30,
@@ -809,18 +881,22 @@ export const seedRecipes: Recipe[] = [
       ['Cook the rice according to the packet, about 12 minutes.', 12],
       'Mix the soy sauce, honey and sesame oil. Slice the peppers, carrot and scallions, and grate the ginger.',
       'Heat the oil in a wide pan or wok over high heat.',
-      ['Add the pork in an even layer and cook, breaking it up, for 6 minutes until well browned.', 6],
+      [
+        'Add the pork in an even layer and cook, breaking it up, for 6 minutes until well browned.',
+        6,
+      ],
       'Add the ginger, garlic, peppers and carrot and stir-fry for 3 minutes so the vegetables stay crisp.',
       'Pour in the sauce and let it bubble and coat everything for 1 minute.',
       'Serve over rice with scallions and lime wedges.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-potato-kale-soup',
       title: 'Potato and kale soup',
-      description: 'A rustic, filling soup of soft potato, paprika and chickpeas, with kale folded in at the end.',
+      description:
+        'A rustic, filling soup of soft potato, paprika and chickpeas, with kale folded in at the end.',
       photo: '1547592166-23ac45744acd',
       active: 20,
       total: 45,
@@ -848,10 +924,13 @@ export const seedRecipes: Recipe[] = [
       ['Soften the onion, carrot and celery in the olive oil in a large pot for 8 minutes.', 8],
       'Add the garlic and paprika and stir for 1 minute.',
       'Add the potatoes, drained chickpeas and stock, and bring to a boil.',
-      ['Simmer for 20 minutes, until the potatoes are very soft. Crush a few against the side of the pot to thicken.', 20],
+      [
+        'Simmer for 20 minutes, until the potatoes are very soft. Crush a few against the side of the pot to thicken.',
+        20,
+      ],
       'Stir in the kale and cook for 3 more minutes.',
       'Season with salt, pepper and lemon juice, then serve with grated parmesan.',
-    ],
+    ]
   ),
 
   build(
@@ -889,14 +968,15 @@ export const seedRecipes: Recipe[] = [
       'Make four wells in the sauce and crack an egg into each.',
       ['Cover and cook for 7 minutes, until the whites are set and the yolks are still soft.', 7],
       'Crumble over the feta, add parsley and serve straight from the pan with bread.',
-    ],
+    ]
   ),
 
   build(
     {
       id: 'r-mushroom-spinach-frittata',
       title: 'Mushroom and spinach frittata',
-      description: 'Browned mushrooms and wilted spinach set in eggs and cheddar, finished under the grill.',
+      description:
+        'Browned mushrooms and wilted spinach set in eggs and cheddar, finished under the grill.',
       photo: '1498837167922-ddd27525d352',
       active: 20,
       total: 30,
@@ -919,12 +999,15 @@ export const seedRecipes: Recipe[] = [
     [
       'Heat the grill. Slice the mushrooms and onion. Beat the eggs with the yogurt, paprika, salt and pepper.',
       'Heat the oil and butter in a 26 cm ovenproof pan over medium-high heat.',
-      ['Cook the mushrooms and onion for 8 minutes, without moving them too much, until browned.', 8],
+      [
+        'Cook the mushrooms and onion for 8 minutes, without moving them too much, until browned.',
+        8,
+      ],
       'Add the garlic and spinach and stir until the spinach wilts and the pan is fairly dry.',
       'Pour in the eggs, scatter with cheddar and reduce the heat to medium-low.',
       ['Cook for 5 minutes, until the edges are set and the center is still wobbly.', 5],
       ['Slide the pan under the grill for 4 minutes, until puffed and golden.', 4],
       'Rest for 3 minutes, then cut into wedges and serve warm or at room temperature.',
-    ],
+    ]
   ),
 ]

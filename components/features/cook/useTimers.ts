@@ -17,7 +17,9 @@ export function remainingOf(t: TimerState, now: number): number {
 
 function beep() {
   try {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    const Ctx =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!Ctx) return
     const ctx = new Ctx()
     const times = [0, 0.28, 0.56]
@@ -61,7 +63,8 @@ export function useTimers() {
           const next = { ...prev }
           for (const [id] of done) {
             const t = next[id]
-            if (t && t.endsAt !== null && t.endsAt <= n) next[id] = { ...t, endsAt: null, remainingMs: 0, finished: true }
+            if (t && t.endsAt !== null && t.endsAt <= n)
+              next[id] = { ...t, endsAt: null, remainingMs: 0, finished: true }
           }
           return next
         })
@@ -74,7 +77,12 @@ export function useTimers() {
     const n = Date.now()
     setNow(n)
     setTimers((prev) => {
-      const t = prev[id] ?? { durationMs: minutes * 60_000, remainingMs: minutes * 60_000, endsAt: null, finished: false }
+      const t = prev[id] ?? {
+        durationMs: minutes * 60_000,
+        remainingMs: minutes * 60_000,
+        endsAt: null,
+        finished: false,
+      }
       if (t.endsAt !== null) return prev
       const rem = t.finished || t.remainingMs <= 0 ? t.durationMs : t.remainingMs
       return { ...prev, [id]: { ...t, remainingMs: rem, endsAt: n + rem, finished: false } }

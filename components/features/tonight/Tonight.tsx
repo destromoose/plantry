@@ -47,15 +47,35 @@ export function Tonight() {
     [recipes, pantry, settings.tastes, energy, ctx, cooked]
   )
 
-  const greeting = ctx.mood === 'dawn' ? 'Morning' : ctx.mood === 'day' ? 'Afternoon' : ctx.mood === 'dusk' ? 'Evening' : 'Late one'
-  const dateText = fromDateKey(target).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+  const greeting =
+    ctx.mood === 'dawn'
+      ? 'Morning'
+      : ctx.mood === 'day'
+        ? 'Afternoon'
+        : ctx.mood === 'dusk'
+          ? 'Evening'
+          : 'Late one'
+  const dateText = fromDateKey(target).toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
 
   return (
-    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-7 pb-8 pt-4">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+      className="space-y-7 pb-8 pt-4"
+    >
       <motion.header variants={reveal}>
         <Eyebrow>{ctx.targetLabel}</Eyebrow>
-        <h1 className="mt-1 font-display text-fluid-xl font-semibold leading-none tracking-tight">{dateText}</h1>
-        <p className="mt-2 text-[15px] text-ink-2">{me ? `${greeting}, ${me.name}.` : `${greeting}.`}</p>
+        <h1 className="mt-1 font-display text-fluid-xl font-semibold leading-none tracking-tight">
+          {dateText}
+        </h1>
+        <p className="mt-2 text-[15px] text-ink-2">
+          {me ? `${greeting}, ${me.name}.` : `${greeting}.`}
+        </p>
       </motion.header>
 
       <motion.div variants={reveal}>
@@ -63,7 +83,14 @@ export function Tonight() {
       </motion.div>
 
       <motion.div variants={reveal}>
-        <TonightHero ranked={ranked} entry={entry} energy={energy} targetDate={target} today={today} reason={ctx.reason} />
+        <TonightHero
+          ranked={ranked}
+          entry={entry}
+          energy={energy}
+          targetDate={target}
+          today={today}
+          reason={ctx.reason}
+        />
       </motion.div>
 
       <motion.div variants={reveal}>
@@ -76,10 +103,15 @@ export function Tonight() {
       </motion.section>
 
       {ctx.isWeekend && ctx.hour < 13 && (
-        <motion.section variants={reveal} className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <motion.section
+          variants={reveal}
+          className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
+        >
           <div>
             <Eyebrow>Sunday ritual</Eyebrow>
-            <p className="mt-1 font-display text-lg font-semibold">Ten minutes now saves five decisions later.</p>
+            <p className="mt-1 font-display text-lg font-semibold">
+              Ten minutes now saves five decisions later.
+            </p>
           </div>
           <Link href="/week" className={cn(buttonVariants({ variant: 'secondary' }), 'self-start')}>
             Plan the week
@@ -98,7 +130,17 @@ export function Tonight() {
 
 /* ------------------------------------------------------------------ */
 
-function NudgeCard({ nudge, targetDate, today, now }: { nudge: string; targetDate: string; today: string; now: string }) {
+function NudgeCard({
+  nudge,
+  targetDate,
+  today,
+  now,
+}: {
+  nudge: string
+  targetDate: string
+  today: string
+  now: string
+}) {
   const recipes = useStore((s) => s.recipes)
   const plan = useStore((s) => s.plan)
   const setPlanEntry = useStore((s) => s.setPlanEntry)
@@ -109,7 +151,10 @@ function NudgeCard({ nudge, targetDate, today, now }: { nudge: string; targetDat
   const recipe = entry?.recipeId ? recipes.find((r) => r.id === entry.recipeId) : undefined
 
   const shell = (title: string, body: string | undefined, action: React.ReactNode) => (
-    <aside className="card flex flex-col gap-3 border-l-4 border-l-accent p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="A nudge">
+    <aside
+      className="card flex flex-col gap-3 border-l-4 border-l-accent p-5 sm:flex-row sm:items-center sm:justify-between"
+      aria-label="A nudge"
+    >
       <div>
         <p className="font-display text-lg font-semibold leading-snug">{title}</p>
         {body && <p className="mt-0.5 text-sm text-ink-2">{body}</p>}
@@ -135,7 +180,11 @@ function NudgeCard({ nudge, targetDate, today, now }: { nudge: string; targetDat
   if (nudge === 'defrost' && recipe) {
     const ing = recipe.ingredients.find((i) => i.aisle === 'frozen' || i.aisle === 'meat-fish')
     if (!ing) return null
-    return shell(`Take the ${ing.name.toLowerCase()} out of the freezer`, `For ${recipe.title}. It will thank you by dinner.`, null)
+    return shell(
+      `Take the ${ing.name.toLowerCase()} out of the freezer`,
+      `For ${recipe.title}. It will thank you by dinner.`,
+      null
+    )
   }
 
   if (nudge === 'start-now' && recipe) {
@@ -144,7 +193,10 @@ function NudgeCard({ nudge, targetDate, today, now }: { nudge: string; targetDat
     return shell(
       `Start now and you'll eat by ${time}`,
       `${recipe.title} takes ${formatMinutes(recipe.totalMinutes)} start to finish.`,
-      <Link href={`/cook/${recipe.id}?date=${targetDate}`} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+      <Link
+        href={`/cook/${recipe.id}?date=${targetDate}`}
+        className={buttonVariants({ variant: 'primary', size: 'sm' })}
+      >
         Cook
       </Link>
     )
@@ -159,7 +211,10 @@ function NudgeCard({ nudge, targetDate, today, now }: { nudge: string; targetDat
       `There's ${r.title} in the fridge from yesterday`,
       'Already cooked. Tonight can be easy.',
       entry?.leftoversOf === r.id ? null : (
-        <Button size="sm" onClick={() => setPlanEntry({ date: targetDate, slot: 'dinner', leftoversOf: r.id })}>
+        <Button
+          size="sm"
+          onClick={() => setPlanEntry({ date: targetDate, slot: 'dinner', leftoversOf: r.id })}
+        >
           Have it {targetDate === today ? 'tonight' : 'tomorrow'}
         </Button>
       )
@@ -181,16 +236,30 @@ function NextDays({ target }: { target: string }) {
       {days.map((d) => {
         const e = plan.find((p) => p.date === d && p.slot === 'dinner')
         const r = recipes.find((x) => x.id === (e?.recipeId ?? e?.leftoversOf))
-        const title = e?.recipeId ? r?.title : e?.leftoversOf ? `Leftovers: ${r?.title ?? ''}` : e?.note
+        const title = e?.recipeId
+          ? r?.title
+          : e?.leftoversOf
+            ? `Leftovers: ${r?.title ?? ''}`
+            : e?.note
         const cook = members.find((m) => m.id === e?.cookId)
         return (
           <li key={d} className="w-[11rem] shrink-0 snap-start sm:w-auto sm:flex-1">
-            <Link href="/week" className="card flex h-full min-h-[96px] flex-col justify-between gap-3 p-4 hover:border-ink-3">
+            <Link
+              href="/week"
+              className="card flex h-full min-h-[96px] flex-col justify-between gap-3 p-4 hover:border-ink-3"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">{shortDay(d)}</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-3">
+                  {shortDay(d)}
+                </span>
                 {cook && <Avatar member={cook} size="sm" />}
               </div>
-              <span className={cn('line-clamp-2 font-display text-base font-semibold leading-snug', !title && 'font-normal text-ink-3')}>
+              <span
+                className={cn(
+                  'line-clamp-2 font-display text-base font-semibold leading-snug',
+                  !title && 'font-normal text-ink-3'
+                )}
+              >
                 {title || 'Nothing yet'}
               </span>
             </Link>
@@ -219,8 +288,14 @@ function WeatherOptIn() {
   return (
     <div className="card flex items-center gap-3 p-4">
       <CloudSun className="h-5 w-5 shrink-0 text-ink-2" aria-hidden />
-      <p className="flex-1 text-sm text-ink-2">Let Plantry peek at the weather? Rainy nights lean cozy.</p>
-      <Button size="sm" variant="secondary" onClick={() => updateSettings({ weatherEnabled: true })}>
+      <p className="flex-1 text-sm text-ink-2">
+        Let Plantry peek at the weather? Rainy nights lean cozy.
+      </p>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => updateSettings({ weatherEnabled: true })}
+      >
         Sure
       </Button>
       <Button

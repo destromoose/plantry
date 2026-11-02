@@ -1,20 +1,13 @@
 // Domain types for Plantry. Everything here is serializable (no Date objects)
 // so the whole store can be persisted and exported as JSON.
 
-export type Taste = 'cozy' | 'fresh' | 'fast' | 'one-pan' | 'veg-forward' | 'spicy' | 'big-batch' | 'kid-friendly'
+export type Taste =
+  'cozy' | 'fresh' | 'fast' | 'one-pan' | 'veg-forward' | 'spicy' | 'big-batch' | 'kid-friendly'
 
 export type PantryZone = 'fridge' | 'freezer' | 'cupboard' | 'counter'
 
 export type Aisle =
-  | 'produce'
-  | 'dairy'
-  | 'meat-fish'
-  | 'bakery'
-  | 'pantry'
-  | 'frozen'
-  | 'spices'
-  | 'drinks'
-  | 'other'
+  'produce' | 'dairy' | 'meat-fish' | 'bakery' | 'pantry' | 'frozen' | 'spices' | 'drinks' | 'other'
 
 export interface Ingredient {
   id: string

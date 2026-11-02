@@ -39,20 +39,33 @@ export interface PlantryState {
 
   // settings and household
   updateSettings: (patch: Partial<Settings>) => void
-  completeOnboarding: (input: { members: { name: string }[]; tastes: Taste[]; pantryNames: string[] }) => void
+  completeOnboarding: (input: {
+    members: { name: string }[]
+    tastes: Taste[]
+    pantryNames: string[]
+  }) => void
   addMember: (name: string) => void
   removeMember: (id: string) => void
   renameMember: (id: string, name: string) => void
   setWeather: (w?: Weather) => void
 
   // recipes
-  addRecipe: (r: Omit<Recipe, 'id' | 'createdAt' | 'isFavorite' | 'custom'> & { id?: string }) => Recipe
+  addRecipe: (
+    r: Omit<Recipe, 'id' | 'createdAt' | 'isFavorite' | 'custom'> & { id?: string }
+  ) => Recipe
   updateRecipe: (id: string, patch: Partial<Recipe>) => void
   deleteRecipe: (id: string) => void
   toggleFavorite: (id: string) => void
 
   // pantry
-  addPantryItem: (input: { name: string; zone?: PantryItem['zone']; aisle?: Aisle; quantity?: number; unit?: string; softLifeDays?: number }) => void
+  addPantryItem: (input: {
+    name: string
+    zone?: PantryItem['zone']
+    aisle?: Aisle
+    quantity?: number
+    unit?: string
+    softLifeDays?: number
+  }) => void
   removePantryItem: (id: string) => void
   restockPantryItem: (id: string) => void
   useUpPantryItem: (id: string) => void
@@ -135,8 +148,14 @@ export const useStore = create<PlantryState>()(
         const now = new Date().toISOString()
         const newMembers: Member[] = members
           .filter((m) => m.name.trim())
-          .map((m, i) => ({ id: uid('m'), name: m.name.trim(), color: memberColors[i % memberColors.length], isMe: i === 0 }))
-        if (newMembers.length === 0) newMembers.push({ id: uid('m'), name: 'Me', color: 'terracotta', isMe: true })
+          .map((m, i) => ({
+            id: uid('m'),
+            name: m.name.trim(),
+            color: memberColors[i % memberColors.length],
+            isMe: i === 0,
+          }))
+        if (newMembers.length === 0)
+          newMembers.push({ id: uid('m'), name: 'Me', color: 'terracotta', isMe: true })
         set((s) => ({
           members: newMembers,
           settings: { ...s.settings, onboarded: true, tastes },
@@ -146,10 +165,18 @@ export const useStore = create<PlantryState>()(
 
       addMember: (name) =>
         set((s) => ({
-          members: [...s.members, { id: uid('m'), name: name.trim(), color: memberColors[s.members.length % memberColors.length] }],
+          members: [
+            ...s.members,
+            {
+              id: uid('m'),
+              name: name.trim(),
+              color: memberColors[s.members.length % memberColors.length],
+            },
+          ],
         })),
       removeMember: (id) => set((s) => ({ members: s.members.filter((m) => m.id !== id) })),
-      renameMember: (id, name) => set((s) => ({ members: s.members.map((m) => (m.id === id ? { ...m, name } : m)) })),
+      renameMember: (id, name) =>
+        set((s) => ({ members: s.members.map((m) => (m.id === id ? { ...m, name } : m)) })),
       setWeather: (weather) => set({ weather }),
 
       addRecipe: (r) => {
@@ -163,14 +190,19 @@ export const useStore = create<PlantryState>()(
         set((s) => ({ recipes: [recipe, ...s.recipes] }))
         return recipe
       },
-      updateRecipe: (id, patch) => set((s) => ({ recipes: s.recipes.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),
+      updateRecipe: (id, patch) =>
+        set((s) => ({ recipes: s.recipes.map((r) => (r.id === id ? { ...r, ...patch } : r)) })),
       deleteRecipe: (id) =>
         set((s) => ({
           recipes: s.recipes.filter((r) => r.id !== id),
-          plan: s.plan.map((p) => (p.recipeId === id ? { ...p, recipeId: undefined, note: p.note ?? 'Removed recipe' } : p)),
+          plan: s.plan.map((p) =>
+            p.recipeId === id ? { ...p, recipeId: undefined, note: p.note ?? 'Removed recipe' } : p
+          ),
         })),
       toggleFavorite: (id) =>
-        set((s) => ({ recipes: s.recipes.map((r) => (r.id === id ? { ...r, isFavorite: !r.isFavorite } : r)) })),
+        set((s) => ({
+          recipes: s.recipes.map((r) => (r.id === id ? { ...r, isFavorite: !r.isFavorite } : r)),
+        })),
 
       addPantryItem: ({ name, zone, aisle, quantity, unit, softLifeDays }) => {
         const now = new Date().toISOString()
@@ -191,7 +223,11 @@ export const useStore = create<PlantryState>()(
       },
       removePantryItem: (id) => set((s) => ({ pantry: s.pantry.filter((p) => p.id !== id) })),
       restockPantryItem: (id) =>
-        set((s) => ({ pantry: s.pantry.map((p) => (p.id === id ? { ...p, addedAt: new Date().toISOString() } : p)) })),
+        set((s) => ({
+          pantry: s.pantry.map((p) =>
+            p.id === id ? { ...p, addedAt: new Date().toISOString() } : p
+          ),
+        })),
       useUpPantryItem: (id) => set((s) => ({ pantry: s.pantry.filter((p) => p.id !== id) })),
 
       setPlanEntry: (entry) =>
@@ -199,12 +235,15 @@ export const useStore = create<PlantryState>()(
           const rest = s.plan.filter((p) => !(p.date === entry.date && p.slot === entry.slot))
           return { plan: [...rest, { ...entry, id: entry.id ?? uid('pl') }] }
         }),
-      clearPlanEntry: (date, slot) => set((s) => ({ plan: s.plan.filter((p) => !(p.date === date && p.slot === slot)) })),
+      clearPlanEntry: (date, slot) =>
+        set((s) => ({ plan: s.plan.filter((p) => !(p.date === date && p.slot === slot)) })),
       movePlanEntry: (id, toDate) =>
         set((s) => {
           const moving = s.plan.find((p) => p.id === id)
           if (!moving) return {}
-          const displaced = s.plan.find((p) => p.date === toDate && p.slot === moving.slot && p.id !== id)
+          const displaced = s.plan.find(
+            (p) => p.date === toDate && p.slot === moving.slot && p.id !== id
+          )
           return {
             plan: s.plan.map((p) => {
               if (p.id === id) return { ...p, date: toDate }
@@ -216,7 +255,8 @@ export const useStore = create<PlantryState>()(
       claimNight: (date, cookId) =>
         set((s) => {
           const existing = s.plan.find((p) => p.date === date && p.slot === 'dinner')
-          if (existing) return { plan: s.plan.map((p) => (p.id === existing.id ? { ...p, cookId } : p)) }
+          if (existing)
+            return { plan: s.plan.map((p) => (p.id === existing.id ? { ...p, cookId } : p)) }
           return { plan: [...s.plan, { id: uid('pl'), date, slot: 'dinner', cookId }] }
         }),
       markCooked: (date, opts = {}) => {
@@ -227,14 +267,20 @@ export const useStore = create<PlantryState>()(
         let pantry = s.pantry
         if (opts.usePantry !== false && recipe) {
           const perishableKeys = new Set(
-            recipe.ingredients.filter((i) => !i.optional && ['produce', 'meat-fish', 'dairy', 'bakery'].includes(i.aisle)).map((i) => i.key)
+            recipe.ingredients
+              .filter(
+                (i) => !i.optional && ['produce', 'meat-fish', 'dairy', 'bakery'].includes(i.aisle)
+              )
+              .map((i) => i.key)
           )
           pantry = pantry.filter((p) => !(perishableKeys.has(p.key) && !p.staple))
         }
         let plan = s.plan.map((p) => (p.id === entry.id ? { ...p, done: true } : p))
         if (opts.leftovers && recipe) {
           const next = addDays(date, 1)
-          const taken = plan.find((p) => p.date === next && p.slot === 'dinner' && (p.recipeId || p.note))
+          const taken = plan.find(
+            (p) => p.date === next && p.slot === 'dinner' && (p.recipeId || p.note)
+          )
           if (!taken) {
             plan = plan.filter((p) => !(p.date === next && p.slot === 'dinner'))
             plan.push({ id: uid('pl'), date: next, slot: 'dinner', leftoversOf: recipe.id })
@@ -243,10 +289,14 @@ export const useStore = create<PlantryState>()(
         set({
           pantry,
           plan,
-          cooked: [{ recipeId: entry.recipeId ?? entry.leftoversOf ?? '', date, cookId: entry.cookId }, ...s.cooked].slice(0, 60),
+          cooked: [
+            { recipeId: entry.recipeId ?? entry.leftoversOf ?? '', date, cookId: entry.cookId },
+            ...s.cooked,
+          ].slice(0, 60),
         })
       },
-      setEnergy: (date, energy) => set((s) => ({ energyByDate: { ...s.energyByDate, [date]: energy } })),
+      setEnergy: (date, energy) =>
+        set((s) => ({ energyByDate: { ...s.energyByDate, [date]: energy } })),
       setShuffleSeen: (ids) => set({ shuffleSeen: ids }),
 
       generateShop: (dates) => {
@@ -264,7 +314,10 @@ export const useStore = create<PlantryState>()(
             if (prev) {
               needed.set(ing.key, {
                 ...prev,
-                quantity: prev.unit === ing.unit && prev.quantity !== undefined ? prev.quantity + ing.quantity * scale : prev.quantity,
+                quantity:
+                  prev.unit === ing.unit && prev.quantity !== undefined
+                    ? prev.quantity + ing.quantity * scale
+                    : prev.quantity,
                 fromRecipeIds: [...new Set([...prev.fromRecipeIds, recipe.id])],
               })
             } else {
@@ -283,7 +336,10 @@ export const useStore = create<PlantryState>()(
         }
         const loose = s.shop.filter((i) => i.fromRecipeIds.length === 0)
         const existingChecked = new Map(s.shop.map((i) => [i.key, i.checked]))
-        const generated = [...needed.values()].map((i) => ({ ...i, checked: existingChecked.get(i.key) ?? false }))
+        const generated = [...needed.values()].map((i) => ({
+          ...i,
+          checked: existingChecked.get(i.key) ?? false,
+        }))
         set({ shop: [...generated, ...loose] })
       },
       addShopItem: (name, aisle) => {
@@ -291,10 +347,23 @@ export const useStore = create<PlantryState>()(
         if (get().shop.some((i) => i.key === key)) return
         const staple = staples.find((st) => st.key === key)
         set((s) => ({
-          shop: [...s.shop, { id: uid('sh'), name: name.trim(), key, aisle: aisle ?? staple?.aisle ?? 'other', checked: false, fromRecipeIds: [] }],
+          shop: [
+            ...s.shop,
+            {
+              id: uid('sh'),
+              name: name.trim(),
+              key,
+              aisle: aisle ?? staple?.aisle ?? 'other',
+              checked: false,
+              fromRecipeIds: [],
+            },
+          ],
         }))
       },
-      toggleShopItem: (id) => set((s) => ({ shop: s.shop.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)) })),
+      toggleShopItem: (id) =>
+        set((s) => ({
+          shop: s.shop.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)),
+        })),
       removeShopItem: (id) => set((s) => ({ shop: s.shop.filter((i) => i.id !== id) })),
       clearChecked: () => set((s) => ({ shop: s.shop.filter((i) => !i.checked) })),
       finishShopping: () => {
@@ -305,7 +374,14 @@ export const useStore = create<PlantryState>()(
         for (const item of checked) {
           const existing = pantry.find((p) => p.key === item.key)
           if (existing) existing.addedAt = now
-          else pantry.unshift(makePantryItem(item.name, now, { aisle: item.aisle, quantity: item.quantity, unit: item.unit }))
+          else
+            pantry.unshift(
+              makePantryItem(item.name, now, {
+                aisle: item.aisle,
+                quantity: item.quantity,
+                unit: item.unit,
+              })
+            )
         }
         set({ pantry, shop: s.shop.filter((i) => !i.checked) })
       },
@@ -313,19 +389,41 @@ export const useStore = create<PlantryState>()(
       createHandoff: (h) =>
         set((s) => ({
           handoffs: [{ ...h, id: uid('h'), createdAt: new Date().toISOString() }, ...s.handoffs],
-          plan: s.plan.map((p) => (p.date === h.date && p.slot === 'dinner' ? { ...p, cookId: h.toId } : p)),
+          plan: s.plan.map((p) =>
+            p.date === h.date && p.slot === 'dinner' ? { ...p, cookId: h.toId } : p
+          ),
         })),
-      acceptHandoff: (id) => set((s) => ({ handoffs: s.handoffs.map((h) => (h.id === id ? { ...h, accepted: true } : h)) })),
+      acceptHandoff: (id) =>
+        set((s) => ({
+          handoffs: s.handoffs.map((h) => (h.id === id ? { ...h, accepted: true } : h)),
+        })),
 
       exportData: () => {
         const s = get()
         const { settings, members, recipes, pantry, plan, shop, handoffs, energyByDate, cooked } = s
-        return JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), settings, members, recipes, pantry, plan, shop, handoffs, energyByDate, cooked }, null, 2)
+        return JSON.stringify(
+          {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            settings,
+            members,
+            recipes,
+            pantry,
+            plan,
+            shop,
+            handoffs,
+            energyByDate,
+            cooked,
+          },
+          null,
+          2
+        )
       },
       importData: (json) => {
         try {
           const data = JSON.parse(json) as Partial<PlantryState> & { version?: number }
-          if (!data || typeof data !== 'object' || !Array.isArray(data.recipes)) return { ok: false, error: 'That file does not look like a Plantry export.' }
+          if (!data || typeof data !== 'object' || !Array.isArray(data.recipes))
+            return { ok: false, error: 'That file does not look like a Plantry export.' }
           set({
             settings: { ...defaultSettings, ...(data.settings ?? {}), onboarded: true },
             members: data.members ?? [],

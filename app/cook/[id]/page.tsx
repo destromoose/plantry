@@ -9,5 +9,10 @@ export default async function Page({
 }) {
   const { id } = await params
   const { date } = await searchParams
-  return <CookMode id={id} date={typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined} />
+  return (
+    <CookMode
+      id={id}
+      date={typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined}
+    />
+  )
 }

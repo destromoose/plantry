@@ -19,7 +19,12 @@ function recipe(id: string, aisle: 'meat-fish' | 'produce' = 'produce'): Recipe 
 }
 
 const settings = { mood: 'auto' as const, weatherEnabled: false }
-const dinner = (date: string, recipeId: string): PlanEntry => ({ id: `pl-${date}`, date, slot: 'dinner', recipeId })
+const dinner = (date: string, recipeId: string): PlanEntry => ({
+  id: `pl-${date}`,
+  date,
+  slot: 'dinner',
+  recipeId,
+})
 
 describe('moodForHour', () => {
   it('has the right boundaries', () => {
@@ -37,10 +42,20 @@ describe('moodForHour', () => {
 
 describe('buildContext', () => {
   it('targets tomorrow after 21:00 and tonight at 18:00', () => {
-    const late = buildContext({ now: new Date(2026, 10, 3, 21, 30), settings, plan: [], recipes: [] })
+    const late = buildContext({
+      now: new Date(2026, 10, 3, 21, 30),
+      settings,
+      plan: [],
+      recipes: [],
+    })
     expect(late.targetLabel).toBe('Tomorrow')
     expect(late.targetDate).toBe('2026-11-04')
-    const evening = buildContext({ now: new Date(2026, 10, 3, 18, 0), settings, plan: [], recipes: [] })
+    const evening = buildContext({
+      now: new Date(2026, 10, 3, 18, 0),
+      settings,
+      plan: [],
+      recipes: [],
+    })
     expect(evening.targetLabel).toBe('Tonight')
     expect(evening.targetDate).toBe('2026-11-03')
   })
@@ -53,13 +68,23 @@ describe('buildContext', () => {
 
   it('nudges to start now on a Tuesday evening with a planned dinner', () => {
     const r = recipe('soup')
-    const ctx = buildContext({ now: new Date(2026, 10, 3, 17, 30), settings, plan: [dinner('2026-11-03', 'soup')], recipes: [r] })
+    const ctx = buildContext({
+      now: new Date(2026, 10, 3, 17, 30),
+      settings,
+      plan: [dinner('2026-11-03', 'soup')],
+      recipes: [r],
+    })
     expect(ctx.nudge).toBe('start-now')
   })
 
   it('nudges to defrost in the morning when dinner has meat or fish', () => {
     const r = recipe('chicken', 'meat-fish')
-    const ctx = buildContext({ now: new Date(2026, 10, 3, 9, 0), settings, plan: [dinner('2026-11-03', 'chicken')], recipes: [r] })
+    const ctx = buildContext({
+      now: new Date(2026, 10, 3, 9, 0),
+      settings,
+      plan: [dinner('2026-11-03', 'chicken')],
+      recipes: [r],
+    })
     expect(ctx.nudge).toBe('defrost')
   })
 })

@@ -52,7 +52,9 @@ export function Week() {
   function fillWeek() {
     const s = useStore.getState()
     const used = new Set<string>(
-      s.plan.filter((p) => weekDates.includes(p.date) && p.slot === 'dinner' && p.recipeId).map((p) => p.recipeId as string)
+      s.plan
+        .filter((p) => weekDates.includes(p.date) && p.slot === 'dinner' && p.recipeId)
+        .map((p) => p.recipeId as string)
     )
     let filled = 0
     for (const date of weekDates) {
@@ -60,10 +62,19 @@ export function Week() {
       const current = useStore.getState().plan.find((p) => p.date === date && p.slot === 'dinner')
       if (current && (current.recipeId || current.leftoversOf || current.note)) continue
 
-      const prevEntry = useStore.getState().plan.find((p) => p.date === addDays(date, -1) && p.slot === 'dinner')
-      const prevRecipe = prevEntry?.recipeId ? s.recipes.find((r) => r.id === prevEntry.recipeId) : undefined
+      const prevEntry = useStore
+        .getState()
+        .plan.find((p) => p.date === addDays(date, -1) && p.slot === 'dinner')
+      const prevRecipe = prevEntry?.recipeId
+        ? s.recipes.find((r) => r.id === prevEntry.recipeId)
+        : undefined
       if (prevRecipe?.leftovers && date > today) {
-        s.setPlanEntry({ date, slot: 'dinner', leftoversOf: prevRecipe.id, cookId: current?.cookId })
+        s.setPlanEntry({
+          date,
+          slot: 'dinner',
+          leftoversOf: prevRecipe.id,
+          cookId: current?.cookId,
+        })
         filled++
         continue
       }
@@ -76,13 +87,22 @@ export function Week() {
         recent: s.cooked.map((c) => c.recipeId),
         exclude: [...used],
       })
-      const pick = ranked[0] ?? suggest({ recipes: s.recipes, pantry: s.pantry, tastes: s.settings.tastes, context: ctx })[0]
+      const pick =
+        ranked[0] ??
+        suggest({
+          recipes: s.recipes,
+          pantry: s.pantry,
+          tastes: s.settings.tastes,
+          context: ctx,
+        })[0]
       if (!pick) continue
       used.add(pick.recipe.id)
       s.setPlanEntry({ date, slot: 'dinner', recipeId: pick.recipe.id, cookId: current?.cookId })
       filled++
     }
-    toast(filled ? 'Week filled. Shuffle anything you don\'t fancy.' : 'Nothing left to fill this week')
+    toast(
+      filled ? "Week filled. Shuffle anything you don't fancy." : 'Nothing left to fill this week'
+    )
   }
 
   const activeEntry = active ? entryFor(active.date) : undefined
@@ -91,12 +111,24 @@ export function Week() {
     <div className="pb-10 pt-4">
       <header className="mb-5">
         <Eyebrow>{range}</Eyebrow>
-        <h1 className="mt-1 font-display text-fluid-2xl font-semibold leading-none tracking-tight">Your week</h1>
+        <h1 className="mt-1 font-display text-fluid-2xl font-semibold leading-none tracking-tight">
+          Your week
+        </h1>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button variant="ghost" size="icon" aria-label="Previous week" onClick={() => setOffset((o) => o - 1)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Previous week"
+            onClick={() => setOffset((o) => o - 1)}
+          >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Next week" onClick={() => setOffset((o) => o + 1)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Next week"
+            onClick={() => setOffset((o) => o + 1)}
+          >
             <ChevronRight className="h-5 w-5" />
           </Button>
           {offset !== 0 && (
@@ -111,7 +143,13 @@ export function Week() {
         </div>
       </header>
 
-      <motion.ul key={weekDates[0]} variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
+      <motion.ul
+        key={weekDates[0]}
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="space-y-3"
+      >
         {weekDates.map((date, i) => {
           const entry = entryFor(date)
           const recipe = recipes.find((r) => r.id === entry?.recipeId)
@@ -126,15 +164,26 @@ export function Week() {
             <>
               <Thumb src={recipe.imageUrl} className="h-14 w-14 rounded-xl" sizes="56px" />
               <span className="min-w-0 flex-1">
-                <span className={cn('line-clamp-2 font-display text-lg font-semibold leading-tight', done && 'text-ink-3')}>{recipe.title}</span>
-                <span className="block text-sm text-ink-3">{formatMinutes(recipe.activeMinutes)} hands-on</span>
+                <span
+                  className={cn(
+                    'line-clamp-2 font-display text-lg font-semibold leading-tight',
+                    done && 'text-ink-3'
+                  )}
+                >
+                  {recipe.title}
+                </span>
+                <span className="block text-sm text-ink-3">
+                  {formatMinutes(recipe.activeMinutes)} hands-on
+                </span>
               </span>
             </>
           ) : lo ? (
             <>
               <Thumb src={lo.imageUrl} className="h-14 w-14 rounded-xl opacity-80" sizes="56px" />
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">Leftovers: {lo.title}</span>
+                <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">
+                  Leftovers: {lo.title}
+                </span>
                 <span className="block text-sm text-ink-3">Easy night</span>
               </span>
             </>
@@ -159,8 +208,12 @@ export function Week() {
                   isToday ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'
                 )}
               >
-                <span className="text-[11px] font-semibold uppercase tracking-wider">{shortDay(date)}</span>
-                <span className="font-display text-xl font-semibold leading-none">{fromDateKey(date).getDate()}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {shortDay(date)}
+                </span>
+                <span className="font-display text-xl font-semibold leading-none">
+                  {fromDateKey(date).getDate()}
+                </span>
               </div>
 
               <AnimatePresence mode="popLayout" initial={false}>
@@ -174,11 +227,16 @@ export function Week() {
                 >
                   {decidedRow && body ? (
                     recipe ? (
-                      <Link href={`/recipes/${recipe.id}`} className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl">
+                      <Link
+                        href={`/recipes/${recipe.id}`}
+                        className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl"
+                      >
                         {body}
                       </Link>
                     ) : (
-                      <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">{body}</div>
+                      <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">
+                        {body}
+                      </div>
                     )
                   ) : (
                     <button
@@ -193,7 +251,14 @@ export function Week() {
               </AnimatePresence>
 
               {done && (
-                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={checkPop} className="text-secondary" role="img" aria-label="Cooked">
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={checkPop}
+                  className="text-secondary"
+                  role="img"
+                  aria-label="Cooked"
+                >
                   <Check className="h-5 w-5" />
                 </motion.span>
               )}
@@ -211,13 +276,25 @@ export function Week() {
         })}
       </motion.ul>
 
-      <section className="card mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center" aria-label="Week summary">
-        <ProgressRing value={decided / 7} size={56} stroke={6} tone={decided === 7 ? 'secondary' : 'accent'}>
+      <section
+        className="card mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
+        aria-label="Week summary"
+      >
+        <ProgressRing
+          value={decided / 7}
+          size={56}
+          stroke={6}
+          tone={decided === 7 ? 'secondary' : 'accent'}
+        >
           <span className="font-display text-base font-semibold">{decided}</span>
         </ProgressRing>
         <div className="flex-1">
           <p className="font-display text-lg font-semibold">{decided} of 7 decided</p>
-          <p className="text-sm text-ink-2">{decided === 7 ? 'Every night is handled.' : 'Undecided nights stay quiet until you want them.'}</p>
+          <p className="text-sm text-ink-2">
+            {decided === 7
+              ? 'Every night is handled.'
+              : 'Undecided nights stay quiet until you want them.'}
+          </p>
         </div>
         <Button
           variant={decided === 0 ? 'secondary' : 'primary'}

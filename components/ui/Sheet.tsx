@@ -68,11 +68,21 @@ export function Sheet({ open, onClose, title, children, className, tall }: Sheet
           >
             <div className="flex items-center justify-between px-5 pb-2 pt-3 sm:pt-5">
               <div className="mx-auto h-1.5 w-10 rounded-pill bg-line sm:hidden" />
-              <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close" className="absolute right-3 top-3">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onClose}
+                aria-label="Close"
+                className="absolute right-3 top-3"
+              >
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            {title && <h2 className="px-6 pb-2 font-display text-2xl font-semibold tracking-tight">{title}</h2>}
+            {title && (
+              <h2 className="px-6 pb-2 font-display text-2xl font-semibold tracking-tight">
+                {title}
+              </h2>
+            )}
             <div className="safe-bottom flex-1 overflow-y-auto px-6 pb-6">{children}</div>
           </motion.div>
         </div>

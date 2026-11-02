@@ -51,7 +51,8 @@ export function suggest(input: SuggestInput): Scored[] {
     const ratio = cov.total ? cov.have / cov.total : 0
     score += ratio * 40
     if (cov.missing.length === 0 && cov.total > 0) reasons.push('You have everything')
-    else if (cov.missing.length <= 2 && cov.total > 0) reasons.push(`Only missing ${cov.missing.join(' and ')}`)
+    else if (cov.missing.length <= 2 && cov.total > 0)
+      reasons.push(`Only missing ${cov.missing.join(' and ')}`)
 
     const usesAging = recipe.ingredients.filter((i) => aging.has(i.key))
     if (usesAging.length) {
@@ -80,7 +81,12 @@ export function suggest(input: SuggestInput): Scored[] {
       score += 10
       reasons.push(context.weatherLean === 'warm' ? 'Good for a cold night' : 'Nothing heavy')
     }
-    if (context.weatherLean !== 'any' && recipe.weather && recipe.weather !== 'any' && recipe.weather !== context.weatherLean)
+    if (
+      context.weatherLean !== 'any' &&
+      recipe.weather &&
+      recipe.weather !== 'any' &&
+      recipe.weather !== context.weatherLean
+    )
       score -= 6
 
     if (!context.isWeekend && recipe.totalMinutes > 60) score -= 8

@@ -23,13 +23,27 @@ function tintFor(seed: string) {
 }
 
 /** Fills its parent. Falls back to a tinted placeholder for missing or unsupported hosts. */
-export function RecipeImage({ url, seed, sizes, priority, className }: { url?: string; seed: string; sizes: string; priority?: boolean; className?: string }) {
+export function RecipeImage({
+  url,
+  seed,
+  sizes,
+  priority,
+  className,
+}: {
+  url?: string
+  seed: string
+  sizes: string
+  priority?: boolean
+  className?: string
+}) {
   return (
     <div className={cn('absolute inset-0 bg-surface-2', className)}>
       {isUnsplash(url) ? (
         <Image src={url!} alt="" fill sizes={sizes} priority={priority} className="object-cover" />
       ) : (
-        <div className={cn('flex h-full w-full items-center justify-center text-ink-3', tintFor(seed))}>
+        <div
+          className={cn('flex h-full w-full items-center justify-center text-ink-3', tintFor(seed))}
+        >
           <UtensilsCrossed className="h-8 w-8" aria-hidden />
         </div>
       )}

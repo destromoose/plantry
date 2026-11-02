@@ -34,7 +34,9 @@ export function TonightHero(props: HeroProps) {
   const clearPlanEntry = useStore((s) => s.clearPlanEntry)
 
   const planned = entry?.recipeId ? recipes.find((r) => r.id === entry.recipeId) : undefined
-  const leftoverOf = entry?.leftoversOf ? recipes.find((r) => r.id === entry.leftoversOf) : undefined
+  const leftoverOf = entry?.leftoversOf
+    ? recipes.find((r) => r.id === entry.leftoversOf)
+    : undefined
 
   if (recipes.length === 0) {
     return (
@@ -57,7 +59,11 @@ export function TonightHero(props: HeroProps) {
         <Eyebrow>Decided</Eyebrow>
         <h2 className="mt-1 font-display text-fluid-xl font-semibold">{entry.note}</h2>
         <p className="mt-1 text-[15px] text-ink-2">Dinner is handled. Nothing to wash.</p>
-        <Button variant="secondary" className="mt-5" onClick={() => clearPlanEntry(targetDate, 'dinner')}>
+        <Button
+          variant="secondary"
+          className="mt-5"
+          onClick={() => clearPlanEntry(targetDate, 'dinner')}
+        >
           Pick something to cook instead
         </Button>
       </div>
@@ -67,12 +73,22 @@ export function TonightHero(props: HeroProps) {
   if (leftoverOf) {
     return (
       <div className="card flex flex-col gap-4 bg-surface-2 p-5 sm:flex-row sm:items-center">
-        <Link href={`/recipes/${leftoverOf.id}`} className="block" aria-label={`Open ${leftoverOf.title}`}>
-          <Thumb src={leftoverOf.imageUrl} sizes="160px" className="h-28 w-full rounded-2xl sm:w-40" />
+        <Link
+          href={`/recipes/${leftoverOf.id}`}
+          className="block"
+          aria-label={`Open ${leftoverOf.title}`}
+        >
+          <Thumb
+            src={leftoverOf.imageUrl}
+            sizes="160px"
+            className="h-28 w-full rounded-2xl sm:w-40"
+          />
         </Link>
         <div className="flex-1">
           <Eyebrow>Calm night</Eyebrow>
-          <h2 className="mt-1 font-display text-fluid-xl font-semibold leading-tight">Leftovers: {leftoverOf.title}</h2>
+          <h2 className="mt-1 font-display text-fluid-xl font-semibold leading-tight">
+            Leftovers: {leftoverOf.title}
+          </h2>
           <p className="mt-1 text-[15px] text-ink-2">Already cooked. Heat, plate, done.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => clearPlanEntry(targetDate, 'dinner')}>
@@ -88,10 +104,17 @@ export function TonightHero(props: HeroProps) {
     return <PlannedOrSuggested recipe={planned} planned entry={entry} {...props} />
   }
 
-  if (energy === 'cant-tonight') return <CantTonight ranked={ranked} targetDate={targetDate} today={today} />
+  if (energy === 'cant-tonight')
+    return <CantTonight ranked={ranked} targetDate={targetDate} today={today} />
 
   if (ranked.length === 0) {
-    return <EmptyState icon={UtensilsCrossed} title="Nothing fits tonight" body="Try a different energy level." />
+    return (
+      <EmptyState
+        icon={UtensilsCrossed}
+        title="Nothing fits tonight"
+        body="Try a different energy level."
+      />
+    )
   }
   return <Deck {...props} />
 }
@@ -118,7 +141,11 @@ function Deck(props: HeroProps) {
     const next = pickNext(ranked, nextSeen)
     setDir(direction)
     setSeen(nextSeen)
-    setShownId(next && next.recipe.id !== scored.recipe.id ? next.recipe.id : ranked.find((r) => r.recipe.id !== scored.recipe.id)?.recipe.id)
+    setShownId(
+      next && next.recipe.id !== scored.recipe.id
+        ? next.recipe.id
+        : ranked.find((r) => r.recipe.id !== scored.recipe.id)?.recipe.id
+    )
   }
 
   return (
@@ -150,7 +177,12 @@ function Deck(props: HeroProps) {
             }
           }}
         >
-          <PlannedOrSuggested recipe={scored.recipe} scored={scored} onShuffle={() => shuffle(1)} {...props} />
+          <PlannedOrSuggested
+            recipe={scored.recipe}
+            scored={scored}
+            onShuffle={() => shuffle(1)}
+            {...props}
+          />
         </motion.div>
       </AnimatePresence>
       <p className="mt-3 text-center text-xs text-ink-3">Swipe the card to shuffle</p>
@@ -184,8 +216,14 @@ function PlannedOrSuggested({
 
   const cov = coverage(recipe, pantry)
   const coverLine =
-    cov.missing.length === 0 ? 'You have everything' : cov.missing.length <= 2 ? `Only missing ${cov.missing.join(' and ')}` : `Missing ${cov.missing.length} things`
-  const tags = (scored?.reasons ?? []).filter((r) => !r.startsWith('Only missing') && r !== 'You have everything')
+    cov.missing.length === 0
+      ? 'You have everything'
+      : cov.missing.length <= 2
+        ? `Only missing ${cov.missing.join(' and ')}`
+        : `Missing ${cov.missing.length} things`
+  const tags = (scored?.reasons ?? []).filter(
+    (r) => !r.startsWith('Only missing') && r !== 'You have everything'
+  )
   const cook = members.find((m) => m.id === entry?.cookId)
 
   function lockIn() {
@@ -196,10 +234,27 @@ function PlannedOrSuggested({
 
   return (
     <article className="card overflow-hidden">
-      <Link href={`/recipes/${recipe.id}`} className="relative block aspect-[4/3] max-h-[420px] w-full bg-surface-2 sm:aspect-[16/9]" aria-label={`Open ${recipe.title}`} draggable={false}>
-        <motion.div layoutId={`recipe-image-${recipe.id}`} transition={settle} className="absolute inset-0">
+      <Link
+        href={`/recipes/${recipe.id}`}
+        className="relative block aspect-[4/3] max-h-[420px] w-full bg-surface-2 sm:aspect-[16/9]"
+        aria-label={`Open ${recipe.title}`}
+        draggable={false}
+      >
+        <motion.div
+          layoutId={`recipe-image-${recipe.id}`}
+          transition={settle}
+          className="absolute inset-0"
+        >
           {recipe.imageUrl && (
-            <Image src={recipe.imageUrl} alt="" fill priority sizes="(min-width: 768px) 700px, 100vw" className="object-cover" draggable={false} />
+            <Image
+              src={recipe.imageUrl}
+              alt=""
+              fill
+              priority
+              sizes="(min-width: 768px) 700px, 100vw"
+              className="object-cover"
+              draggable={false}
+            />
           )}
         </motion.div>
       </Link>
@@ -207,18 +262,26 @@ function PlannedOrSuggested({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <Link href={`/recipes/${recipe.id}`} draggable={false}>
-              <h2 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">{recipe.title}</h2>
+              <h2 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">
+                {recipe.title}
+              </h2>
             </Link>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
               <span className="inline-flex items-center gap-1">
-                <Clock className="h-4 w-4" aria-hidden /> {formatMinutes(recipe.activeMinutes)} hands-on
+                <Clock className="h-4 w-4" aria-hidden /> {formatMinutes(recipe.activeMinutes)}{' '}
+                hands-on
               </span>
               <span className="inline-flex items-center gap-1">
                 <Users className="h-4 w-4" aria-hidden /> Serves {recipe.servings}
               </span>
             </p>
           </div>
-          <ProgressRing value={cov.total ? cov.have / cov.total : 0} size={48} stroke={5} tone={cov.missing.length === 0 ? 'secondary' : 'accent'}>
+          <ProgressRing
+            value={cov.total ? cov.have / cov.total : 0}
+            size={48}
+            stroke={5}
+            tone={cov.missing.length === 0 ? 'secondary' : 'accent'}
+          >
             <span className="font-display text-sm font-semibold">{cov.have}</span>
           </ProgressRing>
         </div>
@@ -244,7 +307,10 @@ function PlannedOrSuggested({
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {planned ? (
-            <Link href={`/cook/${recipe.id}?date=${targetDate}`} className={buttonVariants({ variant: 'primary', size: 'lg' })}>
+            <Link
+              href={`/cook/${recipe.id}?date=${targetDate}`}
+              className={buttonVariants({ variant: 'primary', size: 'lg' })}
+            >
               Cook <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           ) : (
@@ -297,7 +363,15 @@ function PlannedOrSuggested({
 
 /* ------------------------------------------------------------------ */
 
-function CantTonight({ ranked, targetDate, today }: { ranked: Scored[]; targetDate: string; today: string }) {
+function CantTonight({
+  ranked,
+  targetDate,
+  today,
+}: {
+  ranked: Scored[]
+  targetDate: string
+  today: string
+}) {
   const recipes = useStore((s) => s.recipes)
   const cooked = useStore((s) => s.cooked)
   const setPlanEntry = useStore((s) => s.setPlanEntry)
@@ -349,7 +423,9 @@ function CantTonight({ ranked, targetDate, today }: { ranked: Scored[]; targetDa
                   <Thumb src={recipe.imageUrl} className="h-12 w-12 rounded-xl" sizes="48px" />
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{recipe.title}</span>
-                    <span className="block text-sm text-ink-2">{formatMinutes(recipe.activeMinutes)} hands-on</span>
+                    <span className="block text-sm text-ink-2">
+                      {formatMinutes(recipe.activeMinutes)} hands-on
+                    </span>
                   </span>
                 </button>
               </li>
@@ -363,7 +439,9 @@ function CantTonight({ ranked, targetDate, today }: { ranked: Scored[]; targetDa
             setPlanEntry({ date: targetDate, slot: 'dinner', note: 'Takeout' })
             toast('Takeout, sorted')
           }}
-          className={cn('flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-dashed border-ink-3 p-3 text-left hover:bg-surface-2')}
+          className={cn(
+            'flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-dashed border-ink-3 p-3 text-left hover:bg-surface-2'
+          )}
         >
           <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2">
             <UtensilsCrossed className="h-5 w-5 text-ink-2" aria-hidden />

@@ -26,7 +26,9 @@ const slide = {
 export function CookMode({ id, date }: { id: string; date?: string }) {
   const router = useRouter()
   const recipe = useStore((s) => s.recipes.find((r) => r.id === id))
-  const entry = useStore((s) => (date ? s.plan.find((p) => p.date === date && p.slot === 'dinner') : undefined))
+  const entry = useStore((s) =>
+    date ? s.plan.find((p) => p.date === date && p.slot === 'dinner') : undefined
+  )
   const markCooked = useStore((s) => s.markCooked)
 
   const [index, setIndex] = useState(0)
@@ -124,9 +126,16 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
         <EmptyState
           icon={UtensilsCrossed}
           title={recipe ? 'No steps yet' : "That recipe isn't here"}
-          body={recipe ? 'Add some steps to cook along.' : 'It may have been deleted, or the link is off.'}
+          body={
+            recipe
+              ? 'Add some steps to cook along.'
+              : 'It may have been deleted, or the link is off.'
+          }
           action={
-            <Link href={recipe ? `/recipes/${recipe.id}` : '/recipes'} className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[15px] font-medium hover:bg-line/60">
+            <Link
+              href={recipe ? `/recipes/${recipe.id}` : '/recipes'}
+              className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[15px] font-medium hover:bg-line/60"
+            >
               {recipe ? 'Back to the recipe' : 'Back to recipes'}
             </Link>
           }
@@ -157,13 +166,28 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
     <div className="relative mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5">
       <header className="pt-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" aria-label="Close cook mode" onClick={() => router.push(`/recipes/${recipe.id}`)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close cook mode"
+            onClick={() => router.push(`/recipes/${recipe.id}`)}
+          >
             <X className="h-5 w-5" aria-hidden />
           </Button>
-          <p className="min-w-0 flex-1 truncate text-center text-sm font-medium text-ink-2">{recipe.title}</p>
+          <p className="min-w-0 flex-1 truncate text-center text-sm font-medium text-ink-2">
+            {recipe.title}
+          </p>
           <div className="w-11" aria-hidden />
         </div>
-        <div className="mt-3 flex gap-1.5" role="progressbar" aria-label="Progress" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={index + 1} aria-valuetext={`Step ${index + 1} of ${steps.length}`}>
+        <div
+          className="mt-3 flex gap-1.5"
+          role="progressbar"
+          aria-label="Progress"
+          aria-valuemin={1}
+          aria-valuemax={steps.length}
+          aria-valuenow={index + 1}
+          aria-valuetext={`Step ${index + 1} of ${steps.length}`}
+        >
           {steps.map((s, i) => (
             <div key={s.id} className="h-1.5 flex-1 overflow-hidden rounded-pill bg-line">
               <motion.div
@@ -187,7 +211,11 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={settle}
                 onClick={() => go(i)}
-                aria-label={t.finished ? `Step ${i + 1} timer finished. Go to step.` : `Step ${i + 1} timer ${formatClock(remainingOf(t, now))} left. Go to step.`}
+                aria-label={
+                  t.finished
+                    ? `Step ${i + 1} timer finished. Go to step.`
+                    : `Step ${i + 1} timer ${formatClock(remainingOf(t, now))} left. Go to step.`
+                }
                 className={cn(
                   'inline-flex h-9 items-center gap-1.5 rounded-pill px-3 text-[13px] font-medium tabular-nums',
                   t.finished ? 'bg-danger text-cream' : 'bg-accent text-accent-ink'
@@ -222,7 +250,9 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
               <Eyebrow>
                 Step {index + 1} of {steps.length}
               </Eyebrow>
-              <p className="font-display text-fluid-step font-medium leading-tight tracking-tight">{step.text}</p>
+              <p className="font-display text-fluid-step font-medium leading-tight tracking-tight">
+                {step.text}
+              </p>
             </div>
             {step.timerMinutes ? (
               <StepTimer
@@ -243,7 +273,14 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
           <ListChecks className="h-5 w-5" aria-hidden /> Ingredients
         </Button>
         <div className="flex-1" />
-        <Button variant="outline" size="lg" className="w-16 px-0" onClick={prev} disabled={index === 0} aria-label="Previous step">
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-16 px-0"
+          onClick={prev}
+          disabled={index === 0}
+          aria-label="Previous step"
+        >
           <ArrowLeft className="h-6 w-6" aria-hidden />
         </Button>
         {isLast ? (
@@ -258,7 +295,9 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
       </footer>
 
       <Sheet open={ingOpen} onClose={() => setIngOpen(false)} title="Ingredients" tall>
-        <p className="mb-3 text-sm text-ink-3">For {Math.round(recipe.servings * scale)} servings. Tap to check off.</p>
+        <p className="mb-3 text-sm text-ink-3">
+          For {Math.round(recipe.servings * scale)} servings. Tap to check off.
+        </p>
         <ul className="space-y-1">
           {recipe.ingredients.map((ing) => {
             const on = checked.has(ing.id)
@@ -277,10 +316,20 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
                   }
                   className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-surface-2"
                 >
-                  <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full border', on ? 'border-secondary bg-secondary text-secondary-ink' : 'border-line')}>
+                  <span
+                    className={cn(
+                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border',
+                      on ? 'border-secondary bg-secondary text-secondary-ink' : 'border-line'
+                    )}
+                  >
                     <AnimatePresence initial={false}>
                       {on && (
-                        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={checkPop}>
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          transition={checkPop}
+                        >
                           <Check className="h-3.5 w-3.5" aria-hidden />
                         </motion.span>
                       )}
@@ -290,7 +339,9 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
                     {ing.name}
                     {ing.optional && ' (optional)'}
                   </span>
-                  <span className="text-sm tabular-nums text-ink-2">{formatQuantity(ing.quantity * scale, ing.unit)}</span>
+                  <span className="text-sm tabular-nums text-ink-2">
+                    {formatQuantity(ing.quantity * scale, ing.unit)}
+                  </span>
                 </button>
               </li>
             )
@@ -308,12 +359,18 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
           >
             <Check className="h-8 w-8" aria-hidden />
           </motion.div>
-          <h2 className="font-display text-2xl font-semibold tracking-tight">Dinner&apos;s done.</h2>
+          <h2 className="font-display text-2xl font-semibold tracking-tight">
+            Dinner&apos;s done.
+          </h2>
           <p className="mt-1 text-[15px] text-ink-2">{recipe.title}</p>
         </div>
         {date && entry && (
           <div className="mb-4 space-y-2">
-            <Toggle checked={usePantry} onChange={setUsePantry} label="Use up the fresh stuff from my pantry" />
+            <Toggle
+              checked={usePantry}
+              onChange={setUsePantry}
+              label="Use up the fresh stuff from my pantry"
+            />
             <Toggle checked={leftovers} onChange={setLeftovers} label="There are leftovers" />
           </div>
         )}

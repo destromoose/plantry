@@ -75,12 +75,18 @@ export function Settings() {
   }
 
   const toggleTaste = (t: SettingsT['tastes'][number]) =>
-    update({ tastes: settings.tastes.includes(t) ? settings.tastes.filter((x) => x !== t) : [...settings.tastes, t] })
+    update({
+      tastes: settings.tastes.includes(t)
+        ? settings.tastes.filter((x) => x !== t)
+        : [...settings.tastes, t],
+    })
 
   return (
     <div className="space-y-5 pb-8">
       <header className="mb-2">
-        <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">Settings</h1>
+        <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+          Settings
+        </h1>
         <p className="mt-1 text-ink-2">Make it yours.</p>
       </header>
 
@@ -141,7 +147,11 @@ export function Settings() {
               settings.weatherEnabled ? 'justify-end bg-accent' : 'justify-start bg-line'
             )}
           >
-            <motion.span layout transition={settle} className="h-6 w-6 rounded-full bg-surface shadow-card" />
+            <motion.span
+              layout
+              transition={settle}
+              className="h-6 w-6 rounded-full bg-surface shadow-card"
+            />
           </button>
         </div>
       </Card>
@@ -150,7 +160,11 @@ export function Settings() {
         <SectionTitle>Tastes</SectionTitle>
         <div role="group" aria-label="Tastes" className="flex flex-wrap gap-2">
           {tasteOptions.map((t) => (
-            <Chip key={t.id} selected={settings.tastes.includes(t.id)} onClick={() => toggleTaste(t.id)}>
+            <Chip
+              key={t.id}
+              selected={settings.tastes.includes(t.id)}
+              onClick={() => toggleTaste(t.id)}
+            >
               {t.label}
             </Chip>
           ))}
@@ -209,10 +223,15 @@ export function Settings() {
         />
       </Card>
 
-      <p className="px-1 text-center text-sm text-ink-3">Plantry keeps everything on this device. No account, no tracking.</p>
+      <p className="px-1 text-center text-sm text-ink-3">
+        Plantry keeps everything on this device. No account, no tracking.
+      </p>
 
       <Sheet open={confirm} onClose={() => setConfirm(false)} title="Start over?">
-        <p className="mb-5 text-ink-2">This clears your pantry, plan, list and household from this device. Export first if you want a copy.</p>
+        <p className="mb-5 text-ink-2">
+          This clears your pantry, plan, list and household from this device. Export first if you
+          want a copy.
+        </p>
         <div className="flex flex-col gap-2">
           <Button
             variant="danger"

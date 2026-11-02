@@ -16,14 +16,31 @@ export interface ParsedRecipe {
 }
 
 const UNITS = [
-  'kg', 'g', 'ml', 'l', 'tsp', 'tbsp', 'cups', 'cup', 'cloves', 'clove', 'cans', 'can',
-  'bunch', 'slices', 'slice', 'whole', 'oz', 'lb',
+  'kg',
+  'g',
+  'ml',
+  'l',
+  'tsp',
+  'tbsp',
+  'cups',
+  'cup',
+  'cloves',
+  'clove',
+  'cans',
+  'can',
+  'bunch',
+  'slices',
+  'slice',
+  'whole',
+  'oz',
+  'lb',
 ]
 const UNIT_SET = new Set(UNITS)
 const VULGAR: Record<string, number> = { '½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3 }
 
 const ING_HEADING = /^\s*(?:#+\s*)?ingredients?\b\s*:?\s*$/i
-const STEP_HEADING = /^\s*(?:#+\s*)?(?:method|instructions?|directions?|steps?|preparation)\b\s*:?\s*$/i
+const STEP_HEADING =
+  /^\s*(?:#+\s*)?(?:method|instructions?|directions?|steps?|preparation)\b\s*:?\s*$/i
 
 /** Finds a timer in step text: "12 minutes", "10-12 min" (takes the upper bound). */
 export function detectTimer(text: string): number | undefined {
@@ -48,7 +65,10 @@ function parseQuantityToken(tok: string): number | undefined {
 export function parseIngredientLine(raw: string): ParsedIngredient | null {
   let line = raw.replace(/^\s*(?:[-*•–]\s+|\d+[.)]\s+(?=\D))/, '').trim()
   // "1 1/2" mixed number: merge into one token
-  line = line.replace(/^(\d+)\s+(\d+\/\d+)/, (_, a: string, b: string) => `${Number(a) + parseQuantityToken(b)!}`)
+  line = line.replace(
+    /^(\d+)\s+(\d+\/\d+)/,
+    (_, a: string, b: string) => `${Number(a) + parseQuantityToken(b)!}`
+  )
   if (!line) return null
   const parts = line.split(/\s+/)
   let quantity = 1
@@ -74,7 +94,11 @@ export function parseIngredientLine(raw: string): ParsedIngredient | null {
 
 function finish(quantity: number, unit: string, nameParts: string[]): ParsedIngredient | null {
   let name = nameParts.join(' ').replace(/^of\s+/i, '')
-  name = name.split(',')[0].replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim()
+  name = name
+    .split(',')[0]
+    .replace(/\(.*?\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!name) return null
   return { name, quantity, unit }
 }
@@ -98,7 +122,8 @@ function buildSteps(lines: string[]): ParsedStep[] {
       else steps[steps.length - 1] += ` ${text}`
     } else {
       // Unnumbered: a line that does not start in lower case begins a new step.
-      if (steps.length > 0 && /^[a-z]/.test(text) && !/[.!?]$/.test(steps[steps.length - 1])) steps[steps.length - 1] += ` ${text}`
+      if (steps.length > 0 && /^[a-z]/.test(text) && !/[.!?]$/.test(steps[steps.length - 1]))
+        steps[steps.length - 1] += ` ${text}`
       else steps.push(text)
     }
   }
@@ -111,7 +136,10 @@ function buildSteps(lines: string[]): ParsedStep[] {
 const startsLikeIngredient = (l: string) => /^\s*(?:[-*•–]|\d|[½¼¾⅓⅔])/.test(l)
 
 export function parseRecipe(text: string): ParsedRecipe {
-  const lines = text.replace(/\r/g, '').split('\n').map((l) => l.trim())
+  const lines = text
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((l) => l.trim())
   const nonEmpty = lines.filter(Boolean)
   const out: ParsedRecipe = { ingredients: [], steps: [] }
   if (nonEmpty.length === 0) return out
@@ -119,7 +147,12 @@ export function parseRecipe(text: string): ParsedRecipe {
   let title: string | undefined
   let body = lines
   const first = nonEmpty[0]
-  if (first.length < 80 && !/^\d/.test(first) && !ING_HEADING.test(first) && !STEP_HEADING.test(first)) {
+  if (
+    first.length < 80 &&
+    !/^\d/.test(first) &&
+    !ING_HEADING.test(first) &&
+    !STEP_HEADING.test(first)
+  ) {
     title = first.replace(/^#+\s*/, '')
     const at = lines.indexOf(first)
     body = lines.slice(at + 1)

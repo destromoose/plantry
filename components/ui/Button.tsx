@@ -31,8 +31,7 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-  extends Omit<HTMLMotionProps<'button'>, 'ref'>,
-    VariantProps<typeof buttonVariants> {}
+  extends Omit<HTMLMotionProps<'button'>, 'ref'>, VariantProps<typeof buttonVariants> {}
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, type = 'button', ...props }, ref) => (

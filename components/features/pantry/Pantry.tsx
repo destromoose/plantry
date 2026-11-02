@@ -53,7 +53,9 @@ export function Pantry() {
       zones
         .map((z) => ({
           ...z,
-          items: pantry.filter((p) => p.zone === z.id).sort((a, b) => freshness(a, today) - freshness(b, today)),
+          items: pantry
+            .filter((p) => p.zone === z.id)
+            .sort((a, b) => freshness(a, today) - freshness(b, today)),
         }))
         .filter((z) => z.items.length > 0),
     [pantry, today]
@@ -62,12 +64,17 @@ export function Pantry() {
   const options = useMemo(() => {
     const seen = new Map<string, { name: string; zone?: PantryZone }>()
     for (const s of staples) seen.set(s.key, { name: s.name, zone: s.zone })
-    for (const r of recipes) for (const i of r.ingredients) if (!seen.has(i.key)) seen.set(i.key, { name: i.name })
+    for (const r of recipes)
+      for (const i of r.ingredients) if (!seen.has(i.key)) seen.set(i.key, { name: i.name })
     return [...seen.values()]
   }, [recipes])
 
   const q = name.trim().toLowerCase()
-  const matches = q ? options.filter((o) => o.name.toLowerCase().includes(q) && o.name.toLowerCase() !== q).slice(0, 6) : []
+  const matches = q
+    ? options
+        .filter((o) => o.name.toLowerCase().includes(q) && o.name.toLowerCase() !== q)
+        .slice(0, 6)
+    : []
 
   function add(n = name, z = zone) {
     const clean = n.trim()
@@ -97,7 +104,9 @@ export function Pantry() {
     <div className="pb-8">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">Pantry</h1>
+          <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+            Pantry
+          </h1>
           <p className="mt-1 text-ink-2">
             {pluralize(pantry.length, 'thing')}, {soon} should be used soon
           </p>
@@ -138,7 +147,12 @@ export function Pantry() {
             </ul>
           )}
         </div>
-        <Select value={zone} onChange={(e) => setZone(e.target.value as PantryZone)} aria-label="Where it lives" className="w-32 shrink-0">
+        <Select
+          value={zone}
+          onChange={(e) => setZone(e.target.value as PantryZone)}
+          aria-label="Where it lives"
+          className="w-32 shrink-0"
+        >
           {zones.map((z) => (
             <option key={z.id} value={z.id}>
               {z.label}
@@ -161,7 +175,10 @@ export function Pantry() {
         <div className="space-y-8">
           {grouped.map((z) => (
             <section key={z.id} aria-labelledby={`zone-${z.id}`}>
-              <h2 id={`zone-${z.id}`} className="mb-3 font-display text-xl font-semibold tracking-tight">
+              <h2
+                id={`zone-${z.id}`}
+                className="mb-3 font-display text-xl font-semibold tracking-tight"
+              >
                 {z.label}
               </h2>
               <motion.ul
@@ -172,7 +189,13 @@ export function Pantry() {
               >
                 <AnimatePresence mode="popLayout">
                   {z.items.map((item, i) => (
-                    <Tile key={item.id} item={item} index={i} today={today} onOpen={() => setActive(item)} />
+                    <Tile
+                      key={item.id}
+                      item={item}
+                      index={i}
+                      today={today}
+                      onOpen={() => setActive(item)}
+                    />
                   ))}
                 </AnimatePresence>
               </motion.ul>
@@ -198,7 +221,17 @@ export function Pantry() {
   )
 }
 
-function Tile({ item, index, today, onOpen }: { item: PantryItem; index: number; today: string; onOpen: () => void }) {
+function Tile({
+  item,
+  index,
+  today,
+  onOpen,
+}: {
+  item: PantryItem
+  index: number
+  today: string
+  onOpen: () => void
+}) {
   const restock = useStore((s) => s.restockPantryItem)
   const usedUp = useStore((s) => s.useUpPantryItem)
   const f = freshness(item, today)
@@ -320,7 +353,8 @@ function CookList({
       .slice(0, 6)
   }, [open, recipes, pantry, tastes, ctx, recent])
 
-  if (results.length === 0) return <p className="text-ink-2">Nothing to cook from yet. Add a few things first.</p>
+  if (results.length === 0)
+    return <p className="text-ink-2">Nothing to cook from yet. Add a few things first.</p>
   return (
     <ul className="space-y-2">
       {results.map((s) => (
@@ -331,14 +365,22 @@ function CookList({
             className="flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-surface-2"
           >
             <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-surface-2">
-              {s.recipe.imageUrl && <Image src={s.recipe.imageUrl} alt="" fill sizes="64px" className="object-cover" />}
+              {s.recipe.imageUrl && (
+                <Image src={s.recipe.imageUrl} alt="" fill sizes="64px" className="object-cover" />
+              )}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-lg font-semibold leading-tight">{s.recipe.title}</span>
+              <span className="block truncate font-display text-lg font-semibold leading-tight">
+                {s.recipe.title}
+              </span>
               <span className="block text-sm text-ink-2">
                 You have {s.have} of {s.total}
               </span>
-              {s.missing.length > 0 && <span className="block truncate text-xs text-ink-3">Missing {s.missing.join(', ')}</span>}
+              {s.missing.length > 0 && (
+                <span className="block truncate text-xs text-ink-3">
+                  Missing {s.missing.join(', ')}
+                </span>
+              )}
             </span>
           </Link>
         </li>

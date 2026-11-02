@@ -5,7 +5,10 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { tap, tapTransition } from '@/lib/motion'
 
-interface ChipProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onAnimationStart' | 'onDragStart' | 'onDragEnd' | 'onDrag'> {
+interface ChipProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'onAnimationStart' | 'onDragStart' | 'onDragEnd' | 'onDrag'
+> {
   selected?: boolean
   tone?: 'default' | 'accent' | 'secondary'
   size?: 'sm' | 'md'
@@ -13,7 +16,10 @@ interface ChipProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 
 
 /** A pill the user can toggle. Used for tastes, filters, quick picks. */
 export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
-  ({ className, selected, tone = 'default', size = 'md', type = 'button', children, ...props }, ref) => (
+  (
+    { className, selected, tone = 'default', size = 'md', type = 'button', children, ...props },
+    ref
+  ) => (
     <motion.button
       ref={ref}
       type={type}
@@ -40,7 +46,12 @@ Chip.displayName = 'Chip'
 
 export function Tag({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center rounded-pill bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink-2', className)}>
+    <span
+      className={cn(
+        'inline-flex items-center rounded-pill bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink-2',
+        className
+      )}
+    >
       {children}
     </span>
   )

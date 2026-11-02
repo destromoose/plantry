@@ -44,7 +44,10 @@ export function Shop() {
       aisles
         .map((a) => {
           const items = shop.filter((i) => i.aisle === a.id)
-          return { ...a, items: [...items.filter((i) => !i.checked), ...items.filter((i) => i.checked)] }
+          return {
+            ...a,
+            items: [...items.filter((i) => !i.checked), ...items.filter((i) => i.checked)],
+          }
         })
         .filter((g) => g.items.length > 0),
     [shop]
@@ -53,12 +56,17 @@ export function Shop() {
   function fromPlan() {
     const dates = Array.from({ length: 7 }, (_, i) => addDays(targetDate, i))
     generateShop(dates)
-    toast(`${useStore.getState().shop.filter((i) => i.fromRecipeIds.length > 0).length} items from your plan`)
+    toast(
+      `${useStore.getState().shop.filter((i) => i.fromRecipeIds.length > 0).length} items from your plan`
+    )
   }
 
   async function copyText() {
     const text = groups
-      .map((g) => `${g.label}\n${g.items.map((i) => `- ${i.name}${formatQuantity(i.quantity, i.unit) ? ` (${formatQuantity(i.quantity, i.unit)})` : ''}`).join('\n')}`)
+      .map(
+        (g) =>
+          `${g.label}\n${g.items.map((i) => `- ${i.name}${formatQuantity(i.quantity, i.unit) ? ` (${formatQuantity(i.quantity, i.unit)})` : ''}`).join('\n')}`
+      )
       .join('\n\n')
     try {
       await navigator.clipboard.writeText(text)
@@ -84,7 +92,9 @@ export function Shop() {
     <div className="pb-32">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">Shop</h1>
+          <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+            Shop
+          </h1>
           <p className="mt-1 text-ink-2">{unchecked} to get</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -104,25 +114,49 @@ export function Shop() {
           add()
         }}
       >
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Add something" aria-label="Add a shopping item" autoComplete="off" />
-        <Button type="submit" size="icon" aria-label="Add to list" disabled={!name.trim()} className="shrink-0">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Add something"
+          aria-label="Add a shopping item"
+          autoComplete="off"
+        />
+        <Button
+          type="submit"
+          size="icon"
+          aria-label="Add to list"
+          disabled={!name.trim()}
+          className="shrink-0"
+        >
           <Plus className="h-5 w-5" />
         </Button>
       </form>
 
       {shop.length === 0 ? (
-        <EmptyState icon={ShoppingBasket} title="Nothing to buy" body="Plan a few dinners and the list writes itself." action={planButton} />
+        <EmptyState
+          icon={ShoppingBasket}
+          title="Nothing to buy"
+          body="Plan a few dinners and the list writes itself."
+          action={planButton}
+        />
       ) : (
         <div className="space-y-8">
           {groups.map((g) => (
             <section key={g.id} aria-labelledby={`aisle-${g.id}`}>
-              <h2 id={`aisle-${g.id}`} className="mb-2 font-display text-xl font-semibold tracking-tight">
+              <h2
+                id={`aisle-${g.id}`}
+                className="mb-2 font-display text-xl font-semibold tracking-tight"
+              >
                 {g.label}
               </h2>
               <ul className="card divide-y divide-line overflow-hidden p-0">
                 <AnimatePresence mode="popLayout" initial={false}>
                   {g.items.map((item) => (
-                    <Row key={item.id} item={item} fromTitle={item.fromRecipeIds.map((id) => titles.get(id)).filter(Boolean)[0]} />
+                    <Row
+                      key={item.id}
+                      item={item}
+                      fromTitle={item.fromRecipeIds.map((id) => titles.get(id)).filter(Boolean)[0]}
+                    />
                   ))}
                 </AnimatePresence>
               </ul>
@@ -213,12 +247,21 @@ function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
               animate={{ scale: 1 }}
               transition={checkPop}
             >
-              <motion.path d="M5 12.5l4.5 4.5L19 7.5" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.18 }} />
+              <motion.path
+                d="M5 12.5l4.5 4.5L19 7.5"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.18 }}
+              />
             </motion.svg>
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className={cn('block truncate', item.checked ? 'text-ink-3 line-through' : 'text-ink')}>{item.name}</span>
+          <span
+            className={cn('block truncate', item.checked ? 'text-ink-3 line-through' : 'text-ink')}
+          >
+            {item.name}
+          </span>
           {fromTitle && <span className="block truncate text-xs text-ink-3">from {fromTitle}</span>}
         </span>
         {qty && <span className="shrink-0 text-sm text-ink-2">{qty}</span>}

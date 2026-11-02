@@ -2,8 +2,21 @@ import { describe, expect, it } from 'vitest'
 import { coverage, pickNext, suggest } from './suggest'
 import type { Aisle, PantryItem, Recipe } from './types'
 
-function recipe(id: string, keys: string[], opts: Partial<Recipe> = {}, optional: string[] = []): Recipe {
-  const ing = (k: string, o: boolean) => ({ id: `${id}-${k}`, name: k, key: k, quantity: 1, unit: '', aisle: 'produce' as Aisle, optional: o || undefined })
+function recipe(
+  id: string,
+  keys: string[],
+  opts: Partial<Recipe> = {},
+  optional: string[] = []
+): Recipe {
+  const ing = (k: string, o: boolean) => ({
+    id: `${id}-${k}`,
+    name: k,
+    key: k,
+    quantity: 1,
+    unit: '',
+    aisle: 'produce' as Aisle,
+    optional: o || undefined,
+  })
   return {
     id,
     title: id,
@@ -21,7 +34,15 @@ function recipe(id: string, keys: string[], opts: Partial<Recipe> = {}, optional
 }
 
 function item(key: string): PantryItem {
-  return { id: `p-${key}`, name: key, key, zone: 'fridge', aisle: 'produce', addedAt: '2026-11-03T00:00:00.000Z', softLifeDays: 30 }
+  return {
+    id: `p-${key}`,
+    name: key,
+    key,
+    zone: 'fridge',
+    aisle: 'produce',
+    addedAt: '2026-11-03T00:00:00.000Z',
+    softLifeDays: 30,
+  }
 }
 
 const context = { weatherLean: 'any' as const, isWeekend: false, now: '2026-11-03T12:00:00.000Z' }
@@ -48,7 +69,12 @@ describe('suggest', () => {
   it('puts quick recipes first when energy is cant-tonight', () => {
     const quick = recipe('quick', ['egg'], { activeMinutes: 8, totalMinutes: 10 })
     const slow = recipe('slow', ['egg'], { activeMinutes: 40, totalMinutes: 40 })
-    const out = suggest({ ...base, recipes: [slow, quick], pantry: [item('egg')], energy: 'cant-tonight' })
+    const out = suggest({
+      ...base,
+      recipes: [slow, quick],
+      pantry: [item('egg')],
+      energy: 'cant-tonight',
+    })
     expect(out.map((s) => s.recipe.id)).toEqual(['quick', 'slow'])
   })
 

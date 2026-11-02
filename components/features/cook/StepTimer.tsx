@@ -37,10 +37,22 @@ export function StepTimer({
 
   return (
     <div className="flex flex-col items-center gap-4" role="group" aria-label="Step timer">
-      <motion.div animate={finished ? { scale: [1, 1.06, 1] } : { scale: 1 }} transition={finished ? { ...settle, repeat: Infinity, repeatDelay: 0.4 } : settle}>
-        <ProgressRing value={progress} size={176} stroke={8} tone={finished ? 'danger' : running ? 'accent' : 'ink'}>
+      <motion.div
+        animate={finished ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+        transition={finished ? { ...settle, repeat: Infinity, repeatDelay: 0.4 } : settle}
+      >
+        <ProgressRing
+          value={progress}
+          size={176}
+          stroke={8}
+          tone={finished ? 'danger' : running ? 'accent' : 'ink'}
+        >
           <div className="text-center">
-            <p className="font-display text-4xl font-semibold tabular-nums" role="timer" aria-live="off">
+            <p
+              className="font-display text-4xl font-semibold tabular-nums"
+              role="timer"
+              aria-live="off"
+            >
               {formatClock(remaining)}
             </p>
             {finished && <p className="text-sm font-medium text-danger">Time&apos;s up</p>}
@@ -54,10 +66,15 @@ export function StepTimer({
           </Button>
         ) : (
           <Button variant="secondary" onClick={onStart}>
-            <Play className="h-4 w-4" aria-hidden /> {state && !finished && remaining < durationMs ? 'Resume' : 'Start'}
+            <Play className="h-4 w-4" aria-hidden />{' '}
+            {state && !finished && remaining < durationMs ? 'Resume' : 'Start'}
           </Button>
         )}
-        <Button variant="ghost" onClick={onReset} disabled={!state || (!running && !finished && remaining === durationMs)}>
+        <Button
+          variant="ghost"
+          onClick={onReset}
+          disabled={!state || (!running && !finished && remaining === durationMs)}
+        >
           <RotateCcw className="h-4 w-4" aria-hidden /> Reset
         </Button>
       </div>

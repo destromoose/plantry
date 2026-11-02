@@ -4,7 +4,20 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Check, Clock, Flame, Heart, Pencil, Trash2, Users, UtensilsCrossed, Timer, ShoppingBasket, CalendarPlus } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  Clock,
+  Flame,
+  Heart,
+  Pencil,
+  Trash2,
+  Users,
+  UtensilsCrossed,
+  Timer,
+  ShoppingBasket,
+  CalendarPlus,
+} from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn, addDays, dayLabel, formatMinutes, formatQuantity, toDateKey } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
@@ -47,7 +60,10 @@ export function RecipeDetail({ id }: { id: string }) {
         title="That recipe isn't here"
         body="It may have been deleted, or the link is off."
         action={
-          <Link href="/recipes" className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[15px] font-medium hover:bg-line/60">
+          <Link
+            href="/recipes"
+            className="inline-flex h-11 items-center rounded-pill bg-surface-2 px-5 text-[15px] font-medium hover:bg-line/60"
+          >
             Back to recipes
           </Link>
         }
@@ -83,10 +99,20 @@ export function RecipeDetail({ id }: { id: string }) {
     <article className="pb-36 lg:pb-28">
       <div className="relative -mx-5 aspect-[4/3] overflow-hidden lg:mx-0 lg:aspect-[16/9] lg:rounded-card">
         <motion.div layoutId={`recipe-image-${recipe.id}`} className="absolute inset-0">
-          <RecipeImage url={recipe.imageUrl} seed={recipe.id} sizes="(min-width: 1024px) 800px, 100vw" priority />
+          <RecipeImage
+            url={recipe.imageUrl}
+            seed={recipe.id}
+            sizes="(min-width: 1024px) 800px, 100vw"
+            priority
+          />
         </motion.div>
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
-          <Button variant="glass" size="icon" aria-label="Back to recipes" onClick={() => router.push('/recipes')}>
+          <Button
+            variant="glass"
+            size="icon"
+            aria-label="Back to recipes"
+            onClick={() => router.push('/recipes')}
+          >
             <ArrowLeft className="h-5 w-5" aria-hidden />
           </Button>
           <Button
@@ -96,15 +122,27 @@ export function RecipeDetail({ id }: { id: string }) {
             aria-pressed={recipe.isFavorite}
             onClick={() => toggleFavorite(recipe.id)}
           >
-            <Heart className={cn('h-5 w-5', recipe.isFavorite && 'fill-accent text-accent')} aria-hidden />
+            <Heart
+              className={cn('h-5 w-5', recipe.isFavorite && 'fill-accent text-accent')}
+              aria-hidden
+            />
           </Button>
         </div>
       </div>
 
-      <motion.div variants={staggerContainer} initial="hidden" animate="show" className="mx-auto mt-6 max-w-2xl space-y-8">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="mx-auto mt-6 max-w-2xl space-y-8"
+      >
         <motion.header variants={reveal} custom={0}>
-          <h1 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">{recipe.title}</h1>
-          {recipe.description && <p className="mt-2 text-[16px] text-ink-2">{recipe.description}</p>}
+          <h1 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">
+            {recipe.title}
+          </h1>
+          {recipe.description && (
+            <p className="mt-2 text-[16px] text-ink-2">{recipe.description}</p>
+          )}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {recipe.tastes.map((t) => (
               <Tag key={t}>{tasteLabels[t]}</Tag>
@@ -118,7 +156,11 @@ export function RecipeDetail({ id }: { id: string }) {
           </dl>
           {recipe.custom && (
             <div className="mt-4 flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => router.push(`/recipes/new?id=${recipe.id}`)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/recipes/new?id=${recipe.id}`)}
+              >
                 <Pencil className="h-4 w-4" aria-hidden /> Edit
               </Button>
               <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
@@ -130,11 +172,15 @@ export function RecipeDetail({ id }: { id: string }) {
 
         <motion.section variants={reveal} custom={1} aria-labelledby="ing-title">
           <SectionTitle
-            action={<Stepper value={current} onChange={setServings} min={1} max={24} label="Servings" />}
+            action={
+              <Stepper value={current} onChange={setServings} min={1} max={24} label="Servings" />
+            }
           >
             <span id="ing-title">Ingredients</span>
           </SectionTitle>
-          <p className="-mt-2 mb-3 text-sm text-ink-3">For {current} {current === 1 ? 'serving' : 'servings'}</p>
+          <p className="-mt-2 mb-3 text-sm text-ink-3">
+            For {current} {current === 1 ? 'serving' : 'servings'}
+          </p>
           <ul className="card divide-y divide-line overflow-hidden">
             {recipe.ingredients.map((ing) => {
               const have = pantryKeys.has(ing.key)
@@ -151,21 +197,26 @@ export function RecipeDetail({ id }: { id: string }) {
                   <span className="min-w-0 flex-1">
                     <span className="text-[15px]">{ing.name}</span>
                     {ing.optional && <span className="text-sm text-ink-3"> (optional)</span>}
-                    <span className="sr-only">{have ? ', you have it' : ', not in your pantry'}</span>
+                    <span className="sr-only">
+                      {have ? ', you have it' : ', not in your pantry'}
+                    </span>
                   </span>
                   {have && (
                     <span aria-hidden className="text-xs font-medium text-secondary">
                       You have it
                     </span>
                   )}
-                  <span className="shrink-0 text-sm tabular-nums text-ink-2">{formatQuantity(ing.quantity * scale, ing.unit)}</span>
+                  <span className="shrink-0 text-sm tabular-nums text-ink-2">
+                    {formatQuantity(ing.quantity * scale, ing.unit)}
+                  </span>
                 </li>
               )
             })}
           </ul>
           {missing.length > 0 && (
             <Button variant="outline" className="mt-3" onClick={addMissing}>
-              <ShoppingBasket className="h-4 w-4" aria-hidden /> Add missing to list ({missing.length})
+              <ShoppingBasket className="h-4 w-4" aria-hidden /> Add missing to list (
+              {missing.length})
             </Button>
           )}
         </motion.section>
@@ -177,7 +228,10 @@ export function RecipeDetail({ id }: { id: string }) {
           <ol className="space-y-5">
             {recipe.steps.map((step, i) => (
               <li key={step.id} className="flex gap-4">
-                <span className="w-7 shrink-0 font-display text-2xl font-semibold leading-none text-accent" aria-hidden>
+                <span
+                  className="w-7 shrink-0 font-display text-2xl font-semibold leading-none text-accent"
+                  aria-hidden
+                >
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -196,7 +250,12 @@ export function RecipeDetail({ id }: { id: string }) {
 
       <div className="pointer-events-none fixed inset-x-0 bottom-24 z-30 flex justify-center px-4 lg:bottom-6">
         <div className="glass pointer-events-auto flex w-full max-w-md items-center gap-2 rounded-pill p-2">
-          <Button variant="secondary" size="lg" className="flex-1" onClick={() => setPlanOpen(true)}>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="flex-1"
+            onClick={() => setPlanOpen(true)}
+          >
             <CalendarPlus className="h-5 w-5" aria-hidden /> Plan it
           </Button>
           <Button size="lg" className="flex-1" onClick={() => router.push(`/cook/${recipe.id}`)}>
@@ -209,7 +268,11 @@ export function RecipeDetail({ id }: { id: string }) {
         <ul className="space-y-1">
           {days.map((d) => (
             <li key={d.key}>
-              <Button variant="ghost" className="h-12 w-full justify-start text-base" onClick={() => planFor(d.key, d.label)}>
+              <Button
+                variant="ghost"
+                className="h-12 w-full justify-start text-base"
+                onClick={() => planFor(d.key, d.label)}
+              >
                 {d.label}
               </Button>
             </li>
@@ -219,7 +282,8 @@ export function RecipeDetail({ id }: { id: string }) {
 
       <Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete this recipe?">
         <p className="mb-5 text-[15px] text-ink-2">
-          {recipe.title} will be removed from your recipes. Any night you planned it for goes back to empty.
+          {recipe.title} will be removed from your recipes. Any night you planned it for goes back
+          to empty.
         </p>
         <div className="flex gap-2">
           <Button variant="secondary" className="flex-1" onClick={() => setDeleteOpen(false)}>

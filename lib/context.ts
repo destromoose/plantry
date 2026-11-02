@@ -40,15 +40,25 @@ export function buildContext({ now, settings, weather, plan, recipes }: BuildInp
   const lean = settings.weatherEnabled ? weatherLean(weather) : 'any'
 
   const tonight = plan.find((p) => p.date === targetDate && p.slot === 'dinner')
-  const tonightRecipe = tonight?.recipeId ? recipes.find((r) => r.id === tonight.recipeId) : undefined
+  const tonightRecipe = tonight?.recipeId
+    ? recipes.find((r) => r.id === tonight.recipeId)
+    : undefined
   const yesterdayBigBatch = plan.find(
-    (p) => p.date === addDays(today, -1) && p.slot === 'dinner' && p.done && recipes.find((r) => r.id === p.recipeId)?.leftovers
+    (p) =>
+      p.date === addDays(today, -1) &&
+      p.slot === 'dinner' &&
+      p.done &&
+      recipes.find((r) => r.id === p.recipeId)?.leftovers
   )
   const weekPlanned = countPlannedDinners(plan, today)
 
   let nudge: Context['nudge'] = 'none'
   if (isWeekend && hour >= 7 && hour < 13 && weekPlanned < 3) nudge = 'plan-week'
-  else if (hour >= 7 && hour < 12 && tonightRecipe?.ingredients.some((i) => i.aisle === 'frozen' || i.aisle === 'meat-fish'))
+  else if (
+    hour >= 7 &&
+    hour < 12 &&
+    tonightRecipe?.ingredients.some((i) => i.aisle === 'frozen' || i.aisle === 'meat-fish')
+  )
     nudge = 'defrost'
   else if (hour >= 16 && hour < 20 && tonightRecipe) nudge = 'start-now'
   else if ((hour >= 20 || lateNight) && yesterdayBigBatch) nudge = 'leftovers'
@@ -71,7 +81,9 @@ export function buildContext({ now, settings, weather, plan, recipes }: BuildInp
 
 function countPlannedDinners(plan: PlanEntry[], today: string): number {
   const week = new Set(Array.from({ length: 7 }, (_, i) => addDays(today, i)))
-  return plan.filter((p) => p.slot === 'dinner' && week.has(p.date) && (p.recipeId || p.note || p.leftoversOf)).length
+  return plan.filter(
+    (p) => p.slot === 'dinner' && week.has(p.date) && (p.recipeId || p.note || p.leftoversOf)
+  ).length
 }
 
 function describe(i: {
@@ -84,14 +96,21 @@ function describe(i: {
 }): string {
   const day = i.isWeekend ? 'weekend' : 'weekday'
   const time =
-    i.mood === 'dawn' ? 'morning' : i.mood === 'day' ? 'afternoon' : i.mood === 'dusk' ? 'evening' : 'late night'
+    i.mood === 'dawn'
+      ? 'morning'
+      : i.mood === 'day'
+        ? 'afternoon'
+        : i.mood === 'dusk'
+          ? 'evening'
+          : 'late night'
   let w = ''
   if (i.weather) {
     if (i.weather.precipitation) w = 'Rainy '
     else if (i.weather.tempC <= 12) w = 'Chilly '
     else if (i.weather.tempC >= 26) w = 'Hot '
   }
-  const leanText = i.lean === 'warm' ? ', so I leaned cozy' : i.lean === 'light' ? ', so I kept it light' : ''
+  const leanText =
+    i.lean === 'warm' ? ', so I leaned cozy' : i.lean === 'light' ? ', so I kept it light' : ''
   const target = i.lateNight ? ' Thinking about tomorrow.' : ''
   return `${w}${w ? day : capitalize(day)} ${time}${leanText}.${target}`
 }
@@ -106,7 +125,9 @@ export async function fetchWeather(lat: number, lon: number): Promise<Weather | 
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation`
     const res = await fetch(url)
     if (!res.ok) return undefined
-    const json = (await res.json()) as { current?: { temperature_2m?: number; precipitation?: number } }
+    const json = (await res.json()) as {
+      current?: { temperature_2m?: number; precipitation?: number }
+    }
     if (!json.current || typeof json.current.temperature_2m !== 'number') return undefined
     return {
       tempC: json.current.temperature_2m,

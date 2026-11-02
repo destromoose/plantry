@@ -34,7 +34,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-mood="day" className={`${display.variable} ${sans.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      data-mood="day"
+      className={`${display.variable} ${sans.variable}`}
+      suppressHydrationWarning
+    >
       <body className="grain font-sans">
         <div className="ambient" aria-hidden>
           <i />

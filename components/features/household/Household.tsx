@@ -54,12 +54,16 @@ export function Household() {
     (p) => p.slot === 'dinner' && weekSet.has(p.date) && p.date <= today && (p.recipeId || p.note)
   ).length
   const cookedThisWeek = cooked.filter((c) => weekSet.has(c.date))
-  const open = week.filter((d) => d >= today && !(dinner(d)?.recipeId || dinner(d)?.note || dinner(d)?.leftoversOf)).length
+  const open = week.filter(
+    (d) => d >= today && !(dinner(d)?.recipeId || dinner(d)?.note || dinner(d)?.leftoversOf)
+  ).length
 
   return (
     <div className="space-y-10 pb-8">
       <header>
-        <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">{word}</h1>
+        <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">
+          {word}
+        </h1>
         <p className="mt-1 text-ink-2">The dinner load, shared.</p>
       </header>
 
@@ -99,7 +103,12 @@ export function Household() {
                   </button>
                 )}
                 {!m.isMe && (
-                  <Button variant="ghost" size="icon" aria-label={`Remove ${m.name}`} onClick={() => removeMember(m.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${m.name}`}
+                    onClick={() => removeMember(m.id)}
+                  >
                     <X className="h-5 w-5" />
                   </Button>
                 )}
@@ -116,8 +125,18 @@ export function Household() {
               setNewName('')
             }}
           >
-            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Add someone" aria-label="Add someone" />
-            <Button type="submit" variant="secondary" disabled={!newName.trim()} className="shrink-0">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Add someone"
+              aria-label="Add someone"
+            />
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={!newName.trim()}
+              className="shrink-0"
+            >
               <Plus className="h-4 w-4" aria-hidden /> Add
             </Button>
           </form>
@@ -128,7 +147,12 @@ export function Household() {
         <SectionTitle>
           <span id="week-h">This week</span>
         </SectionTitle>
-        <motion.ul variants={staggerContainer} initial="hidden" animate="show" className="card divide-y divide-line overflow-hidden p-0">
+        <motion.ul
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="card divide-y divide-line overflow-hidden p-0"
+        >
           {week.map((date, i) => {
             const cook = member(dinner(date)?.cookId)
             const isToday = date === today
@@ -140,11 +164,24 @@ export function Household() {
                   aria-label={`${shortDay(date)}: ${describeDinner(date)}. ${cook ? `Cooking: ${cook.name}` : 'Nobody yet'}. Change who cooks.`}
                   className="flex min-h-[3.5rem] w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-surface-2"
                 >
-                  <span className={`w-10 shrink-0 text-sm font-semibold ${isToday ? 'text-accent' : 'text-ink-3'}`}>{shortDay(date)}</span>
-                  <span className={`min-w-0 flex-1 truncate ${describeDinner(date) === 'Open' ? 'text-ink-3' : 'font-display text-lg'}`}>
+                  <span
+                    className={`w-10 shrink-0 text-sm font-semibold ${isToday ? 'text-accent' : 'text-ink-3'}`}
+                  >
+                    {shortDay(date)}
+                  </span>
+                  <span
+                    className={`min-w-0 flex-1 truncate ${describeDinner(date) === 'Open' ? 'text-ink-3' : 'font-display text-lg'}`}
+                  >
                     {describeDinner(date)}
                   </span>
-                  {cook ? <Avatar member={cook} /> : <span className="h-8 w-8 rounded-full border border-dashed border-line" aria-hidden />}
+                  {cook ? (
+                    <Avatar member={cook} />
+                  ) : (
+                    <span
+                      className="h-8 w-8 rounded-full border border-dashed border-line"
+                      aria-hidden
+                    />
+                  )}
                 </button>
               </motion.li>
             )
@@ -157,7 +194,9 @@ export function Household() {
           <span id="handoffs-h">Hand-offs</span>
         </SectionTitle>
         {handoffs.length === 0 ? (
-          <p className="card p-5 text-ink-2">No hand-offs yet. On the Tonight screen, tap Hand off to pass a night to someone.</p>
+          <p className="card p-5 text-ink-2">
+            No hand-offs yet. On the Tonight screen, tap Hand off to pass a night to someone.
+          </p>
         ) : (
           <ul className="space-y-3">
             {[...handoffs]
@@ -168,11 +207,15 @@ export function Household() {
                   <li key={h.id} className="card flex items-center gap-3 p-4">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">
-                        {member(h.fromId)?.name ?? 'Someone'} handed {member(h.toId)?.name ?? 'someone'}{' '}
-                        {fromDateKey(h.date).toLocaleDateString(undefined, { weekday: 'long' })}&apos;s dinner
+                        {member(h.fromId)?.name ?? 'Someone'} handed{' '}
+                        {member(h.toId)?.name ?? 'someone'}{' '}
+                        {fromDateKey(h.date).toLocaleDateString(undefined, { weekday: 'long' })}
+                        &apos;s dinner
                       </p>
                       {title && <p className="font-display text-lg">{title}</p>}
-                      {h.message && <p className="text-sm italic text-ink-2">&ldquo;{h.message}&rdquo;</p>}
+                      {h.message && (
+                        <p className="text-sm italic text-ink-2">&ldquo;{h.message}&rdquo;</p>
+                      )}
                     </div>
                     {h.accepted ? (
                       <Tag>
@@ -208,12 +251,20 @@ export function Household() {
                 {m.name} cooked {cookedThisWeek.filter((c) => c.cookId === m.id).length}.
               </li>
             ))}
-            <li>{open === 0 ? 'Every night is spoken for.' : `${pluralize(open, 'night')} still open.`}</li>
+            <li>
+              {open === 0
+                ? 'Every night is spoken for.'
+                : `${pluralize(open, 'night')} still open.`}
+            </li>
           </ul>
         </Card>
       </section>
 
-      <Sheet open={!!claimDate} onClose={() => setClaimDate(null)} title={claimDate ? `Who's cooking ${shortDay(claimDate)}?` : undefined}>
+      <Sheet
+        open={!!claimDate}
+        onClose={() => setClaimDate(null)}
+        title={claimDate ? `Who's cooking ${shortDay(claimDate)}?` : undefined}
+      >
         <ul className="space-y-1">
           {members.map((m) => (
             <li key={m.id}>
@@ -228,7 +279,9 @@ export function Household() {
               >
                 <Avatar member={m} />
                 <span className="font-medium">{m.name}</span>
-                {claimDate && dinner(claimDate)?.cookId === m.id && <Check className="ml-auto h-4 w-4 text-secondary" aria-label="Current cook" />}
+                {claimDate && dinner(claimDate)?.cookId === m.id && (
+                  <Check className="ml-auto h-4 w-4 text-secondary" aria-label="Current cook" />
+                )}
               </button>
             </li>
           ))}

@@ -14,13 +14,26 @@ export const energyOptions: { id: Energy; label: string; hint: string }[] = [
   { id: 'cant-tonight', label: "Can't tonight", hint: "And that's fine" },
 ]
 
-export function EnergyPicker({ energy, label, onSet }: { energy?: Energy; label: string; onSet: (e: Energy) => void }) {
+export function EnergyPicker({
+  energy,
+  label,
+  onSet,
+}: {
+  energy?: Energy
+  label: string
+  onSet: (e: Energy) => void
+}) {
   const [editing, setEditing] = useState(false)
   const current = energyOptions.find((o) => o.id === energy)
 
   if (current && !editing) {
     return (
-      <motion.div layout transition={settle} className="flex items-center gap-2" aria-label="Your energy">
+      <motion.div
+        layout
+        transition={settle}
+        className="flex items-center gap-2"
+        aria-label="Your energy"
+      >
         <span className="inline-flex h-9 items-center gap-1.5 rounded-pill bg-surface-2 px-3.5 text-sm font-medium text-ink">
           <Check className="h-4 w-4 text-secondary" aria-hidden />
           {current.label}
@@ -62,10 +75,27 @@ export function EnergyPicker({ energy, label, onSet }: { energy?: Energy; label:
               )}
             >
               {selected && (
-                <motion.span layoutId="energy-selected" transition={settle} className="absolute inset-0 bg-accent" aria-hidden />
+                <motion.span
+                  layoutId="energy-selected"
+                  transition={settle}
+                  className="absolute inset-0 bg-accent"
+                  aria-hidden
+                />
               )}
-              <span className={cn('relative block font-display text-lg font-semibold', selected && 'text-accent-ink')}>{o.label}</span>
-              <Eyebrow className={cn('relative mt-0.5 normal-case tracking-normal text-[13px] font-normal', selected && 'text-accent-ink/80')}>
+              <span
+                className={cn(
+                  'relative block font-display text-lg font-semibold',
+                  selected && 'text-accent-ink'
+                )}
+              >
+                {o.label}
+              </span>
+              <Eyebrow
+                className={cn(
+                  'relative mt-0.5 text-[13px] font-normal normal-case tracking-normal',
+                  selected && 'text-accent-ink/80'
+                )}
+              >
                 {o.hint}
               </Eyebrow>
             </motion.button>

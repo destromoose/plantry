@@ -39,13 +39,20 @@ export function SaveSheet({
       <ul className="space-y-2">
         {days.map((d) => {
           const entry = plan.find((p) => p.date === d && p.slot === 'dinner')
-          const taken = entry?.recipeId ? recipes.find((r) => r.id === entry.recipeId)?.title : entry?.note ?? (entry?.leftoversOf ? 'Leftovers' : undefined)
+          const taken = entry?.recipeId
+            ? recipes.find((r) => r.id === entry.recipeId)?.title
+            : (entry?.note ?? (entry?.leftoversOf ? 'Leftovers' : undefined))
           return (
             <li key={d}>
               <button
                 type="button"
                 onClick={() => {
-                  setPlanEntry({ date: d, slot: 'dinner', recipeId: recipe.id, cookId: entry?.cookId })
+                  setPlanEntry({
+                    date: d,
+                    slot: 'dinner',
+                    recipeId: recipe.id,
+                    cookId: entry?.cookId,
+                  })
                   toast(`Saved for ${dayLabel(d, today)}`)
                   onSaved()
                   onClose()
@@ -55,10 +62,15 @@ export function SaveSheet({
                 <span>
                   <span className="block font-medium">{dayLabel(d, today)}</span>
                   <span className="block text-sm text-ink-3">
-                    {fromDateKey(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {fromDateKey(d).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </span>
                 </span>
-                <span className="max-w-[55%] truncate text-sm text-ink-2">{taken ? `Replaces ${taken}` : 'Free'}</span>
+                <span className="max-w-[55%] truncate text-sm text-ink-2">
+                  {taken ? `Replaces ${taken}` : 'Free'}
+                </span>
               </button>
             </li>
           )
@@ -92,8 +104,14 @@ export function HandoffSheet({
     <Sheet open={open} onClose={onClose} title="Hand off dinner">
       {others.length === 0 || !me ? (
         <div>
-          <p className="text-[15px] text-ink-2">Add someone to your household first. Then you can pass the apron.</p>
-          <Link href="/household" onClick={onClose} className={cn(buttonVariants({ variant: 'primary' }), 'mt-5')}>
+          <p className="text-[15px] text-ink-2">
+            Add someone to your household first. Then you can pass the apron.
+          </p>
+          <Link
+            href="/household"
+            onClick={onClose}
+            className={cn(buttonVariants({ variant: 'primary' }), 'mt-5')}
+          >
             Go to household
           </Link>
         </div>
@@ -118,7 +136,13 @@ export function HandoffSheet({
                   type="button"
                   onClick={() => {
                     onBeforeHandoff?.()
-                    createHandoff({ date, fromId: me.id, toId: m.id, recipeId: recipe?.id, message: message.trim() || undefined })
+                    createHandoff({
+                      date,
+                      fromId: me.id,
+                      toId: m.id,
+                      recipeId: recipe?.id,
+                      message: message.trim() || undefined,
+                    })
                     toast(`Handed to ${m.name}`)
                     setMessage('')
                     onClose()
