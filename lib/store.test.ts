@@ -109,6 +109,20 @@ describe('markCooked', () => {
     expect(s().plan.find((p) => p.id === 'a')?.done).toBe(true)
     expect(s().cooked[0].recipeId).toBe('stew')
   })
+
+  it("credits this phone's person when nobody claimed the night", () => {
+    useStore.setState({
+      recipes: [recipe('stew', [{ key: 'beef', aisle: 'meat-fish' }])],
+      plan: [{ id: 'a', date: '2026-11-03', slot: 'dinner', recipeId: 'stew' }],
+      members: [
+        { id: 'm1', name: 'Sam', color: 'terracotta' },
+        { id: 'm2', name: 'Alex', color: 'sage', isMe: true },
+      ],
+      cooked: [],
+    })
+    s().markCooked('2026-11-03')
+    expect(s().cooked[0].cookId).toBe('m2')
+  })
 })
 
 describe('importData', () => {

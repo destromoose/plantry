@@ -41,6 +41,7 @@ import { SectionTitle } from '@/components/ui/Card'
 import { toast } from '@/components/ui/Toast'
 import { RecipeImage } from './RecipeImage'
 import { tasteLabels } from './tastes'
+import { MoreLikeThis } from './MoreLikeThis'
 
 export function RecipeDetail({ id }: { id: string }) {
   const router = useRouter()
@@ -324,6 +325,8 @@ export function RecipeDetail({ id }: { id: string }) {
             </p>
           )}
         </motion.section>
+
+        <MoreLikeThis recipe={recipe} />
       </motion.div>
 
       <div
