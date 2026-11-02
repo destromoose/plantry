@@ -82,19 +82,36 @@ export function Onboarding() {
     saveDraft({ step, names, tastes, avoid, picked: [...picked] })
   }, [step, names, tastes, avoid, picked])
 
-  // Each step is a history entry, so the phone's Back button goes to the previous step.
+  // Each step forward is a history entry, so the phone's Back button goes to the previous step.
+  // depth counts the entries this flow added, so Back and Finish can take them off again.
+  const depth = useRef(0)
   const setStep = (s: (typeof steps)[number]) => {
     setStepState(s)
     setTried(false)
-    window.history.pushState({ onboarding: s }, '')
+    depth.current += 1
+    window.history.pushState({ onboarding: s, depth: depth.current }, '')
+  }
+  const back = () => {
+    if (idx <= 0) return
+    // Step back through history when we added the entry, so Back and the phone agree.
+    if (depth.current > 0) window.history.back()
+    else {
+      setStepState(steps[idx - 1])
+      setTried(false)
+    }
   }
   useEffect(() => {
+    // Mark the entry we started on, so stepping back to it restores a step restored from a draft.
+    window.history.replaceState({ ...window.history.state, onboarding: step, depth: 0 }, '')
     const onPop = (e: PopStateEvent) => {
-      const s = (e.state as { onboarding?: (typeof steps)[number] } | null)?.onboarding
+      const st = e.state as { onboarding?: (typeof steps)[number]; depth?: number } | null
+      const s = st?.onboarding
+      depth.current = st?.depth ?? 0
       setStepState(s && steps.includes(s) ? s : 'who')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Move focus to the new step's heading.
@@ -142,7 +159,17 @@ export function Onboarding() {
         avoid,
         pantryNames: [...picked],
       })
-      router.replace('/')
+      // Take the step entries off history first, so Back from Tonight doesn't land here.
+      const n = depth.current
+      depth.current = 0
+      if (n > 0) {
+        const done = () => {
+          window.removeEventListener('popstate', done)
+          router.replace('/')
+        }
+        window.addEventListener('popstate', done)
+        window.history.go(-n)
+      } else router.replace('/')
     }
   }
 
@@ -373,11 +400,7 @@ export function Onboarding() {
       </motion.div>
 
       <div className="safe-bottom sticky bottom-0 -mx-6 mt-8 flex flex-wrap items-center justify-between gap-2 bg-canvas/85 px-6 pt-3 backdrop-blur">
-        <Button
-          variant="ghost"
-          onClick={() => idx > 0 && setStep(steps[idx - 1])}
-          className={cn(idx === 0 && 'invisible')}
-        >
+        <Button variant="ghost" onClick={back} className={cn(idx === 0 && 'invisible')}>
           Back
         </Button>
         <div className="flex flex-col items-end">

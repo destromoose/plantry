@@ -126,7 +126,10 @@ export function CookMode({
   const [leaveOpen, setLeaveOpen] = useState(false)
   const [awake, setAwake] = useState(false)
 
-  const [index, setIndex] = useState(saved?.index ?? 0)
+  // The recipe may have fewer steps than when the session was saved.
+  const [index, setIndex] = useState(() =>
+    Math.max(0, Math.min(saved?.index ?? 0, (recipe?.steps.length ?? 1) - 1))
+  )
   const [dir, setDir] = useState(1)
   const [ingOpen, setIngOpen] = useState(false)
   const [finishOpen, setFinishOpen] = useState(false)
@@ -317,10 +320,33 @@ export function CookMode({
     if (!date || !entry) {
       // Cooked without a plan: log it as tonight's dinner so history and the pantry stay right.
       const today = toDateKey(new Date())
-      withUndo("Logged as tonight's dinner. Nice work.", () => {
-        setPlanEntry({ date: today, slot: 'dinner', recipeId: recipe.id, servings: count })
-        markCooked(today, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
-      })
+      const tonight = useStore.getState().plan.find((p) => p.date === today && p.slot === 'dinner')
+      if (tonight?.done) {
+        // Tonight is already logged. Don't overwrite it or use the pantry twice.
+        toast('Nice work. Tonight was already logged, so nothing changed.')
+        router.push('/')
+        return
+      }
+      const replacing =
+        tonight?.recipeId && tonight.recipeId !== recipe.id
+          ? useStore.getState().recipes.find((r) => r.id === tonight.recipeId)?.title
+          : undefined
+      withUndo(
+        replacing
+          ? `Logged as tonight's dinner instead of ${replacing}.`
+          : "Logged as tonight's dinner. Nice work.",
+        () => {
+          if (tonight?.recipeId !== recipe.id)
+            setPlanEntry({
+              date: today,
+              slot: 'dinner',
+              recipeId: recipe.id,
+              servings: count,
+              cookId: tonight?.cookId,
+            })
+          markCooked(today, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
+        }
+      )
       router.push('/')
       return
     }
