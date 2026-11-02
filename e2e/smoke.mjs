@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3123
 const BASE = `http://localhost:${PORT}`
 mkdirSync('e2e/screenshots', { recursive: true })
 
-const server = spawn('npx', ['next', 'start', '-p', String(PORT)], { stdio: 'pipe', shell: true })
+const server = spawn('npx', ['next', 'start', '-p', String(PORT)], { stdio: 'pipe', shell: true, detached: true })
 server.stdout.on('data', (d) => process.stdout.write(`[next] ${d}`))
 server.stderr.on('data', (d) => process.stderr.write(`[next] ${d}`))
 
@@ -58,6 +58,18 @@ try {
     await page.waitForURL(`${BASE}/`)
     await page.waitForTimeout(900)
     await page.screenshot({ path: `e2e/screenshots/${name}-04-tonight.png`, fullPage: true })
+
+    // Navigate by clicking, the way people do. page.goto hides transition bugs.
+    for (const label of ['Week', 'Recipes', 'Pantry', 'Shop', 'Tonight', 'Week', 'Shop']) {
+      await page.locator('nav[aria-label="Primary"]:visible').getByRole('link', { name: label, exact: true }).click()
+      await page.waitForTimeout(700)
+      const opacity = await page.evaluate(() => Number(getComputedStyle(document.querySelector('main')).opacity))
+      if (opacity < 0.95) throw new Error(`${name}: page stayed invisible after clicking ${label} (opacity ${opacity})`)
+    }
+    await page.goBack()
+    await page.waitForTimeout(700)
+    const backOpacity = await page.evaluate(() => Number(getComputedStyle(document.querySelector('main')).opacity))
+    if (backOpacity < 0.95) throw new Error(`${name}: page stayed invisible after Back (opacity ${backOpacity})`)
 
     for (const [i, route] of ['week', 'recipes', 'pantry', 'shop', 'household', 'settings'].entries()) {
       await page.goto(`${BASE}/${route}`)
@@ -131,7 +143,10 @@ try {
   failed = true
   console.error(e)
 } finally {
-  server.kill('SIGTERM')
+  // Kill the whole process group so next-server does not outlive the test.
+  try {
+    process.kill(-server.pid, 'SIGTERM')
+  } catch {}
 }
 
 // Image hosts may be unreachable in a sandbox; a failed resource load is not an app error.

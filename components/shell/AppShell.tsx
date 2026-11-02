@@ -3,8 +3,16 @@
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { Sparkles, CalendarDays, BookOpen, Refrigerator, ShoppingBasket, Users, Settings as SettingsIcon } from 'lucide-react'
+import { motion } from 'framer-motion'
+import {
+  Sparkles,
+  CalendarDays,
+  BookOpen,
+  Refrigerator,
+  ShoppingBasket,
+  Users,
+  Settings as SettingsIcon,
+} from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { page, settle } from '@/lib/motion'
@@ -46,7 +54,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!hydrated) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={settle} className="text-accent">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={settle}
+          className="text-accent"
+        >
           <Logo withWord={false} className="[&>svg]:h-10 [&>svg]:w-10" />
         </motion.div>
       </div>
@@ -57,11 +70,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <>
         <Toaster />
-        <AnimatePresence mode="wait">
-          <motion.main key={pathname} variants={page} initial="hidden" animate="show" exit="exit" className="min-h-dvh">
-            {children}
-          </motion.main>
-        </AnimatePresence>
+        <motion.main
+          key={pathname}
+          variants={page}
+          initial="hidden"
+          animate="show"
+          className="min-h-dvh"
+        >
+          {children}
+        </motion.main>
       </>
     )
   }
@@ -91,21 +108,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
         </header>
-        <p className="px-5 font-display text-sm italic text-ink-3 lg:px-0 lg:pt-6" aria-live="polite">
+        <p
+          className="px-5 font-display text-sm italic text-ink-3 lg:px-0 lg:pt-6"
+          aria-live="polite"
+        >
           {ctx.reason}
         </p>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.main
-            key={pathname}
-            variants={page}
-            initial="hidden"
-            animate="show"
-            exit="exit"
-            className="flex-1 px-5 pb-28 pt-3 lg:px-0 lg:pb-12"
-          >
-            {children}
-          </motion.main>
-        </AnimatePresence>
+        {/* Enter-only page fade. An exit animation with mode="wait" never finishes under the
+            App Router and leaves the new page invisible, so pages only animate in. */}
+        <motion.main
+          key={pathname}
+          variants={page}
+          initial="hidden"
+          animate="show"
+          className="flex-1 px-5 pb-28 pt-3 lg:px-0 lg:pb-12"
+        >
+          {children}
+        </motion.main>
         <TabBar pathname={pathname} />
       </div>
     </div>
@@ -134,7 +153,11 @@ function TabBar({ pathname }: { pathname: string }) {
               )}
             >
               {on && (
-                <motion.span layoutId="tab-pill" transition={settle} className="absolute inset-0 rounded-pill bg-accent shadow-card" />
+                <motion.span
+                  layoutId="tab-pill"
+                  transition={settle}
+                  className="absolute inset-0 rounded-pill bg-accent shadow-card"
+                />
               )}
               <t.icon className="relative h-5 w-5" strokeWidth={on ? 2.4 : 2} />
               <span className="relative">{t.label}</span>
@@ -167,7 +190,13 @@ function Sidebar({ pathname }: { pathname: string }) {
                 i === tabs.length && 'mt-4'
               )}
             >
-              {on && <motion.span layoutId="side-pill" transition={settle} className="absolute inset-0 rounded-pill bg-accent shadow-card" />}
+              {on && (
+                <motion.span
+                  layoutId="side-pill"
+                  transition={settle}
+                  className="absolute inset-0 rounded-pill bg-accent shadow-card"
+                />
+              )}
               <t.icon className="relative h-5 w-5" />
               <span className="relative">{t.label}</span>
             </Link>

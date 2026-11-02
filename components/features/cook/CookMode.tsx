@@ -201,8 +201,8 @@ export function CookMode({ id, date }: { id: string; date?: string }) {
         </div>
       </header>
 
-      <main className="flex flex-1 items-center overflow-hidden py-6">
-        <AnimatePresence mode="wait" custom={dir} initial={false}>
+      <main className="relative flex flex-1 items-center overflow-hidden py-6">
+        <AnimatePresence mode="popLayout" custom={dir} initial={false}>
           <motion.section
             key={step.id}
             custom={dir}
