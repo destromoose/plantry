@@ -126,7 +126,7 @@ export function Week() {
             <>
               <Thumb src={recipe.imageUrl} className="h-14 w-14 rounded-xl" sizes="56px" />
               <span className="min-w-0 flex-1">
-                <span className={cn('block truncate font-display text-lg font-semibold leading-tight', done && 'text-ink-3')}>{recipe.title}</span>
+                <span className={cn('line-clamp-2 font-display text-lg font-semibold leading-tight', done && 'text-ink-3')}>{recipe.title}</span>
                 <span className="block text-sm text-ink-3">{formatMinutes(recipe.activeMinutes)} hands-on</span>
               </span>
             </>
@@ -134,7 +134,7 @@ export function Week() {
             <>
               <Thumb src={lo.imageUrl} className="h-14 w-14 rounded-xl opacity-80" sizes="56px" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-display text-lg font-semibold leading-tight">Leftovers: {lo.title}</span>
+                <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">Leftovers: {lo.title}</span>
                 <span className="block text-sm text-ink-3">Easy night</span>
               </span>
             </>

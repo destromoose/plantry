@@ -4,7 +4,8 @@
 // console error or uncaught page error.
 import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
-import { chromium } from 'playwright'
+import { createRequire } from 'node:module'
+const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH || 'playwright')
 
 const PORT = process.env.PORT || 3123
 const BASE = `http://localhost:${PORT}`
@@ -29,7 +30,8 @@ const errors = []
 let failed = false
 try {
   await waitForServer()
-  const browser = await chromium.launch()
+  const proxy = process.env.HTTPS_PROXY || process.env.https_proxy
+  const browser = await chromium.launch(proxy ? { proxy: { server: proxy, bypass: 'localhost,127.0.0.1' } } : {})
   for (const [name, viewport, mobile] of [
     ['phone', { width: 390, height: 844 }, true],
     ['desktop', { width: 1280, height: 860 }, false],
@@ -48,6 +50,7 @@ try {
     await page.getByRole('button', { name: 'Next' }).click()
     await page.getByRole('button', { name: /^Cozy/ }).click()
     await page.getByRole('button', { name: /^One pan/ }).click()
+    await page.waitForTimeout(400)
     await page.screenshot({ path: `e2e/screenshots/${name}-02-onboarding-taste.png` })
     await page.getByRole('button', { name: 'Next' }).click()
     await page.screenshot({ path: `e2e/screenshots/${name}-03-onboarding-pantry.png` })
@@ -74,6 +77,46 @@ try {
     await page.waitForTimeout(700)
     await page.screenshot({ path: `e2e/screenshots/${name}-12-cook.png` })
 
+    // The core loop: energy -> lock in -> fill week -> shopping list -> check -> done -> cook.
+    if (name === 'phone') {
+      await page.goto(`${BASE}/`)
+      await page.getByRole('radio', { name: /Something quick/ }).click()
+      await page.waitForTimeout(400)
+      await page.getByRole('button', { name: 'Shuffle' }).click()
+      await page.waitForTimeout(1500)
+      await page.getByRole('button', { name: 'Lock it in' }).last().click()
+      await page.waitForTimeout(500)
+      await page.screenshot({ path: `e2e/screenshots/${name}-14-tonight-locked.png`, fullPage: true })
+      if (!(await page.getByRole('link', { name: /^Cook/ }).count())) throw new Error('Cook link missing after lock in')
+
+      await page.goto(`${BASE}/week`)
+      await page.getByRole('button', { name: 'Fill my week' }).click()
+      await page.waitForTimeout(900)
+      await page.screenshot({ path: `e2e/screenshots/${name}-15-week-filled.png`, fullPage: true })
+      await page.getByRole('button', { name: 'Make the shopping list' }).click()
+      await page.waitForURL('**/shop')
+      await page.waitForTimeout(700)
+      const rows = await page.getByRole('checkbox').count()
+      if (rows < 5) throw new Error(`expected a generated list, got ${rows} items`)
+      await page.getByRole('checkbox').first().click()
+      await page.getByRole('checkbox').nth(1).click()
+      await page.waitForTimeout(600)
+      await page.screenshot({ path: `e2e/screenshots/${name}-16-shop-list.png`, fullPage: true })
+      await page.getByRole('button', { name: 'Done shopping' }).click()
+      await page.waitForTimeout(500)
+
+      await page.goto(`${BASE}/`)
+      await page.getByRole('link', { name: /^Cook/ }).click()
+      await page.waitForURL('**/cook/**')
+      await page.waitForTimeout(600)
+      await page.keyboard.press('ArrowRight')
+      await page.waitForTimeout(500)
+      const startTimer = page.getByRole('button', { name: /Start/ })
+      if (await startTimer.count()) await startTimer.first().click()
+      await page.waitForTimeout(600)
+      await page.screenshot({ path: `e2e/screenshots/${name}-17-cook-step2.png` })
+    }
+
     // Night mood.
     await page.goto(`${BASE}/settings`)
     await page.getByRole('button', { name: 'Night' }).click()
@@ -91,7 +134,8 @@ try {
   server.kill('SIGTERM')
 }
 
-const realErrors = errors.filter((e) => !/favicon|hydrat|Download the React DevTools/i.test(e))
+// Image hosts may be unreachable in a sandbox; a failed resource load is not an app error.
+const realErrors = errors.filter((e) => !/favicon|Download the React DevTools|Failed to load resource/i.test(e))
 if (realErrors.length) {
   console.error('Console errors:\n' + realErrors.join('\n'))
   failed = true

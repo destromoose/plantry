@@ -25,15 +25,15 @@ export const toast = (text: string) => useToast.getState().show(text)
 export function Toaster() {
   const toasts = useToast((s) => s.toasts)
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-[80] flex flex-col items-center gap-2 px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-28 z-[80] flex flex-col items-center gap-2 px-4 lg:bottom-8">
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div
             key={t.id}
             layout
-            initial={{ opacity: 0, y: -12, scale: 0.96 }}
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.14 } }}
+            exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.14 } }}
             transition={settle}
             role="status"
             className="glass flex items-center gap-2 rounded-pill px-4 py-2.5 text-sm font-medium"

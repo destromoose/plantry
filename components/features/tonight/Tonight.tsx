@@ -54,7 +54,7 @@ export function Tonight() {
     <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-7 pb-8 pt-4">
       <motion.header variants={reveal}>
         <Eyebrow>{ctx.targetLabel}</Eyebrow>
-        <h1 className="mt-1 font-display text-fluid-2xl font-semibold leading-none tracking-tight">{dateText}</h1>
+        <h1 className="mt-1 font-display text-fluid-xl font-semibold leading-none tracking-tight">{dateText}</h1>
         <p className="mt-2 text-[15px] text-ink-2">{me ? `${greeting}, ${me.name}.` : `${greeting}.`}</p>
       </motion.header>
 

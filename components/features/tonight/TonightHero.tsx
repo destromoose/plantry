@@ -196,7 +196,7 @@ function PlannedOrSuggested({
 
   return (
     <article className="card overflow-hidden">
-      <Link href={`/recipes/${recipe.id}`} className="relative block aspect-[4/3] bg-surface-2 sm:aspect-[16/9]" aria-label={`Open ${recipe.title}`} draggable={false}>
+      <Link href={`/recipes/${recipe.id}`} className="relative block aspect-[4/3] max-h-[420px] w-full bg-surface-2 sm:aspect-[16/9]" aria-label={`Open ${recipe.title}`} draggable={false}>
         <motion.div layoutId={`recipe-image-${recipe.id}`} transition={settle} className="absolute inset-0">
           {recipe.imageUrl && (
             <Image src={recipe.imageUrl} alt="" fill priority sizes="(min-width: 768px) 700px, 100vw" className="object-cover" draggable={false} />
@@ -240,7 +240,6 @@ function PlannedOrSuggested({
           </ul>
         )}
 
-        <p className="mt-3 font-display text-base italic text-ink-2">{reason}</p>
         {planned && cook && <p className="mt-2 text-sm text-ink-3">{cook.name} is cooking.</p>}
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
