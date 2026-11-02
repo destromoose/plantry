@@ -17,7 +17,8 @@ function mainKeys(r: Recipe): Set<string> {
 /**
  * Kitchens a dish leans toward, guessed from its title and ingredients. Whole words
  * only, so olive oil, chili flakes and goat cheese don't count as olives, chili or oats.
- * Breakfast and soup are read from the title, since oat milk or chili flakes can go in anything.
+ * Breakfast and soup are read from the title, in English or Spanish, since oat milk or
+ * chili flakes can go in anything.
  */
 const families: [string, RegExp, 'all' | 'title'][] = [
   [
@@ -46,8 +47,12 @@ const families: [string, RegExp, 'all' | 'title'][] = [
     /\b(feta|couscous|tzatziki|chickpeas?|shakshuka|olives|halloumi|za.?atar)\b/i,
     'all',
   ],
-  ['breakfast', /\b(pancakes?|oats?|oatmeal|porridge|granola|waffles?|french toast)\b/i, 'title'],
-  ['soup', /\b(soup|stew|chili|dal)\b/i, 'title'],
+  [
+    'breakfast',
+    /\b(pancakes?|oats?|oatmeal|porridge|granola|waffles?|french toast|tortitas?|panqueques?|avena|gachas|gofres?|torrijas?)\b/i,
+    'title',
+  ],
+  ['soup', /\b(soup|stew|chili|dal|sopa|guiso|estofado|caldo)\b/i, 'title'],
 ]
 
 function familiesOf(r: Recipe): Set<string> {
