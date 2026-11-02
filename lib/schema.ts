@@ -1,6 +1,7 @@
 import { t } from './i18n'
 import { z } from 'zod'
 import type { Settings } from './types'
+import { SEED_VERSION } from './seed/recipes'
 
 // Shapes of everything Plantry saves. Used to check data read back from storage
 // and data brought in through Import, so a bad value can never crash the app.
@@ -155,6 +156,7 @@ export const defaultSettings: Settings = {
   currency: 'USD',
   priceLevel: 'average',
   weeklyBudget: 0,
+  seedVersion: SEED_VERSION,
 }
 
 const settingsSchema = z.object({
@@ -174,6 +176,8 @@ const settingsSchema = z.object({
   currency: z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'MXN']).catch(defaultSettings.currency),
   priceLevel: z.enum(['low', 'average', 'high']).catch(defaultSettings.priceLevel),
   weeklyBudget: z.number().finite().min(0).max(100000).catch(0),
+  // Saves from before starter recipes were versioned read as 0, so they get the new ones.
+  seedVersion: z.number().int().min(0).max(1000).catch(0),
 })
 
 /** The persisted collections and the schema for one item of each. */
@@ -228,7 +232,12 @@ export function cleanData(raw: unknown): CleanResult {
 
   if ('settings' in raw) {
     if (isObject(raw.settings))
-      out.settings = settingsSchema.parse({ ...defaultSettings, ...raw.settings })
+      out.settings = settingsSchema.parse({
+        ...defaultSettings,
+        // A save without this was made before starter recipes were versioned.
+        seedVersion: 0,
+        ...raw.settings,
+      })
     else badCollections.push('settings')
   }
 

@@ -5,7 +5,14 @@ import { useAppContext } from '@/components/shell/Providers'
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { AnimatePresence, motion, useIsPresent } from 'framer-motion'
+import {
+  AnimatePresence,
+  motion,
+  useIsPresent,
+  useMotionValue,
+  useReducedMotionConfig,
+  useTransform,
+} from 'framer-motion'
 import {
   ArrowRight,
   Clock,
@@ -194,7 +201,7 @@ function Deck(props: HeroProps) {
   return (
     <div className="relative">
       <AnimatePresence mode="popLayout" initial={false} custom={dir}>
-        <motion.div
+        <SwipeCard
           key={scored.recipe.id}
           custom={dir}
           variants={{
@@ -237,7 +244,7 @@ function Deck(props: HeroProps) {
               {...props}
             />
           </WhilePresent>
-        </motion.div>
+        </SwipeCard>
       </AnimatePresence>
       {hint && (
         <p className="mt-3 text-center text-sm text-ink-2">
@@ -253,6 +260,21 @@ function Deck(props: HeroProps) {
 }
 
 /** The card leaving the screen can't be tapped or read out, so there is only ever one set of buttons. */
+/** The draggable card. It leans the way you pull it, like a card in your hand. */
+function SwipeCard({ children, ...props }: React.ComponentProps<typeof motion.div>) {
+  const x = useMotionValue(0)
+  const still = useReducedMotionConfig()
+  const lean = useTransform(x, [-240, 0, 240], still ? [0, 0, 0] : [-5, 0, 5])
+  const lift = useTransform(x, [-240, 0, 240], still ? [1, 1, 1] : [0.985, 1, 0.985])
+  return (
+    <motion.div {...props} style={{ ...props.style, x }}>
+      <motion.div style={{ rotate: lean, scale: lift, transformOrigin: '50% 100%' }}>
+        {children as React.ReactNode}
+      </motion.div>
+    </motion.div>
+  )
+}
+
 function WhilePresent({ children }: { children: React.ReactNode }) {
   const present = useIsPresent()
   const ref = useRef<HTMLDivElement>(null)

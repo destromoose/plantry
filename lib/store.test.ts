@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useStore } from './store'
 import type { Aisle, Recipe } from './types'
+import { SEED_VERSION, seedAdded, seedRecipes } from './seed/recipes'
 
 function recipe(
   id: string,
@@ -291,5 +292,28 @@ describe('cooking history', () => {
     s().resetAll()
     s().importData(json)
     expect(s().cooked[0]).toMatchObject({ recipeId: 'r1', rating: 'fine' })
+  })
+})
+
+describe('new starter recipes', () => {
+  const load = (state: unknown) =>
+    useStore.persist.getOptions().merge!(state, useStore.getState()) as ReturnType<
+      typeof useStore.getState
+    >
+
+  it('adds them once to a kitchen saved before they shipped, keeping its own recipes', () => {
+    const mine = recipe('mine', [{ key: 'onion' }])
+    const { seedVersion: _, ...oldSettings } = useStore.getState().settings
+    const s = load({ settings: oldSettings, recipes: [seedRecipes[0], mine] })
+    const ids = s.recipes.map((r) => r.id)
+    expect(ids.slice(0, 2)).toEqual([seedRecipes[0].id, 'mine'])
+    for (const id of seedAdded[SEED_VERSION]) expect(ids).toContain(id)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(s.settings.seedVersion).toBe(SEED_VERSION)
+
+    // Once given, a starter the cook deleted doesn't come back on the next load.
+    const kept = s.recipes.filter((r) => r.id !== seedAdded[SEED_VERSION][0])
+    const again = load({ settings: s.settings, recipes: kept })
+    expect(again.recipes.map((r) => r.id)).not.toContain(seedAdded[SEED_VERSION][0])
   })
 })

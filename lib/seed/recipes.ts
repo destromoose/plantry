@@ -61,6 +61,9 @@ function build(m: Meta, ings: Ing[], steps: StepIn[]): Recipe {
   }
 }
 
+/** Bump when recipes are added, so kitchens saved earlier get the new ones once. */
+export const SEED_VERSION = 2
+
 export const seedRecipes: Recipe[] = [
   build(
     {
@@ -1010,4 +1013,619 @@ export const seedRecipes: Recipe[] = [
       'Rest for 3 minutes, then cut into wedges and serve warm or at room temperature.',
     ]
   ),
+
+  // Added in seed version 2. Existing kitchens get these once, on their next load.
+  build(
+    {
+      id: 'r-chicken-fajitas',
+      title: 'Sizzling chicken fajitas',
+      description: 'Smoky strips of chicken with soft peppers and onions, wrapped warm with lime.',
+      photo: '1788601988443-9b859ba3fdf4',
+      active: 20,
+      total: 25,
+      servings: 4,
+      tastes: ['fast', 'kid-friendly', 'one-pan'],
+      weather: 'any',
+    },
+    [
+      ['Chicken breasts', 'chicken breast', 500, 'g', MF],
+      ['Bell peppers', 'bell pepper', 2, 'whole', PR],
+      ['Onion', 'onion', 1, 'whole', PR],
+      ['Olive oil', 'olive oil', 2, 'tbsp', PA],
+      ['Paprika', 'paprika', 2, 'tsp', SP],
+      ['Cumin', 'cumin', 1, 'tsp', SP],
+      ['Limes', 'lime', 2, 'whole', PR],
+      ['Tortillas', 'tortilla', 8, 'whole', BK],
+      ['Sour cream', 'sour cream', 100, 'g', DA, true],
+      ['Cilantro', 'cilantro', 0.5, 'bunch', PR, true],
+    ],
+    [
+      'Slice the chicken into thin strips. Slice the peppers and onion.',
+      'Toss the chicken with half the oil, the paprika, cumin, a big pinch of salt and the juice of one lime.',
+      'Heat a large pan until very hot. Add the rest of the oil and the peppers and onion.',
+      [
+        'Cook the vegetables for 5 minutes until charred at the edges, then push them to one side.',
+        5,
+      ],
+      [
+        'Add the chicken in one layer and cook for 6 minutes, turning once, until cooked through.',
+        6,
+      ],
+      'Warm the tortillas in a dry pan. Cut the second lime into wedges.',
+      'Pile everything into the tortillas with sour cream, cilantro and a squeeze of lime.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-beef-broccoli',
+      title: 'Beef and broccoli with rice',
+      description:
+        'Takeout-style beef and crisp broccoli in a glossy garlic, ginger and soy sauce.',
+      photo: '1760504526069-ff0f8bf6e4ca',
+      active: 20,
+      total: 25,
+      servings: 4,
+      tastes: ['fast', 'one-pan'],
+      weather: 'any',
+    },
+    [
+      ['Steak', 'beef steak', 450, 'g', MF],
+      ['Broccoli', 'broccoli', 1, 'whole', PR],
+      ['Garlic', 'garlic', 3, 'clove', PR],
+      ['Ginger', 'ginger', 1, 'tbsp', PR],
+      ['Soy sauce', 'soy sauce', 4, 'tbsp', PA],
+      ['Honey', 'honey', 1, 'tbsp', PA],
+      ['Flour', 'flour', 1, 'tbsp', PA],
+      ['Vegetable oil', 'vegetable oil', 2, 'tbsp', PA],
+      ['Sesame oil', 'sesame oil', 1, 'tsp', PA],
+      ['Rice', 'rice', 300, 'g', PA],
+    ],
+    [
+      [
+        'Rinse the rice and cook it with 1.5 times its volume of water, covered, for 15 minutes.',
+        15,
+      ],
+      'Slice the steak very thinly across the grain and toss it with the flour and a pinch of salt.',
+      'Cut the broccoli into small florets. Grate the garlic and ginger.',
+      'Stir the soy sauce, honey, sesame oil and 4 tbsp water together.',
+      [
+        'Heat half the oil in a large pan until smoking and sear the beef for 2 minutes. Lift it out.',
+        2,
+      ],
+      [
+        'Add the rest of the oil and the broccoli with a splash of water. Cover and cook for 3 minutes.',
+        3,
+      ],
+      'Add the garlic and ginger for 30 seconds, then the sauce and the beef. Bubble until glossy and serve over rice.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-weeknight-carbonara',
+      title: 'Weeknight carbonara',
+      description: 'Silky egg and parmesan sauce, crisp bacon and lots of black pepper. No cream.',
+      photo: '1633337474564-1d9478ca4e2e',
+      active: 15,
+      total: 20,
+      servings: 4,
+      tastes: ['fast', 'cozy', 'kid-friendly'],
+      weather: 'any',
+    },
+    [
+      ['Spaghetti', 'pasta', 400, 'g', PA],
+      ['Bacon', 'bacon', 200, 'g', MF],
+      ['Eggs', 'egg', 3, 'whole', DA],
+      ['Parmesan', 'parmesan', 80, 'g', DA],
+      ['Black pepper', 'black pepper', 1, 'tsp', SP],
+      ['Garlic', 'garlic', 1, 'clove', PR, true],
+    ],
+    [
+      'Bring a big pot of salted water to the boil.',
+      'Beat the eggs with the finely grated parmesan and the black pepper.',
+      ['Cook the spaghetti for 10 minutes, or 1 minute less than the packet says.', 10],
+      'Meanwhile, cut the bacon into strips and fry it slowly with the crushed garlic until crisp. Take the pan off the heat.',
+      'Scoop out a mug of pasta water, then drain the pasta and tip it into the bacon pan.',
+      'Off the heat, pour in the egg mix with a splash of pasta water and toss fast until creamy, adding more water if it looks thick.',
+      'Serve straight away with more parmesan and pepper.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-cauliflower-chickpea-curry',
+      title: 'Cauliflower and chickpea curry',
+      description:
+        'Golden cauliflower and chickpeas in a mild coconut tomato sauce. Even better tomorrow.',
+      photo: '1695720247911-817755ad7d02',
+      active: 15,
+      total: 40,
+      servings: 4,
+      tastes: ['cozy', 'veg-forward', 'big-batch'],
+      weather: 'warm',
+      leftovers: true,
+    },
+    [
+      ['Vegetable oil', 'vegetable oil', 2, 'tbsp', PA],
+      ['Onion', 'onion', 1, 'whole', PR],
+      ['Garlic', 'garlic', 3, 'clove', PR],
+      ['Ginger', 'ginger', 1, 'tbsp', PR],
+      ['Cumin', 'cumin', 2, 'tsp', SP],
+      ['Paprika', 'paprika', 1, 'tsp', SP],
+      ['Cauliflower', 'cauliflower', 1, 'whole', PR],
+      ['Chickpeas', 'chickpea', 1, 'can', PA],
+      ['Canned tomatoes', 'canned tomato', 1, 'can', PA],
+      ['Coconut milk', 'coconut milk', 1, 'can', PA],
+      ['Rice', 'rice', 300, 'g', PA],
+      ['Cilantro', 'cilantro', 0.5, 'bunch', PR, true],
+    ],
+    [
+      'Chop the onion. Grate the garlic and ginger. Cut the cauliflower into small florets.',
+      ['Soften the onion in the oil with a pinch of salt for 6 minutes.', 6],
+      'Stir in the garlic, ginger, cumin and paprika for 1 minute.',
+      'Add the cauliflower, drained chickpeas, tomatoes and coconut milk. Season well.',
+      ['Simmer with the lid half on for 25 minutes until the cauliflower is tender.', 25],
+      ['Meanwhile, cook the rice with 1.5 times its volume of water, covered, for 15 minutes.', 15],
+      'Taste for salt and serve over the rice with cilantro.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-sausage-potato-traybake',
+      title: 'Sausage, potato and green bean tray bake',
+      description: 'Everything roasts together on one tray, with a sticky honey mustard glaze.',
+      photo: '1523813301608-f54a198f6b5f',
+      active: 10,
+      total: 45,
+      servings: 4,
+      tastes: ['one-pan', 'cozy', 'kid-friendly'],
+      weather: 'warm',
+    },
+    [
+      ['Sausages', 'sausage', 8, 'whole', MF],
+      ['Potatoes', 'potato', 700, 'g', PR],
+      ['Green beans', 'green bean', 250, 'g', PR],
+      ['Red onion', 'onion', 1, 'whole', PR],
+      ['Olive oil', 'olive oil', 2, 'tbsp', PA],
+      ['Mustard', 'mustard', 2, 'tbsp', PA],
+      ['Honey', 'honey', 1, 'tbsp', PA],
+    ],
+    [
+      'Heat the oven to 220C. Cut the potatoes into bite-size chunks and the onion into wedges.',
+      'Toss the potatoes and onion with the oil and salt on a large tray.',
+      ['Roast for 15 minutes.', 15],
+      'Add the sausages and the green beans to the tray and toss everything in the oil.',
+      ['Roast for 20 minutes more, until the sausages are browned.', 20],
+      'Stir the mustard and honey together, brush over the sausages and roast for 5 more minutes.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-prawn-tacos-slaw',
+      title: 'Prawn tacos with lime slaw',
+      description: 'Garlicky chili prawns on warm tortillas with a crunchy, tangy cabbage slaw.',
+      photo: '1689774329109-9b70beeefc0a',
+      active: 20,
+      total: 20,
+      servings: 4,
+      tastes: ['fast', 'fresh', 'spicy'],
+      weather: 'light',
+    },
+    [
+      ['Prawns', 'prawn', 400, 'g', MF],
+      ['Cabbage', 'cabbage', 0.25, 'whole', PR],
+      ['Limes', 'lime', 2, 'whole', PR],
+      ['Sour cream', 'sour cream', 100, 'g', DA],
+      ['Garlic', 'garlic', 2, 'clove', PR],
+      ['Chili flakes', 'chili flake', 1, 'tsp', SP],
+      ['Paprika', 'paprika', 1, 'tsp', SP],
+      ['Olive oil', 'olive oil', 2, 'tbsp', PA],
+      ['Tortillas', 'tortilla', 8, 'whole', BK],
+      ['Cilantro', 'cilantro', 0.5, 'bunch', PR, true],
+    ],
+    [
+      'Shred the cabbage finely and toss it with the juice of one lime and a pinch of salt.',
+      'Stir the sour cream with a squeeze of lime to make a quick sauce.',
+      'Toss the prawns with the crushed garlic, chili flakes, paprika and a pinch of salt.',
+      [
+        'Heat the oil in a large pan and cook the prawns for 3 minutes, turning once, until pink.',
+        3,
+      ],
+      'Warm the tortillas in a dry pan.',
+      'Fill with slaw and prawns, add a spoon of the lime cream and scatter with cilantro.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-pork-chops-apples',
+      title: 'Pork chops with apples and mustard',
+      description: 'Golden pork chops with soft, buttery apples and onion in a mustard pan sauce.',
+      photo: '1652209898504-ea7f96b44580',
+      active: 20,
+      total: 30,
+      servings: 4,
+      tastes: ['cozy', 'one-pan'],
+      weather: 'warm',
+    },
+    [
+      ['Pork chops', 'pork chop', 4, 'whole', MF],
+      ['Apples', 'apple', 2, 'whole', PR],
+      ['Onion', 'onion', 1, 'whole', PR],
+      ['Butter', 'butter', 2, 'tbsp', DA],
+      ['Mustard', 'mustard', 1, 'tbsp', PA],
+      ['Stock', 'stock', 200, 'ml', PA],
+      ['Olive oil', 'olive oil', 1, 'tbsp', PA],
+      ['Potatoes', 'potato', 600, 'g', PR, true],
+    ],
+    [
+      ['If serving potatoes, boil them in salted water for 20 minutes until tender.', 20],
+      'Pat the pork chops dry and season both sides with salt and pepper.',
+      [
+        'Heat the oil in a large pan and brown the chops for 4 minutes per side. Lift them out to rest.',
+        4,
+      ],
+      'Slice the apples and onion. Melt the butter in the same pan.',
+      ['Cook the apples and onion for 6 minutes until soft and golden.', 6],
+      'Stir in the mustard and stock and bubble for 2 minutes. Return the chops and their juices to warm through.',
+      'Serve with the potatoes and spoon the apples and sauce over the top.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-baked-eggplant-mozzarella',
+      title: 'Baked eggplant with tomato and mozzarella',
+      description:
+        'A lighter, no-fry eggplant parmesan: roasted slices layered with tomato and cheese.',
+      photo: '1632229095740-8c75082087c5',
+      active: 20,
+      total: 55,
+      servings: 4,
+      tastes: ['cozy', 'veg-forward', 'big-batch'],
+      weather: 'warm',
+      leftovers: true,
+    },
+    [
+      ['Eggplants', 'eggplant', 2, 'whole', PR],
+      ['Olive oil', 'olive oil', 3, 'tbsp', PA],
+      ['Garlic', 'garlic', 2, 'clove', PR],
+      ['Canned tomatoes', 'canned tomato', 2, 'can', PA],
+      ['Oregano', 'oregano', 1, 'tsp', SP],
+      ['Mozzarella', 'mozzarella', 250, 'g', DA],
+      ['Parmesan', 'parmesan', 50, 'g', DA],
+      ['Bread', 'bread', 4, 'slice', BK, true],
+    ],
+    [
+      'Heat the oven to 220C. Slice the eggplants into 1 cm rounds.',
+      [
+        'Brush the slices with most of the oil, season, and roast on two trays for 20 minutes until soft.',
+        20,
+      ],
+      [
+        'Meanwhile, cook the sliced garlic in the remaining oil, add the tomatoes and oregano and simmer for 15 minutes.',
+        15,
+      ],
+      'Layer the eggplant, sauce and torn mozzarella in a baking dish, ending with sauce and cheese.',
+      'Scatter the grated parmesan over the top. Turn the oven down to 200C.',
+      ['Bake for 20 minutes until bubbling and golden.', 20],
+      'Rest for 5 minutes and serve with bread to mop up the sauce.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-chicken-noodle-soup',
+      title: 'Chicken noodle soup',
+      description:
+        'The bowl you want when it rains or someone is sniffling. Simple, clear and comforting.',
+      photo: '1555126634-323283e090fa',
+      active: 15,
+      total: 40,
+      servings: 4,
+      tastes: ['cozy', 'kid-friendly', 'big-batch'],
+      weather: 'warm',
+      leftovers: true,
+    },
+    [
+      ['Chicken thighs', 'chicken thigh', 500, 'g', MF],
+      ['Carrots', 'carrot', 2, 'whole', PR],
+      ['Celery', 'celery', 2, 'whole', PR],
+      ['Onion', 'onion', 1, 'whole', PR],
+      ['Garlic', 'garlic', 2, 'clove', PR],
+      ['Olive oil', 'olive oil', 1, 'tbsp', PA],
+      ['Stock', 'stock', 1.5, 'l', PA],
+      ['Egg noodles', 'noodle', 150, 'g', PA],
+      ['Parsley', 'parsley', 0.5, 'bunch', PR, true],
+    ],
+    [
+      'Dice the carrots, celery and onion. Slice the garlic.',
+      ['Soften the vegetables in the oil in a large pot for 6 minutes.', 6],
+      'Add the garlic, the whole chicken thighs and the stock. Bring to a simmer.',
+      ['Simmer gently for 20 minutes until the chicken is cooked through.', 20],
+      'Lift out the chicken and shred it with two forks.',
+      ['Add the noodles to the pot and cook for 5 minutes, then return the chicken.', 5],
+      'Season well with salt and pepper and scatter with chopped parsley.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-black-bean-burrito-bowls',
+      title: 'Black bean burrito bowls',
+      description: 'Cumin rice, black beans, sweet corn and a quick tomato salsa. Build your own.',
+      photo: '1520066391310-428f06ebd602',
+      active: 20,
+      total: 25,
+      servings: 4,
+      tastes: ['veg-forward', 'fresh', 'kid-friendly'],
+      weather: 'light',
+    },
+    [
+      ['Rice', 'rice', 300, 'g', PA],
+      ['Cumin', 'cumin', 1, 'tsp', SP],
+      ['Black beans', 'black bean', 2, 'can', PA],
+      ['Sweetcorn', 'corn', 1, 'can', PA],
+      ['Tomatoes', 'tomato', 3, 'whole', PR],
+      ['Red onion', 'onion', 0.5, 'whole', PR],
+      ['Limes', 'lime', 2, 'whole', PR],
+      ['Avocado', 'avocado', 1, 'whole', PR],
+      ['Cheddar', 'cheddar', 100, 'g', DA, true],
+      ['Cilantro', 'cilantro', 0.5, 'bunch', PR, true],
+    ],
+    [
+      [
+        'Cook the rice with the cumin, a pinch of salt and 1.5 times its volume of water, covered, for 15 minutes.',
+        15,
+      ],
+      'Warm the drained black beans and corn in a small pan with a pinch of salt.',
+      'Dice the tomatoes and onion finely and stir with the juice of one lime and some chopped cilantro.',
+      'Slice the avocado and grate the cheese.',
+      'Fluff the rice with the juice of the second lime.',
+      'Set everything out and let everyone build their own bowl.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-mushroom-risotto',
+      title: 'Creamy mushroom risotto',
+      description: 'Golden mushrooms stirred into soft, savory rice with butter and parmesan.',
+      photo: '1680420574628-225def8eea0a',
+      active: 35,
+      total: 40,
+      servings: 4,
+      tastes: ['cozy', 'veg-forward'],
+      weather: 'warm',
+    },
+    [
+      ['Mushrooms', 'mushroom', 400, 'g', PR],
+      ['Onion', 'onion', 1, 'whole', PR],
+      ['Garlic', 'garlic', 2, 'clove', PR],
+      ['Butter', 'butter', 3, 'tbsp', DA],
+      ['Olive oil', 'olive oil', 1, 'tbsp', PA],
+      ['Risotto rice', 'rice', 300, 'g', PA],
+      ['Stock', 'stock', 1.2, 'l', PA],
+      ['Parmesan', 'parmesan', 60, 'g', DA],
+      ['Parsley', 'parsley', 0.5, 'bunch', PR, true],
+    ],
+    [
+      'Keep the stock warm in a small pan. Slice the mushrooms and finely chop the onion and garlic.',
+      [
+        'Fry the mushrooms in the oil and 1 tbsp butter over high heat for 6 minutes until golden. Set aside.',
+        6,
+      ],
+      ['In the same pan, soften the onion and garlic in another 1 tbsp butter for 5 minutes.', 5],
+      'Stir in the rice for 1 minute until it looks glassy.',
+      [
+        'Add the stock a ladle at a time, stirring, letting each one soak in, for about 18 minutes.',
+        18,
+      ],
+      'When the rice is tender but still has a little bite, stir in the mushrooms, the last of the butter and the parmesan.',
+      'Rest for 2 minutes with the lid on, then serve with parsley and more parmesan.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-pork-cabbage-noodles',
+      title: 'Pork and cabbage noodles',
+      description:
+        'Savory ground pork and sweet, wilted cabbage tossed with noodles, ginger and soy.',
+      photo: '1585032226651-759b368d7246',
+      active: 20,
+      total: 20,
+      servings: 4,
+      tastes: ['fast', 'one-pan'],
+      weather: 'any',
+    },
+    [
+      ['Egg noodles', 'noodle', 300, 'g', PA],
+      ['Ground pork', 'ground pork', 400, 'g', MF],
+      ['Cabbage', 'cabbage', 0.5, 'whole', PR],
+      ['Garlic', 'garlic', 3, 'clove', PR],
+      ['Ginger', 'ginger', 1, 'tbsp', PR],
+      ['Soy sauce', 'soy sauce', 4, 'tbsp', PA],
+      ['Vegetable oil', 'vegetable oil', 1, 'tbsp', PA],
+      ['Sesame oil', 'sesame oil', 1, 'tsp', PA],
+      ['Scallions', 'scallion', 4, 'whole', PR],
+      ['Chili flakes', 'chili flake', 0.5, 'tsp', SP, true],
+    ],
+    [
+      ['Cook the noodles for 4 minutes, then drain and rinse under cold water.', 4],
+      'Shred the cabbage. Grate the garlic and ginger. Slice the scallions.',
+      ['Heat the oil in a large pan and brown the pork for 5 minutes, breaking it up.', 5],
+      'Add the garlic and ginger for 30 seconds.',
+      ['Add the cabbage and cook for 4 minutes until wilted and sweet.', 4],
+      'Toss in the noodles, soy sauce and sesame oil until everything is hot and coated.',
+      'Serve with the scallions and chili flakes on top.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-greek-chicken-couscous',
+      title: 'Greek chicken couscous bowls',
+      description:
+        'Lemon oregano chicken over fluffy couscous with cucumber, tomato, feta and yogurt.',
+      photo: '1626901148200-0e934140a02b',
+      active: 20,
+      total: 25,
+      servings: 4,
+      tastes: ['fresh', 'fast'],
+      weather: 'light',
+    },
+    [
+      ['Chicken breasts', 'chicken breast', 500, 'g', MF],
+      ['Lemon', 'lemon', 1, 'whole', PR],
+      ['Oregano', 'oregano', 2, 'tsp', SP],
+      ['Olive oil', 'olive oil', 3, 'tbsp', PA],
+      ['Couscous', 'couscous', 250, 'g', PA],
+      ['Cucumber', 'cucumber', 1, 'whole', PR],
+      ['Cherry tomatoes', 'cherry tomato', 250, 'g', PR],
+      ['Feta', 'feta', 100, 'g', DA],
+      ['Yogurt', 'yogurt', 150, 'g', DA],
+    ],
+    [
+      'Cut the chicken into chunks and toss with half the oil, the oregano, the zest and half the juice of the lemon, and salt.',
+      'Pour 300 ml boiling water over the couscous with a pinch of salt, cover and leave for 5 minutes.',
+      ['Cook the chicken in a hot pan for 8 minutes, turning, until golden and cooked through.', 8],
+      'Dice the cucumber and halve the tomatoes. Toss with the rest of the oil and lemon juice.',
+      'Fluff the couscous with a fork.',
+      'Fill bowls with couscous, salad and chicken. Crumble over the feta and add a spoon of yogurt.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-banana-oat-pancakes',
+      title: 'Banana oat pancakes',
+      description:
+        'Breakfast for dinner: soft, golden pancakes with banana and a drizzle of maple.',
+      photo: '1528207776546-365bb710ee93',
+      active: 20,
+      total: 25,
+      servings: 4,
+      tastes: ['kid-friendly', 'fast'],
+      weather: 'any',
+    },
+    [
+      ['Bananas', 'banana', 3, 'whole', PR],
+      ['Eggs', 'egg', 2, 'whole', DA],
+      ['Milk', 'milk', 250, 'ml', DA],
+      ['Flour', 'flour', 150, 'g', PA],
+      ['Oats', 'oat', 80, 'g', PA],
+      ['Butter', 'butter', 2, 'tbsp', DA],
+      ['Maple syrup', 'maple syrup', 4, 'tbsp', PA],
+      ['Yogurt', 'yogurt', 150, 'g', DA, true],
+    ],
+    [
+      'Mash two of the bananas in a big bowl. Whisk in the eggs and milk.',
+      'Stir in the flour, oats, a pinch of salt and 2 tsp baking powder if you have it. Rest for 5 minutes.',
+      'Melt a little butter in a nonstick pan over medium heat.',
+      [
+        'Pour in small ladles of batter and cook for 2 minutes until bubbles appear, then flip for 1 minute more.',
+        2,
+      ],
+      'Keep the pancakes warm on a plate under a tea towel while you cook the rest.',
+      'Serve with the last banana sliced, a spoon of yogurt and the maple syrup.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-corn-zucchini-fritters',
+      title: 'Corn and zucchini fritters',
+      description:
+        'Crisp, golden little fritters full of sweet corn and zucchini, with a cool yogurt dip.',
+      photo: '1607095591644-9f97a2099c92',
+      active: 25,
+      total: 30,
+      servings: 4,
+      tastes: ['veg-forward', 'fresh', 'kid-friendly'],
+      weather: 'light',
+    },
+    [
+      ['Zucchini', 'zucchini', 2, 'whole', PR],
+      ['Sweetcorn', 'corn', 1, 'can', PA],
+      ['Eggs', 'egg', 2, 'whole', DA],
+      ['Flour', 'flour', 100, 'g', PA],
+      ['Feta', 'feta', 100, 'g', DA],
+      ['Scallions', 'scallion', 3, 'whole', PR],
+      ['Vegetable oil', 'vegetable oil', 4, 'tbsp', PA],
+      ['Yogurt', 'yogurt', 150, 'g', DA],
+      ['Lemon', 'lemon', 1, 'whole', PR],
+    ],
+    [
+      'Grate the zucchini, sprinkle with salt and leave for 5 minutes, then squeeze out as much water as you can.',
+      'Mix the zucchini with the drained corn, eggs, flour, crumbled feta and sliced scallions.',
+      'Stir the yogurt with the zest and a squeeze of the lemon and a pinch of salt.',
+      'Heat a thin layer of oil in a large nonstick pan over medium-high heat.',
+      [
+        'Drop in spoonfuls of the mix, flatten, and fry for 3 minutes per side until deep golden.',
+        3,
+      ],
+      'Drain on paper and serve hot with the lemon yogurt.',
+    ]
+  ),
+
+  build(
+    {
+      id: 'r-stovetop-mac-cheese',
+      title: 'Stovetop mac and cheese',
+      description:
+        'Real cheese sauce, made in the time it takes the pasta to cook. One pot, no oven.',
+      photo: '1667499989723-c4ab9549d63c',
+      active: 20,
+      total: 20,
+      servings: 4,
+      tastes: ['kid-friendly', 'cozy', 'fast'],
+      weather: 'warm',
+    },
+    [
+      ['Macaroni', 'pasta', 350, 'g', PA],
+      ['Butter', 'butter', 3, 'tbsp', DA],
+      ['Flour', 'flour', 3, 'tbsp', PA],
+      ['Milk', 'milk', 600, 'ml', DA],
+      ['Cheddar', 'cheddar', 200, 'g', DA],
+      ['Mustard', 'mustard', 1, 'tsp', PA],
+      ['Frozen peas', 'frozen pea', 150, 'g', FR, true],
+    ],
+    [
+      [
+        'Cook the macaroni in salted water for 8 minutes, adding the peas for the last 2 minutes if using.',
+        8,
+      ],
+      'Meanwhile, melt the butter in a pan, stir in the flour and cook for 1 minute.',
+      'Whisk in the milk a little at a time until smooth.',
+      ['Simmer, stirring, for 4 minutes until it coats the back of a spoon.', 4],
+      'Take the sauce off the heat and stir in the grated cheddar and mustard. Season.',
+      'Drain the pasta and fold it through the sauce. Serve hot.',
+    ]
+  ),
 ]
+
+/** Recipes added in each seed version, oldest first. */
+export const seedAdded: Record<number, string[]> = {
+  2: [
+    'r-chicken-fajitas',
+    'r-beef-broccoli',
+    'r-weeknight-carbonara',
+    'r-cauliflower-chickpea-curry',
+    'r-sausage-potato-traybake',
+    'r-prawn-tacos-slaw',
+    'r-pork-chops-apples',
+    'r-baked-eggplant-mozzarella',
+    'r-chicken-noodle-soup',
+    'r-black-bean-burrito-bowls',
+    'r-mushroom-risotto',
+    'r-pork-cabbage-noodles',
+    'r-greek-chicken-couscous',
+    'r-banana-oat-pancakes',
+    'r-corn-zucchini-fritters',
+    'r-stovetop-mac-cheese',
+  ],
+}
