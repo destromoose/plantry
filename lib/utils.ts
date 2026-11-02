@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { formatAmount } from './quantity'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -11,6 +12,78 @@ export function uid(prefix = 'id'): string {
   const rand = Math.random().toString(36).slice(2, 8)
   return `${prefix}_${Date.now().toString(36)}${counter.toString(36)}${rand}`
 }
+
+// Different names for the same thing, so the pantry and the list match.
+const synonyms: Record<string, string> = {
+  chilli: 'chili',
+  chile: 'chili',
+  'chilli flake': 'chili flake',
+  'red pepper flake': 'chili flake',
+  'spring onion': 'scallion',
+  'green onion': 'scallion',
+  coriander: 'cilantro',
+  'fresh coriander': 'cilantro',
+  aubergine: 'eggplant',
+  courgette: 'zucchini',
+  capsicum: 'bell pepper',
+  'red pepper': 'bell pepper',
+  'green pepper': 'bell pepper',
+  'yellow pepper': 'bell pepper',
+  garbanzo: 'chickpea',
+  'garbanzo bean': 'chickpea',
+  'minced beef': 'ground beef',
+  'beef mince': 'ground beef',
+  'minced pork': 'ground pork',
+  'pork mince': 'ground pork',
+  'plain yogurt': 'yogurt',
+  yoghurt: 'yogurt',
+  'greek yogurt': 'yogurt',
+  'extra virgin olive oil': 'olive oil',
+  'chicken stock': 'stock',
+  'vegetable stock': 'stock',
+  'veg stock': 'stock',
+  'tinned tomato': 'canned tomato',
+  'chopped tomato': 'canned tomato',
+  peas: 'frozen pea',
+  pea: 'frozen pea',
+  noodle: 'noodle',
+  prawn: 'prawn',
+  shrimp: 'prawn',
+}
+
+// Words that describe the thing but don't change what you buy.
+const fillers = new Set([
+  'large',
+  'small',
+  'medium',
+  'big',
+  'fresh',
+  'freshly',
+  'chopped',
+  'diced',
+  'minced',
+  'sliced',
+  'grated',
+  'ripe',
+  'organic',
+  'whole',
+  'raw',
+  'dried',
+  'ground-up',
+  'finely',
+  'roughly',
+  'boneless',
+  'skinless',
+  'peeled',
+  'crushed',
+  'juiced',
+  'zested',
+  'a',
+  'of',
+])
+
+// Plurals ending in -ies that are not -y words.
+const ieWords = new Set(['cookies', 'brownies', 'pies', 'smoothies', 'veggies', 'calories', 'ties'])
 
 /** Lowercase, singularized-ish key for matching ingredients to pantry items. */
 export function keyOf(name: string): string {
@@ -26,11 +99,34 @@ export function keyOf(name: string): string {
     .replace(/\s+/g, ' ')
   if (!k) return lower.replace(/\s+/g, ' ')
   if (!/^[a-z ]+$/.test(k)) return k
+  const words = k
+    .replace(/free range/g, '')
+    .split(' ')
+    .filter((w) => w && !fillers.has(w))
+  const plain = (words.length ? words : k.split(' ')).join(' ')
+  const single = singular(plain)
+  return synonyms[single] ?? synonyms[plain] ?? single
+}
+
+function singular(k: string): string {
+  const last = k.split(' ').pop() ?? k
+  if (ieWords.has(last)) return k.slice(0, -1)
   if (k.endsWith('oes')) return k.slice(0, -2)
   if (k.endsWith('ies')) return k.slice(0, -3) + 'y'
-  if (k.endsWith('s') && !k.endsWith('ss')) return k.slice(0, -1)
+  if (k.endsWith('s') && !k.endsWith('ss') && !k.endsWith('us')) return k.slice(0, -1)
   return k
 }
+
+/** 1 when just bought, 0 when past its soft life. One rule for the Pantry and suggestions. */
+export function freshnessOf(item: { addedAt: string; softLifeDays: number }, today: string) {
+  const age = Math.max(0, daysBetween(item.addedAt.slice(0, 10), today))
+  return clamp(1 - age / Math.max(1, item.softLifeDays), 0, 1)
+}
+
+/** Use it soon: less than 40% of its life left. */
+export const USE_SOON = 0.4
+export const isUseSoon = (item: { addedAt: string; softLifeDays: number }, today: string) =>
+  freshnessOf(item, today) < USE_SOON
 
 export function toDateKey(d: Date): string {
   const y = d.getFullYear()
@@ -81,25 +177,9 @@ export function formatMinutes(min: number): string {
   return m ? `${h} h ${m} min` : `${h} h`
 }
 
+/** Kept for existing callers; see lib/quantity.ts. */
 export function formatQuantity(q?: number, unit?: string): string {
-  if (q === undefined || q === 0) return unit ?? ''
-  const nice = Number.isInteger(q) ? String(q) : fractionOf(q)
-  return unit ? `${nice} ${unit}` : nice
-}
-
-function fractionOf(q: number): string {
-  const whole = Math.floor(q)
-  const frac = q - whole
-  const map: [number, string][] = [
-    [0.25, '¼'],
-    [0.33, '⅓'],
-    [0.5, '½'],
-    [0.66, '⅔'],
-    [0.75, '¾'],
-  ]
-  const hit = map.find(([v]) => Math.abs(v - frac) < 0.08)
-  if (!hit) return q.toFixed(1).replace(/\.0$/, '')
-  return whole ? `${whole}${hit[1]}` : hit[1]
+  return formatAmount(q, unit)
 }
 
 export function pluralize(n: number, word: string, plural = word + 's'): string {

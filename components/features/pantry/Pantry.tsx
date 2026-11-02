@@ -11,8 +11,9 @@ import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { suggest, coverage } from '@/lib/suggest'
 import { quickPicks, staples } from '@/lib/seed/pantry'
+import { guessZone } from '@/lib/pantryGuess'
 import { reveal, staggerContainer } from '@/lib/motion'
-import { clamp, cn, daysBetween, keyOf, pluralize, toDateKey } from '@/lib/utils'
+import { cn, formatQuantity, freshnessOf, isUseSoon, pluralize, toDateKey } from '@/lib/utils'
 import type { PantryItem, PantryZone } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Tag } from '@/components/ui/Chip'
@@ -29,10 +30,7 @@ const zones: { id: PantryZone; label: string }[] = [
   { id: 'counter', label: 'Counter' },
 ]
 
-function freshness(item: PantryItem, today: string) {
-  const age = Math.max(0, daysBetween(item.addedAt.slice(0, 10), today))
-  return clamp(1 - age / item.softLifeDays, 0, 1)
-}
+const freshness = freshnessOf
 
 export function Pantry() {
   const pantry = useStore((s) => s.pantry)
@@ -46,9 +44,13 @@ export function Pantry() {
   const [cookOpen, setCookOpen] = useState(false)
   const [active, setActive] = useState<PantryItem | null>(null)
   const [name, setName] = useState('')
-  const [zone, setZone] = useState<PantryZone>('fridge')
+  // 'auto' guesses from the name; a choice only applies to the next item.
+  const [zone, setZone] = useState<PantryZone | 'auto'>('auto')
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<'soon' | 'az' | 'new'>('soon')
+  const guessed = guessZone(name)
 
-  const soon = pantry.filter((p) => freshness(p, today) < 0.35).length
+  const soon = pantry.filter((p) => isUseSoon(p, today)).length
 
   const grouped = useMemo(
     () =>
@@ -57,10 +59,19 @@ export function Pantry() {
           ...z,
           items: pantry
             .filter((p) => p.zone === z.id)
-            .sort((a, b) => freshness(a, today) - freshness(b, today)),
+            .filter(
+              (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
+            )
+            .sort((a, b) =>
+              sort === 'az'
+                ? a.name.localeCompare(b.name)
+                : sort === 'new'
+                  ? b.addedAt.localeCompare(a.addedAt)
+                  : freshness(a, today) - freshness(b, today)
+            ),
         }))
         .filter((z) => z.items.length > 0),
-    [pantry, today]
+    [pantry, today, search, sort]
   )
 
   const options = useMemo(() => {
@@ -81,7 +92,8 @@ export function Pantry() {
   function add(n = name, z = zone) {
     const clean = n.trim()
     if (!clean) return
-    const res = addPantryItem({ name: clean, zone: z })
+    const res = addPantryItem({ name: clean, zone: z === 'auto' ? guessZone(clean) : z })
+    setZone('auto')
     toast(
       res === 'added' ? `${clean} is in the pantry` : `${clean} was already there. Marked as fresh.`
     )
@@ -90,13 +102,10 @@ export function Pantry() {
 
   function pickSuggestion(o: { name: string; zone?: PantryZone }) {
     setName(o.name)
-    if (o.zone) setZone(o.zone)
   }
 
   function onNameChange(v: string) {
     setName(v)
-    const staple = staples.find((s) => s.key === keyOf(v))
-    if (staple) setZone(staple.zone)
   }
 
   function addStarter() {
@@ -154,10 +163,15 @@ export function Pantry() {
         </div>
         <Select
           value={zone}
-          onChange={(e) => setZone(e.target.value as PantryZone)}
+          onChange={(e) => setZone(e.target.value as PantryZone | 'auto')}
           aria-label="Where it lives"
-          className="w-32 shrink-0"
+          className="w-36 shrink-0"
         >
+          <option value="auto">
+            {name.trim()
+              ? `${zones.find((z) => z.id === guessed)?.label} (guess)`
+              : 'Where it lives'}
+          </option>
           {zones.map((z) => (
             <option key={z.id} value={z.id}>
               {z.label}
@@ -178,6 +192,30 @@ export function Pantry() {
         />
       ) : (
         <div className="space-y-8">
+          {pantry.length > 8 && (
+            <div className="flex gap-2">
+              <Input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Find in your pantry"
+                aria-label="Find in your pantry"
+              />
+              <Select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as typeof sort)}
+                aria-label="Sort"
+                className="w-40 shrink-0"
+              >
+                <option value="soon">Use soon first</option>
+                <option value="az">A to Z</option>
+                <option value="new">Newest first</option>
+              </Select>
+            </div>
+          )}
+          {grouped.length === 0 && (
+            <p className="text-center text-ink-2">Nothing called &ldquo;{search}&rdquo;.</p>
+          )}
           {grouped.map((z) => (
             <section key={z.id} aria-labelledby={`zone-${z.id}`}>
               <h2
@@ -258,7 +296,7 @@ function Tile({
       onDragEnd={(_, info) => {
         setTimeout(() => (dragged.current = false), 0)
         if (info.offset.x < -120) {
-          withUndo(`${item.name} used up`, () => usedUp(item.id))
+          markUsedUp(item, usedUp)
         } else if (info.offset.x > 120) {
           restock(item.id)
           toast(`${item.name} restocked`)
@@ -277,53 +315,135 @@ function Tile({
         </ProgressRing>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium text-ink">{item.name}</span>
-          {f < 0.35 && <Tag className={cn('mt-1', 'text-ink-2')}>Use soon</Tag>}
+          {item.quantity !== undefined && (
+            <span className="block text-xs text-ink-3">
+              {formatQuantity(item.quantity, item.unit)}
+            </span>
+          )}
+          {isUseSoon(item, today) && <Tag className={cn('mt-1', 'text-ink-2')}>Use soon</Tag>}
         </span>
       </button>
     </motion.li>
   )
 }
 
+/** Used it up: staples go back on the list so you can buy more. Undo puts both back. */
+function markUsedUp(item: PantryItem, usedUp: (id: string) => boolean) {
+  let listed = false
+  withUndo(
+    item.staple ? `${item.name} used up and added to your list` : `${item.name} used up`,
+    () => {
+      listed = usedUp(item.id)
+    }
+  )
+  return listed
+}
+
+const lifeOptions = [3, 5, 7, 14, 30, 90, 180, 365]
+
 function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => void }) {
   const restock = useStore((s) => s.restockPantryItem)
   const usedUp = useStore((s) => s.useUpPantryItem)
   const remove = useStore((s) => s.removePantryItem)
-  // Keep the last item around so the sheet content does not vanish mid-exit.
+  const update = useStore((s) => s.updatePantryItem)
+  // Always show the live item, and keep the last one so the sheet doesn't empty mid-exit.
+  const live = useStore((s) => (item ? s.pantry.find((p) => p.id === item.id) : undefined))
   const last = useRef<PantryItem | null>(null)
-  if (item) last.current = item
-  const shown = item ?? last.current
+  if (live) last.current = live
+  const shown = live ?? last.current
   return (
     <Sheet open={!!item} onClose={onClose} title={shown?.name}>
       {shown && (
-        <div className="flex flex-col gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              restock(shown.id)
-              toast(`${shown.name} restocked`)
-              onClose()
-            }}
-          >
-            Restock (just bought more)
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              withUndo(`${shown.name} used up`, () => usedUp(shown.id))
-              onClose()
-            }}
-          >
-            Used it up
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              withUndo(`${shown.name} removed`, () => remove(shown.id))
-              onClose()
-            }}
-          >
-            Remove
-          </Button>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-sm font-medium text-ink-2">
+              How much
+              <Input
+                inputMode="decimal"
+                className="mt-1"
+                defaultValue={shown.quantity ?? ''}
+                placeholder="Not sure"
+                onBlur={(e) => {
+                  const n = Number(e.target.value.replace(',', '.'))
+                  update(shown.id, { quantity: e.target.value.trim() && n > 0 ? n : undefined })
+                }}
+              />
+            </label>
+            <label className="text-sm font-medium text-ink-2">
+              Unit
+              <Input
+                className="mt-1"
+                defaultValue={shown.unit ?? ''}
+                placeholder="g, ml, whole"
+                onBlur={(e) => update(shown.id, { unit: e.target.value.trim() || undefined })}
+              />
+            </label>
+            <label className="text-sm font-medium text-ink-2">
+              Where it lives
+              <Select
+                className="mt-1"
+                value={shown.zone}
+                onChange={(e) => update(shown.id, { zone: e.target.value as PantryZone })}
+              >
+                {zones.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.label}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <label className="text-sm font-medium text-ink-2">
+              Keeps for
+              <Select
+                className="mt-1"
+                value={String(shown.softLifeDays)}
+                onChange={(e) => update(shown.id, { softLifeDays: Number(e.target.value) })}
+              >
+                {[...new Set([...lifeOptions, shown.softLifeDays])]
+                  .sort((a, b) => a - b)
+                  .map((d) => (
+                    <option key={d} value={d}>
+                      {d >= 365
+                        ? 'A year or more'
+                        : d >= 30
+                          ? `${Math.round(d / 30)} months`.replace(/^1 months/, '1 month')
+                          : `${d} days`}
+                    </option>
+                  ))}
+              </Select>
+            </label>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                restock(shown.id)
+                toast(`${shown.name} restocked`)
+                onClose()
+              }}
+            >
+              Restock (just bought more)
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                markUsedUp(shown, usedUp)
+                onClose()
+              }}
+            >
+              {shown.staple ? 'Used it up (add to my list)' : 'Used it up'}
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-danger"
+              onClick={() => {
+                withUndo(`${shown.name} removed`, () => remove(shown.id))
+                onClose()
+              }}
+            >
+              Remove (added by mistake)
+            </Button>
+          </div>
         </div>
       )}
     </Sheet>

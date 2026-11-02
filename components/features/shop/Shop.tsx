@@ -4,10 +4,11 @@ import { useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Copy, ListChecks, Plus, ShoppingBasket, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { formatAmounts } from '@/lib/quantity'
 import { useTapGuard } from '@/lib/useTapGuard'
 import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
-import { addDays, cn, formatQuantity } from '@/lib/utils'
+import { cn, pluralize, weekOf } from '@/lib/utils'
 import { checkPop, reveal } from '@/lib/motion'
 import type { Aisle, ShopItem } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -34,6 +35,8 @@ export function Shop() {
   const addShopItem = useStore((s) => s.addShopItem)
   const finishShopping = useStore((s) => s.finishShopping)
   const clearChecked = useStore((s) => s.clearChecked)
+  const dismissed = useStore((s) => s.shopDismissed)
+  const restoreDismissed = useStore((s) => s.restoreDismissed)
   const { targetDate } = useAppContext()
   const [name, setName] = useState('')
 
@@ -56,18 +59,18 @@ export function Shop() {
   )
 
   function fromPlan() {
-    const dates = Array.from({ length: 7 }, (_, i) => addDays(targetDate, i))
-    generateShop(dates)
-    toast(
-      `${useStore.getState().shop.filter((i) => i.fromRecipeIds.length > 0).length} items from your plan`
-    )
+    // The same week as the Week screen: the one holding the dinner Tonight is about.
+    const res = generateShop(weekOf(targetDate))
+    if (res.kept) toast('Nothing planned for the rest of this week, so your list stayed as it is.')
+    else if (res.fromPlan === 0) toast('Your pantry covers everything planned this week.')
+    else toast(`${pluralize(res.fromPlan, 'item')} for this week's dinners`)
   }
 
   async function copyText() {
     const text = groups
       .map(
         (g) =>
-          `${g.label}\n${g.items.map((i) => `- ${i.name}${formatQuantity(i.quantity, i.unit) ? ` (${formatQuantity(i.quantity, i.unit)})` : ''}`).join('\n')}`
+          `${g.label}\n${g.items.map((i) => `- ${i.name}${amountText(i) ? ` (${amountText(i)})` : ''}`).join('\n')}`
       )
       .join('\n\n')
     try {
@@ -157,7 +160,12 @@ export function Shop() {
                     <Row
                       key={item.id}
                       item={item}
-                      fromTitle={item.fromRecipeIds.map((id) => titles.get(id)).filter(Boolean)[0]}
+                      fromTitle={
+                        item.fromRecipeIds
+                          .map((id) => titles.get(id))
+                          .filter(Boolean)
+                          .join(', ') || undefined
+                      }
                     />
                   ))}
                 </AnimatePresence>
@@ -165,6 +173,22 @@ export function Shop() {
             </section>
           ))}
         </div>
+      )}
+
+      {dismissed.length > 0 && (
+        <p className="mt-6 text-center text-sm text-ink-3">
+          {pluralize(dismissed.length, 'item')} you removed will stay off this list.{' '}
+          <button
+            type="button"
+            className="min-h-[44px] font-medium text-accent underline-offset-2 hover:underline"
+            onClick={() => {
+              restoreDismissed()
+              fromPlan()
+            }}
+          >
+            Bring them back
+          </button>
+        </p>
       )}
 
       <AnimatePresence>
@@ -201,12 +225,21 @@ export function Shop() {
   )
 }
 
+/** "350 g + 2 tbsp", with countable things rounded up. */
+function amountText(i: ShopItem) {
+  const list = [
+    ...(i.quantity ? [{ quantity: i.quantity, unit: i.unit ?? '' }] : []),
+    ...(i.more ?? []),
+  ]
+  return formatAmounts(list, { forShopping: true })
+}
+
 function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
   const toggle = useStore((s) => s.toggleShopItem)
   const toggleOnce = useTapGuard(toggle)
   const remove = useStore((s) => s.removeShopItem)
   const dragged = useRef(false)
-  const qty = formatQuantity(item.quantity, item.unit)
+  const qty = amountText(item)
 
   return (
     <motion.li

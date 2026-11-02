@@ -99,6 +99,7 @@ export const shopSchema = z.object({
   aisle: aisle.catch('other'),
   checked: z.boolean().catch(false),
   fromRecipeIds: z.array(z.string()).catch([]),
+  more: z.array(z.object({ quantity: num, unit: z.string() })).optional(),
 })
 
 export const memberSchema = z.object({
@@ -164,6 +165,7 @@ const collections = {
   pantry: pantrySchema,
   plan: planSchema,
   shop: shopSchema,
+  shopDismissed: z.string(),
   handoffs: handoffSchema,
   cooked: cookedSchema,
 } as const
@@ -177,6 +179,7 @@ export interface CleanData {
   pantry: z.infer<typeof pantrySchema>[]
   plan: z.infer<typeof planSchema>[]
   shop: z.infer<typeof shopSchema>[]
+  shopDismissed: string[]
   handoffs: z.infer<typeof handoffSchema>[]
   cooked: z.infer<typeof cookedSchema>[]
   energyByDate: Record<string, 'up-for-it' | 'quick' | 'cant-tonight'>
@@ -270,6 +273,7 @@ export function checkImport(
       pantry: data.pantry ?? [],
       plan: data.plan ?? [],
       shop: data.shop ?? [],
+      shopDismissed: data.shopDismissed ?? [],
       handoffs: data.handoffs ?? [],
       cooked: data.cooked ?? [],
       energyByDate: data.energyByDate ?? {},

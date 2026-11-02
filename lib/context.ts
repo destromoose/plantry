@@ -21,6 +21,20 @@ interface BuildInput {
   weather?: Weather
   plan: PlanEntry[]
   recipes: Recipe[]
+  /** The person said they are still eating tonight, so don't jump to tomorrow yet. */
+  stillTonight?: boolean
+}
+
+/** After this hour, Tonight starts thinking about tomorrow, unless tonight is still open. */
+export const TOMORROW_FROM_HOUR = 22
+
+/** Milliseconds until the next moment the context can change: a mood band, the cutoff or midnight. */
+export function msUntilNextChange(now: Date): number {
+  const marks = [5, 10, 17, 21, TOMORROW_FROM_HOUR, 24]
+  const next = new Date(now)
+  const h = marks.find((m) => m > now.getHours()) ?? 24
+  next.setHours(h, 0, 5, 0)
+  return Math.max(1000, next.getTime() - now.getTime())
 }
 
 /**
@@ -28,12 +42,24 @@ interface BuildInput {
  * UI can re-run it at launch or on a clear change (hour band, tab return) and
  * never continuously.
  */
-export function buildContext({ now, settings, weather, plan, recipes }: BuildInput): Context {
+export function buildContext({
+  now,
+  settings,
+  weather,
+  plan,
+  recipes,
+  stillTonight,
+}: BuildInput): Context {
   const hour = now.getHours()
   const dow = now.getDay()
   const isWeekend = dow === 0 || dow === 6
   const today = toDateKey(now)
-  const lateNight = hour >= 21 || hour < 5
+  // Late evening: look at tomorrow, unless tonight's dinner is planned and not yet cooked
+  // or the person asked to stay on tonight. After midnight, "tonight" is the new day.
+  const todayEntry = plan.find((p) => p.date === today && p.slot === 'dinner')
+  const tonightOpen =
+    !!todayEntry && !todayEntry.done && !!(todayEntry.recipeId || todayEntry.leftoversOf)
+  const lateNight = hour >= TOMORROW_FROM_HOUR && !tonightOpen && !stillTonight
   const targetDate = lateNight ? addDays(today, 1) : today
   const targetLabel = lateNight ? 'Tomorrow' : 'Tonight'
   const mood = settings.mood === 'auto' ? moodForHour(hour) : settings.mood
@@ -64,6 +90,7 @@ export function buildContext({ now, settings, weather, plan, recipes }: BuildInp
   else if ((hour >= 20 || lateNight) && yesterdayBigBatch) nudge = 'leftovers'
 
   const reason = describe({ mood, isWeekend, lean, weather, hour, lateNight })
+  const canStayTonight = lateNight
 
   return {
     now: now.toISOString(),
@@ -76,6 +103,7 @@ export function buildContext({ now, settings, weather, plan, recipes }: BuildInp
     weatherLean: lean,
     nudge,
     reason,
+    canStayTonight,
   }
 }
 

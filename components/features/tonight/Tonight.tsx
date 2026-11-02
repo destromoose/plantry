@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { CloudSun, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { useAvoid } from '@/lib/useAvoid'
-import { useAppContext } from '@/components/shell/Providers'
+import { useAppContext, useStayTonight } from '@/components/shell/Providers'
 import { suggest } from '@/lib/suggest'
 import { addDays, cn, formatMinutes, fromDateKey, shortDay, toDateKey } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
@@ -36,6 +36,7 @@ export function Tonight() {
   const me = members.find((m) => m.isMe) ?? members[0]
 
   const avoid = useAvoid()
+  const stayTonight = useStayTonight()
   const ranked = useMemo(
     () =>
       suggest({
@@ -79,6 +80,16 @@ export function Tonight() {
         <p className="mt-2 text-[15px] text-ink-2">
           {me ? `${greeting}, ${me.name}.` : `${greeting}.`}
         </p>
+        {ctx.canStayTonight && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-3 mt-1"
+            onClick={() => stayTonight(true)}
+          >
+            Still eating tonight? Stay on today
+          </Button>
+        )}
       </motion.header>
 
       <motion.div variants={reveal}>

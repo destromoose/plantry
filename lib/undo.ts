@@ -10,6 +10,7 @@ const keys = [
   'pantry',
   'plan',
   'shop',
+  'shopDismissed',
   'handoffs',
   'energyByDate',
   'cooked',

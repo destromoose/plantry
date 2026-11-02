@@ -96,6 +96,8 @@ export interface ShopItem {
   checked: boolean
   /** Recipe ids this item was generated from; empty for loose items. */
   fromRecipeIds: string[]
+  /** Extra amounts in units that can't be added to the first (350 g + 2 tbsp). */
+  more?: { quantity: number; unit: string }[]
 }
 
 export interface Member {
@@ -140,9 +142,11 @@ export interface Context {
   mood: Mood
   hour: number
   isWeekend: boolean
-  /** The date whose dinner the Tonight screen is about. After 9 pm this is tomorrow. */
+  /** The date whose dinner the Tonight screen is about. After 10 pm this is tomorrow, unless tonight is still open. */
   targetDate: string
   targetLabel: 'Tonight' | 'Tomorrow'
+  /** True when Tonight jumped to tomorrow and can be asked to stay on today. */
+  canStayTonight?: boolean
   weather?: Weather
   weatherLean: 'warm' | 'light' | 'any'
   nudge: 'plan-week' | 'defrost' | 'start-now' | 'leftovers' | 'none'

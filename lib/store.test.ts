@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useStore } from './store'
 import type { Aisle, Recipe } from './types'
 
@@ -33,8 +33,10 @@ function recipe(
 const s = () => useStore.getState()
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 10, 2, 12) })
   s().resetAll()
 })
+afterAll(() => vi.useRealTimers())
 
 describe('completeOnboarding', () => {
   it('creates members with colors and pantry items', () => {
@@ -138,5 +140,80 @@ describe('double taps', () => {
   it('says when an item is already on the list', () => {
     expect(s().addShopItem('Lime')).toBe('added')
     expect(s().addShopItem('limes')).toBe('exists')
+  })
+})
+
+describe('shopping list rules', () => {
+  const plan = (date: string, recipeId: string, done = false) => ({
+    id: `pl-${date}`,
+    date,
+    slot: 'dinner' as const,
+    recipeId,
+    done,
+  })
+  it('only lists what the pantry does not cover', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'egg', quantity: 18 }])],
+      plan: [plan('2026-11-03', 'r1')],
+      pantry: [
+        {
+          id: 'p1',
+          name: 'egg',
+          key: 'egg',
+          zone: 'fridge',
+          aisle: 'dairy',
+          quantity: 12,
+          unit: 'pc',
+          addedAt: '2026-11-01',
+          softLifeDays: 14,
+        },
+      ],
+    })
+    s().generateShop(['2026-11-03'])
+    expect(s().shop).toHaveLength(1)
+    expect(s().shop[0].quantity).toBe(6)
+  })
+  it('skips eaten and past dinners, and keeps a removed item off', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'basil' }]), recipe('r2', [{ key: 'lime' }, { key: 'mint' }])],
+      plan: [plan('2026-11-01', 'r1'), plan('2026-11-03', 'r1', true), plan('2026-11-04', 'r2')],
+    })
+    s().generateShop(['2026-11-01', '2026-11-03', '2026-11-04'])
+    expect(
+      s()
+        .shop.map((i) => i.key)
+        .sort()
+    ).toEqual(['lime', 'mint'])
+    s().removeShopItem(s().shop.find((i) => i.key === 'lime')!.id)
+    s().generateShop(['2026-11-04'])
+    expect(s().shop.map((i) => i.key)).toEqual(['mint'])
+  })
+  it('merges a manual item with the same plan item', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'lime', quantity: 2 }])],
+      plan: [plan('2026-11-03', 'r1')],
+    })
+    s().addShopItem('Limes')
+    s().generateShop(['2026-11-03'])
+    expect(s().shop.filter((i) => i.key === 'lime')).toHaveLength(1)
+  })
+  it('does not wipe a list when nothing is planned', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'lime' }])],
+      plan: [plan('2026-11-03', 'r1')],
+    })
+    s().generateShop(['2026-11-03'])
+    useStore.setState({ plan: [] })
+    expect(s().generateShop(['2026-11-03']).kept).toBe(true)
+    expect(s().shop).toHaveLength(1)
+  })
+  it('drops unbought items for a dinner once it is cooked', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'lime' }])],
+      plan: [plan('2026-11-03', 'r1')],
+    })
+    s().generateShop(['2026-11-03'])
+    s().markCooked('2026-11-03')
+    expect(s().shop).toHaveLength(0)
   })
 })

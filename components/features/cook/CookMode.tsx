@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Check, ListChecks, Timer, UtensilsCrossed, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { withUndo } from '@/lib/undo'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { Stepper } from '@/components/ui/Stepper'
 import { useTapGuard } from '@/lib/useTapGuard'
-import { cn, formatQuantity } from '@/lib/utils'
+import { cn, formatQuantity, pluralize } from '@/lib/utils'
 import { checkPop, settle } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -175,8 +176,10 @@ export function CookMode({
     if (!recipe || finishing.current) return
     finishing.current = true
     if (date && entry) {
-      markCooked(date, { usePantry, leftovers })
-      toast('Nice work.')
+      const before = useStore.getState().pantry.length
+      withUndo('Nice work.', () => markCooked(date, { usePantry, leftovers }))
+      const used = before - useStore.getState().pantry.length
+      if (used > 0) toast(`${pluralize(used, 'thing')} used up from your pantry.`)
       router.push('/')
     } else {
       router.push(`/recipes/${recipe.id}`)
@@ -406,7 +409,7 @@ export function CookMode({
             <Toggle
               checked={usePantry}
               onChange={setUsePantry}
-              label="Use up the fresh stuff from my pantry"
+              label="Take what I used out of my pantry"
             />
             <Toggle checked={leftovers} onChange={setLeftovers} label="There are leftovers" />
           </div>

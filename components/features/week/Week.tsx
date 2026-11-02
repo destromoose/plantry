@@ -31,7 +31,11 @@ export function Week() {
   const today = toDateKey(new Date(ctx.now))
   const [offset, setOffset] = useState(0)
   const [active, setActive] = useState<{ date: string; kind: SheetKind } | null>(null)
-  const weekDates = useMemo(() => weekOf(addDays(today, offset * 7)), [today, offset])
+  // The same week everywhere: the one that holds the dinner Tonight is about.
+  const weekDates = useMemo(
+    () => weekOf(addDays(ctx.targetDate, offset * 7)),
+    [ctx.targetDate, offset]
+  )
 
   const entryFor = (d: string) => plan.find((p) => p.date === d && p.slot === 'dinner')
   const isDecided = (d: string) => {
@@ -312,7 +316,8 @@ export function Week() {
           variant={decided === 0 ? 'secondary' : 'primary'}
           disabled={decided === 0}
           onClick={() => {
-            generateShop(weekDates)
+            const res = generateShop(weekDates)
+            if (res.kept) toast('Nothing left to buy for, so your list stayed as it is.')
             router.push('/shop')
           }}
         >

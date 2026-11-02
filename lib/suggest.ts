@@ -1,6 +1,6 @@
 import type { Context, Energy, PantryItem, Recipe, Taste } from './types'
 import { isSafe } from './diet'
-import { daysBetween, toDateKey } from './utils'
+import { isUseSoon, toDateKey } from './utils'
 
 export interface Scored {
   recipe: Recipe
@@ -38,11 +38,7 @@ export function coverage(recipe: Recipe, pantry: PantryItem[]) {
 export function suggest(input: SuggestInput): Scored[] {
   const { recipes, pantry, tastes, energy, context, recent = [], exclude = [], avoid = [] } = input
   const today = toDateKey(new Date(context.now))
-  const aging = new Set(
-    pantry
-      .filter((p) => daysBetween(p.addedAt.slice(0, 10), today) >= p.softLifeDays * 0.6)
-      .map((p) => p.key)
-  )
+  const aging = new Set(pantry.filter((p) => isUseSoon(p, today)).map((p) => p.key))
 
   const out: Scored[] = []
   for (const recipe of recipes) {

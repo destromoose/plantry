@@ -16,6 +16,8 @@ import type {
   Weather,
 } from './types'
 import { addDays, keyOf, toDateKey, uid } from './utils'
+import { addAmount, compatible, subtract, type Amount } from './quantity'
+import { defaultLife, guessZone } from './pantryGuess'
 import { seedRecipes } from './seed/recipes'
 import { staples } from './seed/pantry'
 import { checkImport, cleanData, defaultSettings } from './schema'
@@ -28,6 +30,8 @@ export interface PlantryState {
   pantry: PantryItem[]
   plan: PlanEntry[]
   shop: ShopItem[]
+  /** Keys of plan items the person removed from the list, so they don't come back. */
+  shopDismissed: string[]
   handoffs: Handoff[]
   /** Energy answer for a given date key. */
   energyByDate: Record<string, Energy>
@@ -73,7 +77,9 @@ export interface PlantryState {
   }) => 'added' | 'restocked'
   removePantryItem: (id: string) => void
   restockPantryItem: (id: string) => void
-  useUpPantryItem: (id: string) => void
+  /** Used it up: gone from the pantry, and staples go back on the list. Returns true if listed. */
+  useUpPantryItem: (id: string) => boolean
+  updatePantryItem: (id: string, patch: Partial<PantryItem>) => void
 
   // plan
   setPlanEntry: (entry: Omit<PlanEntry, 'id'> & { id?: string }) => void
@@ -85,8 +91,15 @@ export interface PlantryState {
   setShuffleSeen: (ids: string[]) => void
 
   // shop
-  generateShop: (dates: string[]) => void
-  addShopItem: (name: string, aisle?: Aisle) => 'added' | 'exists'
+  /** Build the list from planned dinners on these dates. `kept` means nothing was planned, so the list was left alone. */
+  generateShop: (dates: string[]) => { fromPlan: number; kept: boolean }
+  addShopItem: (
+    name: string,
+    aisle?: Aisle,
+    opts?: { quantity?: number; unit?: string; recipeId?: string }
+  ) => 'added' | 'exists'
+  /** Let removed plan items come back on the next list. */
+  restoreDismissed: () => void
   toggleShopItem: (id: string) => void
   removeShopItem: (id: string) => void
   clearChecked: () => void
@@ -102,6 +115,9 @@ export interface PlantryState {
   resetAll: () => void
 }
 
+const amountsOf = (i: ShopItem): Amount[] =>
+  i.quantity ? [{ quantity: i.quantity, unit: i.unit ?? '' }, ...(i.more ?? [])] : (i.more ?? [])
+
 const memberColors: Member['color'][] = ['terracotta', 'sage', 'saffron', 'plum']
 
 /** The least-used member colour, so colours don't collide after someone is removed. */
@@ -113,13 +129,15 @@ function nextColor(members: Member[]): Member['color'] {
 function makePantryItem(name: string, now: string, patch: Partial<PantryItem> = {}): PantryItem {
   const key = keyOf(name)
   const staple = staples.find((s) => s.key === key)
+  const zone = patch.zone ?? staple?.zone ?? guessZone(name)
   return {
     id: uid('p'),
-    name: staple?.name ?? name.trim(),
+    // Keep the name the person typed.
+    name: name.trim() || staple?.name || '',
     key,
-    zone: staple?.zone ?? 'cupboard',
+    zone,
     aisle: staple?.aisle ?? 'other',
-    softLifeDays: staple?.softLifeDays ?? 30,
+    softLifeDays: staple?.softLifeDays ?? defaultLife(zone),
     staple: staple?.staple,
     addedAt: now,
     ...patch,
@@ -138,6 +156,7 @@ export const useStore = create<PlantryState>()(
       pantry: [],
       plan: [],
       shop: [],
+      shopDismissed: [],
       handoffs: [],
       energyByDate: {},
       cooked: [],
@@ -252,7 +271,19 @@ export const useStore = create<PlantryState>()(
             p.id === id ? { ...p, addedAt: new Date().toISOString() } : p
           ),
         })),
-      useUpPantryItem: (id) => set((s) => ({ pantry: s.pantry.filter((p) => p.id !== id) })),
+      useUpPantryItem: (id) => {
+        const item = get().pantry.find((p) => p.id === id)
+        set((s) => ({ pantry: s.pantry.filter((p) => p.id !== id) }))
+        if (!item?.staple) return false
+        get().addShopItem(item.name, item.aisle)
+        return true
+      },
+      updatePantryItem: (id, patch) =>
+        set((s) => ({
+          pantry: s.pantry.map((p) =>
+            p.id === id ? { ...p, ...patch, key: keyOf(patch.name ?? p.name) } : p
+          ),
+        })),
 
       setPlanEntry: (entry) =>
         set((s) => {
@@ -290,15 +321,37 @@ export const useStore = create<PlantryState>()(
         if (!entry || entry.done) return
         const recipe = s.recipes.find((r) => r.id === entry.recipeId)
         let pantry = s.pantry
-        if (opts.usePantry !== false && recipe) {
-          const perishableKeys = new Set(
-            recipe.ingredients
-              .filter(
-                (i) => !i.optional && ['produce', 'meat-fish', 'dairy', 'bakery'].includes(i.aisle)
+        let shop = s.shop
+        if (recipe && opts.usePantry !== false) {
+          const scale =
+            (entry.servings ?? s.settings.cookingFor ?? recipe.servings) / recipe.servings
+          pantry = pantry.flatMap((p) => {
+            const ing = recipe.ingredients.find((i) => !i.optional && i.key === p.key)
+            if (!ing) return [p]
+            // Known amount: take off what the recipe used.
+            if (p.quantity !== undefined && ing.quantity > 0) {
+              const left = subtract(
+                { quantity: p.quantity, unit: p.unit ?? '' },
+                { quantity: ing.quantity * scale, unit: ing.unit }
               )
-              .map((i) => i.key)
-          )
-          pantry = pantry.filter((p) => !(perishableKeys.has(p.key) && !p.staple))
+              if (left) return left.quantity > 0.001 ? [{ ...p, quantity: left.quantity }] : []
+            }
+            // No amount to go by: fresh things are used up, cupboard things stay.
+            return p.softLifeDays <= 14 ? [] : [p]
+          })
+        }
+        if (recipe) {
+          // The dinner is eaten, so its unbought list items can go.
+          shop = shop
+            .filter(
+              (i) =>
+                i.checked || !(i.fromRecipeIds.length === 1 && i.fromRecipeIds[0] === recipe.id)
+            )
+            .map((i) =>
+              i.fromRecipeIds.includes(recipe.id) && i.fromRecipeIds.length > 1
+                ? { ...i, fromRecipeIds: i.fromRecipeIds.filter((r) => r !== recipe.id) }
+                : i
+            )
         }
         let plan = s.plan.map((p) => (p.id === entry.id ? { ...p, done: true } : p))
         if (opts.leftovers && recipe) {
@@ -313,6 +366,7 @@ export const useStore = create<PlantryState>()(
         }
         set({
           pantry,
+          shop,
           plan,
           cooked: [
             { recipeId: entry.recipeId ?? entry.leftoversOf ?? '', date, cookId: entry.cookId },
@@ -326,53 +380,111 @@ export const useStore = create<PlantryState>()(
 
       generateShop: (dates) => {
         const s = get()
-        const pantryKeys = new Set(s.pantry.map((p) => p.key))
-        const needed = new Map<string, ShopItem>()
+        const today = toDateKey(new Date())
+        const dismissed = new Set(s.shopDismissed)
+        const needed = new Map<string, { item: ShopItem; amounts: Amount[] }>()
         for (const entry of s.plan) {
-          if (!dates.includes(entry.date) || !entry.recipeId || entry.done) continue
+          // Only dinners still to come: eaten or past nights don't need shopping.
+          if (!dates.includes(entry.date) || entry.date < today) continue
+          if (!entry.recipeId || entry.done) continue
           const recipe = s.recipes.find((r) => r.id === entry.recipeId)
           if (!recipe) continue
           const scale =
             (entry.servings ?? s.settings.cookingFor ?? recipe.servings) / recipe.servings
           for (const ing of recipe.ingredients) {
-            if (ing.optional || pantryKeys.has(ing.key)) continue
-            const prev = needed.get(ing.key)
-            if (prev) {
-              needed.set(ing.key, {
-                ...prev,
-                quantity:
-                  prev.unit === ing.unit && prev.quantity !== undefined
-                    ? prev.quantity + ing.quantity * scale
-                    : prev.quantity,
-                fromRecipeIds: [...new Set([...prev.fromRecipeIds, recipe.id])],
-              })
-            } else {
-              needed.set(ing.key, {
+            if (ing.optional || dismissed.has(ing.key)) continue
+            const cur = needed.get(ing.key) ?? {
+              item: {
                 id: uid('sh'),
                 name: ing.name,
                 key: ing.key,
-                quantity: ing.quantity * scale,
-                unit: ing.unit,
                 aisle: ing.aisle,
                 checked: false,
-                fromRecipeIds: [recipe.id],
-              })
+                fromRecipeIds: [],
+              },
+              amounts: [],
             }
+            if (ing.quantity > 0)
+              cur.amounts = addAmount(cur.amounts, {
+                quantity: ing.quantity * scale,
+                unit: ing.unit,
+              })
+            if (!cur.item.fromRecipeIds.includes(recipe.id)) cur.item.fromRecipeIds.push(recipe.id)
+            needed.set(ing.key, cur)
           }
         }
-        const loose = s.shop.filter((i) => i.fromRecipeIds.length === 0)
-        const existingChecked = new Map(s.shop.map((i) => [i.key, i.checked]))
-        const generated = [...needed.values()].map((i) => ({
-          ...i,
-          checked: existingChecked.get(i.key) ?? false,
-        }))
+        // Take off what the pantry already covers. Without a known amount, assume enough.
+        for (const [key, cur] of needed) {
+          const have = s.pantry.find((p) => p.key === key)
+          if (!have) continue
+          const i = cur.amounts.findIndex((a) => compatible(a.unit, have.unit ?? ''))
+          if (have.quantity === undefined || i === -1) {
+            needed.delete(key)
+            continue
+          }
+          const left = subtract(cur.amounts[i], { quantity: have.quantity, unit: have.unit ?? '' })
+          const rest =
+            left && left.quantity > 0.001
+              ? cur.amounts.map((a, j) => (j === i ? left : a))
+              : cur.amounts.filter((_, j) => j !== i)
+          if (rest.length === 0) needed.delete(key)
+          else cur.amounts = rest
+        }
+        const old = new Map(s.shop.map((i) => [i.key, i]))
+        const generated: ShopItem[] = [...needed.values()].map(({ item, amounts }) => {
+          // A manual row for the same thing merges in instead of showing twice.
+          const prev = old.get(item.key)
+          let all = amounts
+          if (prev && prev.fromRecipeIds.length === 0 && prev.quantity)
+            all = addAmount(all, { quantity: prev.quantity, unit: prev.unit ?? '' })
+          return {
+            ...item,
+            id: prev?.id ?? item.id,
+            checked: prev?.checked ?? false,
+            quantity: all[0]?.quantity,
+            unit: all[0]?.unit,
+            ...(all.length > 1 ? { more: all.slice(1) } : {}),
+          }
+        })
+        const keys = new Set(generated.map((g) => g.key))
+        const loose = s.shop.filter((i) => i.fromRecipeIds.length === 0 && !keys.has(i.key))
+        // Never swap a list that has plan items for an empty one without asking.
+        if (generated.length === 0 && s.shop.some((i) => i.fromRecipeIds.length > 0))
+          return { fromPlan: 0, kept: true }
         set({ shop: [...generated, ...loose] })
+        return { fromPlan: generated.length, kept: false }
       },
-      addShopItem: (name, aisle) => {
+      addShopItem: (name, aisle, opts = {}) => {
         const key = keyOf(name)
-        if (get().shop.some((i) => i.key === key)) return 'exists'
+        const dismissed = get().shopDismissed.filter((k) => k !== key)
+        const existing = get().shop.find((i) => i.key === key)
+        if (existing) {
+          // Already there: add the amount and the recipe instead of a second row.
+          if (opts.quantity || opts.recipeId)
+            set((s) => ({
+              shopDismissed: dismissed,
+              shop: s.shop.map((i) => {
+                if (i.id !== existing.id) return i
+                const list = opts.quantity
+                  ? addAmount(amountsOf(i), { quantity: opts.quantity, unit: opts.unit ?? '' })
+                  : amountsOf(i)
+                return {
+                  ...i,
+                  quantity: list[0]?.quantity,
+                  unit: list[0]?.unit,
+                  more: list.length > 1 ? list.slice(1) : undefined,
+                  fromRecipeIds:
+                    opts.recipeId && !i.fromRecipeIds.includes(opts.recipeId)
+                      ? [...i.fromRecipeIds, opts.recipeId]
+                      : i.fromRecipeIds,
+                }
+              }),
+            }))
+          return 'exists'
+        }
         const staple = staples.find((st) => st.key === key)
         set((s) => ({
+          shopDismissed: dismissed,
           shop: [
             ...s.shop,
             {
@@ -381,7 +493,8 @@ export const useStore = create<PlantryState>()(
               key,
               aisle: aisle ?? staple?.aisle ?? 'other',
               checked: false,
-              fromRecipeIds: [],
+              fromRecipeIds: opts.recipeId ? [opts.recipeId] : [],
+              ...(opts.quantity ? { quantity: opts.quantity, unit: opts.unit ?? '' } : {}),
             },
           ],
         }))
@@ -391,7 +504,19 @@ export const useStore = create<PlantryState>()(
         set((s) => ({
           shop: s.shop.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)),
         })),
-      removeShopItem: (id) => set((s) => ({ shop: s.shop.filter((i) => i.id !== id) })),
+      removeShopItem: (id) =>
+        set((s) => {
+          const item = s.shop.find((i) => i.id === id)
+          const fromPlan = !!item && item.fromRecipeIds.length > 0
+          return {
+            shop: s.shop.filter((i) => i.id !== id),
+            shopDismissed:
+              fromPlan && !s.shopDismissed.includes(item.key)
+                ? [...s.shopDismissed, item.key]
+                : s.shopDismissed,
+          }
+        }),
+      restoreDismissed: () => set({ shopDismissed: [] }),
       clearChecked: () => set((s) => ({ shop: s.shop.filter((i) => !i.checked) })),
       finishShopping: () => {
         const s = get()
@@ -410,7 +535,7 @@ export const useStore = create<PlantryState>()(
               })
             )
         }
-        set({ pantry, shop: s.shop.filter((i) => !i.checked) })
+        set({ pantry, shop: s.shop.filter((i) => !i.checked), shopDismissed: [] })
       },
 
       createHandoff: (h) =>
@@ -427,7 +552,18 @@ export const useStore = create<PlantryState>()(
 
       exportData: () => {
         const s = get()
-        const { settings, members, recipes, pantry, plan, shop, handoffs, energyByDate, cooked } = s
+        const {
+          settings,
+          members,
+          recipes,
+          pantry,
+          plan,
+          shop,
+          shopDismissed,
+          handoffs,
+          energyByDate,
+          cooked,
+        } = s
         return JSON.stringify(
           {
             version: 1,
@@ -438,6 +574,7 @@ export const useStore = create<PlantryState>()(
             pantry,
             plan,
             shop,
+            shopDismissed,
             handoffs,
             energyByDate,
             cooked,
@@ -470,6 +607,7 @@ export const useStore = create<PlantryState>()(
           pantry: [],
           plan: [],
           shop: [],
+          shopDismissed: [],
           handoffs: [],
           energyByDate: {},
           cooked: [],
@@ -489,6 +627,7 @@ export const useStore = create<PlantryState>()(
           pantry: s.pantry,
           plan: s.plan,
           shop: s.shop,
+          shopDismissed: s.shopDismissed,
           handoffs: s.handoffs,
           energyByDate: s.energyByDate,
           cooked: s.cooked,
@@ -499,6 +638,9 @@ export const useStore = create<PlantryState>()(
       merge: (persisted, current) => {
         const { data, dropped } = cleanData(persisted)
         if (dropped) useStorageStatus.setState({ droppedItems: dropped })
+        // Keys are recomputed on load so matching rules can improve over time.
+        if (data.pantry) data.pantry = data.pantry.map((p) => ({ ...p, key: keyOf(p.name) }))
+        if (data.shop) data.shop = data.shop.map((i) => ({ ...i, key: keyOf(i.name) }))
         return {
           ...current,
           ...data,

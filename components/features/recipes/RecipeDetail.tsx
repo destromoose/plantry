@@ -21,7 +21,15 @@ import {
 import { useStore } from '@/lib/store'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
-import { cn, addDays, dayLabel, formatMinutes, formatQuantity, toDateKey } from '@/lib/utils'
+import {
+  cn,
+  addDays,
+  dayLabel,
+  formatMinutes,
+  formatQuantity,
+  pluralize,
+  toDateKey,
+} from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { Tag } from '@/components/ui/Chip'
@@ -80,8 +88,21 @@ export function RecipeDetail({ id }: { id: string }) {
 
   function addMissing() {
     if (!recipe) return
-    missing.forEach((i) => addShopItem(i.name, i.aisle))
-    toast(`${missing.length} added to your list`)
+    let added = 0
+    for (const i of missing) {
+      const res = addShopItem(i.name, i.aisle, {
+        quantity: i.quantity > 0 ? i.quantity * scale : undefined,
+        unit: i.unit,
+        recipeId: recipe.id,
+      })
+      if (res === 'added') added++
+    }
+    const already = missing.length - added
+    toast(
+      already
+        ? `${pluralize(added, 'item')} added. ${already} already on your list, amounts updated.`
+        : `${pluralize(added, 'item')} added to your list`
+    )
   }
 
   function planFor(date: string, label: string) {

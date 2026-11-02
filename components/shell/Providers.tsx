@@ -3,10 +3,15 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { MotionConfig } from 'framer-motion'
 import { useStore } from '@/lib/store'
-import { buildContext, fetchWeather } from '@/lib/context'
+import { buildContext, fetchWeather, msUntilNextChange } from '@/lib/context'
+import { toDateKey } from '@/lib/utils'
 import type { Context } from '@/lib/types'
 
 const ContextCtx = createContext<Context | null>(null)
+const StayCtx = createContext<(on: boolean) => void>(() => {})
+
+/** Keep the Tonight screen on today after the late-evening cutoff. */
+export const useStayTonight = () => useContext(StayCtx)
 
 /** The current adaptive context. Rebuilt at launch, on the hour band change, and on tab return. */
 export function useAppContext(): Context {
@@ -22,22 +27,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const weather = useStore((s) => s.weather)
   const setWeather = useStore((s) => s.setWeather)
   const [tick, setTick] = useState(0)
+  // "Still tonight" is remembered for the day it was asked on.
+  const [stayDate, setStayDate] = useState<string | null>(null)
 
-  // Re-run the engine on a clear change only: when the hour band might have moved
-  // (every 15 minutes) or when the tab becomes visible again after 20 minutes away.
+  // Re-run the engine on a clear change only: exactly when the next mood band, the
+  // late-evening cutoff or midnight arrives, and when the tab becomes visible again.
   useEffect(() => {
-    let hidden = 0
-    const id = setInterval(() => setTick((t) => t + 1), 15 * 60 * 1000)
+    const id = setTimeout(() => setTick((t) => t + 1), msUntilNextChange(new Date()))
     const onVis = () => {
-      if (document.visibilityState === 'hidden') hidden = Date.now()
-      else if (hidden && Date.now() - hidden > 20 * 60 * 1000) setTick((t) => t + 1)
+      if (document.visibilityState === 'visible') setTick((t) => t + 1)
     }
     document.addEventListener('visibilitychange', onVis)
     return () => {
-      clearInterval(id)
+      clearTimeout(id)
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [])
+  }, [tick])
 
   // Weather, only when the user opted in on the Tonight screen.
   useEffect(() => {
@@ -53,9 +58,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [settings.weatherEnabled, weather, setWeather])
 
   const context = useMemo(
-    () => buildContext({ now: new Date(), settings, weather, plan, recipes }),
+    () => {
+      const now = new Date()
+      return buildContext({
+        now,
+        settings,
+        weather,
+        plan,
+        recipes,
+        stillTonight: stayDate === toDateKey(now),
+      })
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [settings.mood, settings.weatherEnabled, weather, plan, recipes, tick]
+    [settings.mood, settings.weatherEnabled, weather, plan, recipes, tick, stayDate]
   )
 
   // Apply the mood to <html> so CSS tokens switch, with a soft crossfade.
@@ -70,7 +85,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ContextCtx.Provider value={context}>
-      <MotionConfig reducedMotion={reduced}>{children}</MotionConfig>
+      <StayCtx.Provider value={(on) => setStayDate(on ? toDateKey(new Date()) : null)}>
+        <MotionConfig reducedMotion={reduced}>{children}</MotionConfig>
+      </StayCtx.Provider>
     </ContextCtx.Provider>
   )
 }

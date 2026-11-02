@@ -22,3 +22,15 @@ describe('keyOf', () => {
     expect(keyOf('🍋')).not.toBe(keyOf('🥑'))
   })
 })
+
+describe('keyOf synonyms', () => {
+  it('matches common alternative names and drops describing words', () => {
+    expect(keyOf('Chilli flakes')).toBe('chili flake')
+    expect(keyOf('Spring onions')).toBe('scallion')
+    expect(keyOf('Coriander')).toBe('cilantro')
+    expect(keyOf('Large eggs')).toBe('egg')
+    expect(keyOf('Free range eggs')).toBe('egg')
+    expect(keyOf('Cookies')).toBe('cookie')
+    expect(keyOf('Gluten free pasta')).toBe('gluten free pasta')
+  })
+})

@@ -41,9 +41,46 @@ describe('moodForHour', () => {
 })
 
 describe('buildContext', () => {
-  it('targets tomorrow after 21:00 and tonight at 18:00', () => {
-    const late = buildContext({
+  it('stays on tonight at 21:30 and after midnight', () => {
+    const at2130 = buildContext({
       now: new Date(2026, 10, 3, 21, 30),
+      settings,
+      plan: [],
+      recipes: [],
+    })
+    expect(at2130.targetDate).toBe('2026-11-03')
+    // 01:00 on the 4th: the dinner to think about is the 4th, not the 5th.
+    const at1am = buildContext({
+      now: new Date(2026, 10, 4, 1, 0),
+      settings,
+      plan: [],
+      recipes: [],
+    })
+    expect(at1am.targetDate).toBe('2026-11-04')
+  })
+
+  it('keeps an uncooked planned dinner on screen late, and can be asked to stay', () => {
+    const plan = [dinner('2026-11-03', 'r1')]
+    const planned = buildContext({
+      now: new Date(2026, 10, 3, 22, 30),
+      settings,
+      plan,
+      recipes: [recipe('r1')],
+    })
+    expect(planned.targetDate).toBe('2026-11-03')
+    const asked = buildContext({
+      now: new Date(2026, 10, 3, 22, 30),
+      settings,
+      plan: [],
+      recipes: [],
+      stillTonight: true,
+    })
+    expect(asked.targetDate).toBe('2026-11-03')
+  })
+
+  it('targets tomorrow after 22:00 and tonight at 18:00', () => {
+    const late = buildContext({
+      now: new Date(2026, 10, 3, 22, 30),
       settings,
       plan: [],
       recipes: [],
