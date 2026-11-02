@@ -15,12 +15,17 @@
     --surface-2: 243 235 221;
     --ink: 42 31 26; /* espresso */
     --ink-2: 94 78 70;
-    --ink-3: 150 134 124;
+    /* Text tokens meet 4.5:1 on canvas, surface and surface-2; line-strong meets 3:1. */
+    --ink-3: 115 103 95;
     --line: 226 214 196;
-    --accent: 200 85 47; /* terracotta */
+    --line-strong: 139 131 120;
+    --accent: 174 74 41; /* terracotta */
+    --accent-text: 174 74 41;
     --accent-ink: 255 250 244;
-    --secondary: 122 158 126; /* sage */
+    --secondary: 85 110 88; /* sage */
+    --secondary-text: 85 110 88;
     --secondary-ink: 255 255 255;
+    --danger: 176 48 36;
     --glow-a: 255 214 170;
     --glow-b: 250 244 234;
     --glow-c: 214 232 214;
@@ -31,7 +36,10 @@
     --canvas: 252 241 230;
     --surface: 255 251 246;
     --surface-2: 247 230 214;
-    --accent: 214 101 62;
+    --ink-3: 113 101 93;
+    --line-strong: 135 128 117;
+    --accent: 165 78 48;
+    --accent-text: 165 78 48;
     --glow-a: 255 196 160;
     --glow-b: 255 236 214;
     --glow-c: 246 214 190;
@@ -40,9 +48,13 @@
     --canvas: 247 236 222;
     --surface: 255 250 242;
     --surface-2: 240 224 204;
-    --accent: 221 146 44; /* saffron */
+    --ink-3: 109 97 90;
+    --line-strong: 131 124 113;
+    --accent: 221 146 44; /* saffron, for fills; text uses the deeper amber below */
+    --accent-text: 136 90 27;
     --accent-ink: 42 31 26;
     --secondary: 110 70 112; /* plum */
+    --secondary-text: 110 70 112;
     --glow-a: 255 190 110;
     --glow-b: 247 236 222;
     --glow-c: 196 160 196;
@@ -53,12 +65,16 @@
     --surface-2: 56 44 58;
     --ink: 250 244 234;
     --ink-2: 214 202 196;
-    --ink-3: 156 142 148;
+    --ink-3: 165 152 157;
     --line: 70 56 72;
+    --line-strong: 130 121 132;
     --accent: 233 162 59; /* saffron */
+    --accent-text: 233 162 59;
     --accent-ink: 30 22 32;
     --secondary: 140 176 144;
+    --secondary-text: 140 176 144;
     --secondary-ink: 30 22 32;
+    --danger: 215 130 121;
     --glow-a: 90 50 80;
     --glow-b: 30 22 32;
     --glow-c: 40 60 60;
@@ -68,6 +84,26 @@
 
   * {
     border-color: rgb(var(--line));
+  }
+
+  /* High contrast: everything reads at full strength, and borders are visible. */
+  html[data-contrast='more'] {
+    --ink-2: var(--ink);
+    --ink-3: var(--ink);
+    --line: var(--line-strong);
+  }
+  @media (prefers-contrast: more) {
+    html[data-mood] {
+      --ink-3: var(--ink-2);
+      --line: var(--line-strong);
+    }
+  }
+
+  [data-text='large'] {
+    font-size: 112.5%;
+  }
+  [data-text='larger'] {
+    font-size: 125%;
   }
 
   html {
@@ -83,6 +119,8 @@
     -webkit-font-smoothing: antialiased;
     min-height: 100dvh;
     overscroll-behavior-y: none;
+    /* A very long name wraps instead of pushing the page sideways. */
+    overflow-wrap: break-word;
   }
 
   ::selection {
@@ -121,7 +159,9 @@
     border-radius: 999px;
     filter: blur(80px);
     opacity: 0.9;
-    transition: background 800ms ease, transform 1200ms ease;
+    transition:
+      background 800ms ease,
+      transform 1200ms ease;
     will-change: transform;
   }
   .ambient::before {
@@ -186,14 +226,18 @@
     -webkit-backdrop-filter: blur(18px) saturate(1.3);
     backdrop-filter: blur(18px) saturate(1.3);
     border: 1px solid rgb(var(--line) / 0.6);
-    box-shadow: 0 1px 0 rgb(255 255 255 / 0.3) inset, 0 12px 32px -14px rgb(42 31 26 / 0.35);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.3) inset,
+      0 12px 32px -14px rgb(42 31 26 / 0.35);
   }
 
   .card {
     background-color: rgb(var(--surface));
     border: 1px solid rgb(var(--line) / 0.7);
     border-radius: 20px;
-    box-shadow: 0 1px 2px rgb(42 31 26 / 0.04), 0 8px 24px -14px rgb(42 31 26 / 0.18);
+    box-shadow:
+      0 1px 2px rgb(42 31 26 / 0.04),
+      0 8px 24px -14px rgb(42 31 26 / 0.18);
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -215,5 +259,35 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* The in-app "Reduced" motion setting does the same, whatever the system says. */
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Coloured text uses its own token so it stays readable where the fill colour is light. */
+@layer utilities {
+  .text-accent {
+    color: rgb(var(--accent-text));
+  }
+  .text-secondary {
+    color: rgb(var(--secondary-text));
+  }
+}
+
+/* Windows high contrast and other forced-colour modes drop background colours, so
+   selected chips, radios and switches get an outline instead. */
+@media (forced-colors: active) {
+  [aria-pressed='true'],
+  [aria-checked='true'],
+  [aria-current='page'] {
+    outline: 3px solid Highlight;
+    outline-offset: 1px;
   }
 }

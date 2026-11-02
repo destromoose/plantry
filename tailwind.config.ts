@@ -13,6 +13,7 @@ const config: Config = {
         'ink-2': 'rgb(var(--ink-2) / <alpha-value>)',
         'ink-3': 'rgb(var(--ink-3) / <alpha-value>)',
         line: 'rgb(var(--line) / <alpha-value>)',
+        'line-strong': 'rgb(var(--line-strong) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
         'accent-ink': 'rgb(var(--accent-ink) / <alpha-value>)',
         secondary: 'rgb(var(--secondary) / <alpha-value>)',
@@ -23,7 +24,7 @@ const config: Config = {
         plum: '#4A2C4F',
         cream: '#FAF4EA',
         espresso: '#2A1F1A',
-        danger: '#C0392B',
+        danger: 'rgb(var(--danger) / <alpha-value>)',
       },
       fontFamily: {
         display: ['var(--font-display)', 'Georgia', 'serif'],

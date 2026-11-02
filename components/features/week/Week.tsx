@@ -1,14 +1,25 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, ChevronLeft, ChevronRight, MoreHorizontal, Plus, Sparkles } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { announce } from '@/lib/announce'
+import { householdAvoid } from '@/lib/diet'
 import { useAppContext } from '@/components/shell/Providers'
-import { suggest } from '@/lib/suggest'
-import { addDays, cn, formatMinutes, fromDateKey, shortDay, toDateKey, weekOf } from '@/lib/utils'
+import { pickNext, suggest } from '@/lib/suggest'
+import {
+  addDays,
+  cn,
+  dayLabel,
+  formatMinutes,
+  fromDateKey,
+  shortDay,
+  toDateKey,
+  weekOf,
+} from '@/lib/utils'
 import { reveal, staggerContainer, checkPop } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { Eyebrow } from '@/components/ui/Card'
@@ -30,7 +41,20 @@ export function Week() {
   const today = toDateKey(new Date(ctx.now))
   const [offset, setOffset] = useState(0)
   const [active, setActive] = useState<{ date: string; kind: SheetKind } | null>(null)
-  const weekDates = useMemo(() => weekOf(addDays(today, offset * 7)), [today, offset])
+  // The same week everywhere: the one that holds the dinner Tonight is about.
+  const weekDates = useMemo(
+    () => weekOf(addDays(ctx.targetDate, offset * 7)),
+    [ctx.targetDate, offset]
+  )
+  const firstWeek = useRef(true)
+  useEffect(() => {
+    if (firstWeek.current) {
+      firstWeek.current = false
+      return
+    }
+    announce(`Showing ${range}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offset])
 
   const entryFor = (d: string) => plan.find((p) => p.date === d && p.slot === 'dinner')
   const isDecided = (d: string) => {
@@ -50,9 +74,20 @@ export function Week() {
   }
 
   function fillWeek() {
+    const before = useStore.getState().plan
     const s = useStore.getState()
+    const avoid = householdAvoid(s.settings, s.members)
+    // Skip what's already this week and what was on last week, so next week isn't a copy.
+    const lastWeek = weekDates.map((d) => addDays(d, -7))
     const used = new Set<string>(
-      s.plan.filter((p) => weekDates.includes(p.date) && p.slot === 'dinner' && p.recipeId).map((p) => p.recipeId as string)
+      s.plan
+        .filter(
+          (p) =>
+            (weekDates.includes(p.date) || lastWeek.includes(p.date)) &&
+            p.slot === 'dinner' &&
+            p.recipeId
+        )
+        .map((p) => p.recipeId as string)
     )
     let filled = 0
     for (const date of weekDates) {
@@ -60,10 +95,19 @@ export function Week() {
       const current = useStore.getState().plan.find((p) => p.date === date && p.slot === 'dinner')
       if (current && (current.recipeId || current.leftoversOf || current.note)) continue
 
-      const prevEntry = useStore.getState().plan.find((p) => p.date === addDays(date, -1) && p.slot === 'dinner')
-      const prevRecipe = prevEntry?.recipeId ? s.recipes.find((r) => r.id === prevEntry.recipeId) : undefined
+      const prevEntry = useStore
+        .getState()
+        .plan.find((p) => p.date === addDays(date, -1) && p.slot === 'dinner')
+      const prevRecipe = prevEntry?.recipeId
+        ? s.recipes.find((r) => r.id === prevEntry.recipeId)
+        : undefined
       if (prevRecipe?.leftovers && date > today) {
-        s.setPlanEntry({ date, slot: 'dinner', leftoversOf: prevRecipe.id, cookId: current?.cookId })
+        s.setPlanEntry({
+          date,
+          slot: 'dinner',
+          leftoversOf: prevRecipe.id,
+          cookId: current?.cookId,
+        })
         filled++
         continue
       }
@@ -75,14 +119,33 @@ export function Week() {
         context: { ...ctx, isWeekend: dow === 0 || dow === 6 },
         recent: s.cooked.map((c) => c.recipeId),
         exclude: [...used],
+        avoid,
       })
-      const pick = ranked[0] ?? suggest({ recipes: s.recipes, pantry: s.pantry, tastes: s.settings.tastes, context: ctx })[0]
+      // A weighted pick from the top few, so filling twice doesn't give the same week.
+      const pick =
+        pickNext(ranked, []) ??
+        suggest({
+          recipes: s.recipes,
+          pantry: s.pantry,
+          tastes: s.settings.tastes,
+          context: ctx,
+          avoid,
+        })[0]
       if (!pick) continue
       used.add(pick.recipe.id)
       s.setPlanEntry({ date, slot: 'dinner', recipeId: pick.recipe.id, cookId: current?.cookId })
       filled++
     }
-    toast(filled ? 'Week filled. Shuffle anything you don\'t fancy.' : 'Nothing left to fill this week')
+    if (!filled) {
+      toast('Nothing left to fill this week')
+      return
+    }
+    toast(
+      `Filled ${filled} ${filled === 1 ? 'night' : 'nights'}. Planned nights stayed as they were.`,
+      {
+        action: { label: 'Undo', onClick: () => useStore.setState({ plan: before }) },
+      }
+    )
   }
 
   const activeEntry = active ? entryFor(active.date) : undefined
@@ -91,12 +154,24 @@ export function Week() {
     <div className="pb-10 pt-4">
       <header className="mb-5">
         <Eyebrow>{range}</Eyebrow>
-        <h1 className="mt-1 font-display text-fluid-2xl font-semibold leading-none tracking-tight">Your week</h1>
+        <h1 className="mt-1 font-display text-fluid-2xl font-semibold leading-none tracking-tight">
+          Your week
+        </h1>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button variant="ghost" size="icon" aria-label="Previous week" onClick={() => setOffset((o) => o - 1)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Previous week"
+            onClick={() => setOffset((o) => o - 1)}
+          >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Next week" onClick={() => setOffset((o) => o + 1)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Next week"
+            onClick={() => setOffset((o) => o + 1)}
+          >
             <ChevronRight className="h-5 w-5" />
           </Button>
           {offset !== 0 && (
@@ -105,13 +180,22 @@ export function Week() {
             </Button>
           )}
           <div className="flex-1" />
-          <Button onClick={fillWeek}>
+          <Button
+            onClick={fillWeek}
+            variant={weekDates.some((d) => d >= today && !isDecided(d)) ? 'primary' : 'secondary'}
+          >
             <Sparkles className="h-4 w-4" aria-hidden /> Fill my week
           </Button>
         </div>
       </header>
 
-      <motion.ul key={weekDates[0]} variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
+      <motion.ul
+        key={weekDates[0]}
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-3 lg:grid-cols-2"
+      >
         {weekDates.map((date, i) => {
           const entry = entryFor(date)
           const recipe = recipes.find((r) => r.id === entry?.recipeId)
@@ -124,17 +208,36 @@ export function Week() {
 
           const body = recipe ? (
             <>
-              <Thumb src={recipe.imageUrl} className="h-14 w-14 rounded-xl" sizes="56px" />
+              <Thumb
+                src={recipe.imageUrl}
+                className="h-14 w-14 rounded-xl max-[400px]:hidden"
+                sizes="56px"
+              />
               <span className="min-w-0 flex-1">
-                <span className={cn('line-clamp-2 font-display text-lg font-semibold leading-tight', done && 'text-ink-3')}>{recipe.title}</span>
-                <span className="block text-sm text-ink-3">{formatMinutes(recipe.activeMinutes)} hands-on</span>
+                <span
+                  className={cn(
+                    'line-clamp-2 font-display text-lg font-semibold leading-tight',
+                    done && 'text-ink-3'
+                  )}
+                >
+                  {recipe.title}
+                </span>
+                <span className="block text-sm text-ink-3">
+                  {formatMinutes(recipe.activeMinutes)} hands-on
+                </span>
               </span>
             </>
           ) : lo ? (
             <>
-              <Thumb src={lo.imageUrl} className="h-14 w-14 rounded-xl opacity-80" sizes="56px" />
+              <Thumb
+                src={lo.imageUrl}
+                className="h-14 w-14 rounded-xl opacity-80 max-[400px]:hidden"
+                sizes="56px"
+              />
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">Leftovers: {lo.title}</span>
+                <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">
+                  Leftovers: {lo.title}
+                </span>
                 <span className="block text-sm text-ink-3">Easy night</span>
               </span>
             </>
@@ -159,8 +262,12 @@ export function Week() {
                   isToday ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'
                 )}
               >
-                <span className="text-[11px] font-semibold uppercase tracking-wider">{shortDay(date)}</span>
-                <span className="font-display text-xl font-semibold leading-none">{fromDateKey(date).getDate()}</span>
+                <span className="text-[0.6875rem] font-semibold uppercase tracking-wider">
+                  {shortDay(date)}
+                </span>
+                <span className="font-display text-xl font-semibold leading-none">
+                  {fromDateKey(date).getDate()}
+                </span>
               </div>
 
               <AnimatePresence mode="popLayout" initial={false}>
@@ -174,16 +281,22 @@ export function Week() {
                 >
                   {decidedRow && body ? (
                     recipe ? (
-                      <Link href={`/recipes/${recipe.id}`} className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl">
+                      <Link
+                        href={`/recipes/${recipe.id}`}
+                        className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl"
+                      >
                         {body}
                       </Link>
                     ) : (
-                      <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">{body}</div>
+                      <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">
+                        {body}
+                      </div>
                     )
                   ) : (
                     <button
                       type="button"
                       onClick={() => setActive({ date, kind: 'pick' })}
+                      aria-label={`Pick something for ${dayLabel(date, today)}`}
                       className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-ink-3/60 text-sm font-medium text-ink-2 hover:bg-surface-2"
                     >
                       <Plus className="h-4 w-4" aria-hidden /> Pick something
@@ -193,7 +306,14 @@ export function Week() {
               </AnimatePresence>
 
               {done && (
-                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={checkPop} className="text-secondary" role="img" aria-label="Cooked">
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={checkPop}
+                  className="text-secondary"
+                  role="img"
+                  aria-label="Cooked"
+                >
                   <Check className="h-5 w-5" />
                 </motion.span>
               )}
@@ -211,19 +331,32 @@ export function Week() {
         })}
       </motion.ul>
 
-      <section className="card mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center" aria-label="Week summary">
-        <ProgressRing value={decided / 7} size={56} stroke={6} tone={decided === 7 ? 'secondary' : 'accent'}>
+      <section
+        className="card mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
+        aria-label="Week summary"
+      >
+        <ProgressRing
+          value={decided / 7}
+          size={56}
+          stroke={6}
+          tone={decided === 7 ? 'secondary' : 'accent'}
+        >
           <span className="font-display text-base font-semibold">{decided}</span>
         </ProgressRing>
         <div className="flex-1">
           <p className="font-display text-lg font-semibold">{decided} of 7 decided</p>
-          <p className="text-sm text-ink-2">{decided === 7 ? 'Every night is handled.' : 'Undecided nights stay quiet until you want them.'}</p>
+          <p className="text-sm text-ink-2">
+            {decided === 7
+              ? 'Every night is handled.'
+              : 'Undecided nights stay quiet until you want them.'}
+          </p>
         </div>
         <Button
           variant={decided === 0 ? 'secondary' : 'primary'}
           disabled={decided === 0}
           onClick={() => {
-            generateShop(weekDates)
+            const res = generateShop(weekDates)
+            if (res.kept) toast('Nothing left to buy for, so your list stayed as it is.')
             router.push('/shop')
           }}
         >

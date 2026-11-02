@@ -1,11 +1,24 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, CalendarDays, Trash2, UserRound, Repeat, Pencil } from 'lucide-react'
+import { Check, CalendarDays, Moon, Pencil, Repeat, Shuffle, Trash2, UserRound } from 'lucide-react'
 import { useStore } from '@/lib/store'
-import { coverage, suggest } from '@/lib/suggest'
+import { Stepper } from '@/components/ui/Stepper'
+import { useAvoid } from '@/lib/useAvoid'
+import { withUndo } from '@/lib/undo'
+import { coverage, pickNext, suggest } from '@/lib/suggest'
+import { useAppContext } from '@/components/shell/Providers'
 import type { Context, PlanEntry, Taste } from '@/lib/types'
-import { cn, daysBetween, formatMinutes, fromDateKey, dayLabel, shortDay } from '@/lib/utils'
+import {
+  addDays,
+  cn,
+  daysBetween,
+  formatMinutes,
+  fromDateKey,
+  dayLabel,
+  shortDay,
+  weekOf,
+} from '@/lib/utils'
 import { Sheet } from '@/components/ui/Sheet'
 import { Chip } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
@@ -40,7 +53,17 @@ interface Props {
 }
 
 /** All the per-day sheets: pick a dinner, row menu, claim a night, move to another day. */
-export function DaySheets({ date, kind, setKind, onClose, today, ctx, entry, weekDates, onCooked }: Props) {
+export function DaySheets({
+  date,
+  kind,
+  setKind,
+  onClose,
+  today,
+  ctx,
+  entry,
+  weekDates,
+  onCooked,
+}: Props) {
   const open = date !== null
   const title =
     date === null
@@ -50,24 +73,48 @@ export function DaySheets({ date, kind, setKind, onClose, today, ctx, entry, wee
         : kind === 'claim'
           ? 'Who is cooking?'
           : kind === 'move'
-            ? 'Move to which night?'
+            ? 'Move or swap with which night?'
             : `${dayLabel(date, today)}, ${fromDateKey(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
 
   return (
     <Sheet open={open} onClose={onClose} title={title} tall={kind === 'pick'}>
-      {date !== null && kind === 'pick' && <PickBody date={date} today={today} ctx={ctx} entry={entry} onClose={onClose} />}
-      {date !== null && kind === 'menu' && (
-        <MenuBody date={date} entry={entry} setKind={setKind} onClose={onClose} onCooked={onCooked} />
+      {date !== null && kind === 'pick' && (
+        <PickBody date={date} today={today} ctx={ctx} entry={entry} onClose={onClose} />
       )}
-      {date !== null && kind === 'claim' && <ClaimBody date={date} entry={entry} onClose={onClose} />}
-      {date !== null && kind === 'move' && entry && <MoveBody date={date} entry={entry} weekDates={weekDates} today={today} onClose={onClose} />}
+      {date !== null && kind === 'menu' && (
+        <MenuBody
+          date={date}
+          entry={entry}
+          setKind={setKind}
+          onClose={onClose}
+          onCooked={onCooked}
+        />
+      )}
+      {date !== null && kind === 'claim' && (
+        <ClaimBody date={date} entry={entry} onClose={onClose} />
+      )}
+      {date !== null && kind === 'move' && entry && (
+        <MoveBody date={date} entry={entry} weekDates={weekDates} today={today} onClose={onClose} />
+      )}
     </Sheet>
   )
 }
 
 /* ------------------------------------------------------------------ */
 
-function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: string; ctx: Context; entry?: PlanEntry; onClose: () => void }) {
+function PickBody({
+  date,
+  today,
+  ctx,
+  entry,
+  onClose,
+}: {
+  date: string
+  today: string
+  ctx: Context
+  entry?: PlanEntry
+  onClose: () => void
+}) {
   const recipes = useStore((s) => s.recipes)
   const pantry = useStore((s) => s.pantry)
   const cooked = useStore((s) => s.cooked)
@@ -77,6 +124,7 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
   const [filters, setFilters] = useState<Taste[]>([])
   const [note, setNote] = useState('')
 
+  const avoid = useAvoid()
   const dow = fromDateKey(date).getDay()
   const ranked = useMemo(
     () =>
@@ -86,15 +134,19 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
         tastes,
         context: { ...ctx, isWeekend: dow === 0 || dow === 6 },
         recent: cooked.map((c) => c.recipeId),
+        avoid,
       }),
-    [recipes, pantry, tastes, ctx, dow, cooked]
+    [recipes, pantry, tastes, ctx, dow, cooked, avoid]
   )
 
   const needle = q.trim().toLowerCase()
   const list = ranked.filter(({ recipe }) => {
     if (filters.length && !filters.every((f) => recipe.tastes.includes(f))) return false
     if (!needle) return true
-    return recipe.title.toLowerCase().includes(needle) || recipe.ingredients.some((i) => i.name.toLowerCase().includes(needle))
+    return (
+      recipe.title.toLowerCase().includes(needle) ||
+      recipe.ingredients.some((i) => i.name.toLowerCase().includes(needle))
+    )
   })
 
   const leftovers = useMemo(() => {
@@ -102,7 +154,10 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
     return cooked
       .filter((c) => daysBetween(c.date, today) >= 0 && daysBetween(c.date, today) <= 3)
       .map((c) => recipes.find((r) => r.id === c.recipeId))
-      .filter((r): r is NonNullable<typeof r> => !!r && !!r.leftovers && !seen.has(r.id) && !!seen.add(r.id))
+      .filter(
+        (r): r is NonNullable<typeof r> =>
+          !!r && !!r.leftovers && !seen.has(r.id) && !!seen.add(r.id)
+      )
   }, [cooked, recipes, today])
 
   function place(patch: Partial<PlanEntry>) {
@@ -112,14 +167,26 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
 
   return (
     <div className="space-y-5">
-      <Input type="search" aria-label="Search recipes" placeholder="Search recipes or ingredients" value={q} onChange={(e) => setQ(e.target.value)} />
-      <div className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1" role="group" aria-label="Filter by taste">
+      <Input
+        type="search"
+        aria-label="Search recipes"
+        placeholder="Search recipes or ingredients"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      <div
+        className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1"
+        role="group"
+        aria-label="Filter by taste"
+      >
         {tasteLabels.map(([id, label]) => (
           <Chip
             key={id}
             size="sm"
             selected={filters.includes(id)}
-            onClick={() => setFilters((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]))}
+            onClick={() =>
+              setFilters((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]))
+            }
             className="shrink-0"
           >
             {label}
@@ -129,7 +196,9 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
 
       {leftovers.length > 0 && !needle && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">Leftovers of...</h3>
+          <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">
+            Leftovers of...
+          </h3>
           <ul className="space-y-2">
             {leftovers.map((r) => (
               <li key={r.id}>
@@ -148,9 +217,11 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
       )}
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">Suggestions</h3>
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">
+          Suggestions
+        </h3>
         {list.length === 0 ? (
-          <p className="py-4 text-[15px] text-ink-2">Nothing matches. Try fewer filters.</p>
+          <p className="py-4 text-[0.9375rem] text-ink-2">Nothing matches. Try fewer filters.</p>
         ) : (
           <ul className="space-y-2">
             {list.map(({ recipe }) => {
@@ -159,7 +230,9 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
                 <li key={recipe.id}>
                   <button
                     type="button"
-                    onClick={() => place({ recipeId: recipe.id, leftoversOf: undefined, note: undefined })}
+                    onClick={() =>
+                      place({ recipeId: recipe.id, leftoversOf: undefined, note: undefined })
+                    }
                     className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-line bg-surface p-2.5 text-left hover:border-ink-3"
                   >
                     <Thumb src={recipe.imageUrl} className="h-12 w-12 rounded-xl" sizes="48px" />
@@ -178,15 +251,23 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
       </section>
 
       <section>
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">Something else</h3>
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">
+          Something else
+        </h3>
         <form
           className="flex gap-2"
           onSubmit={(e) => {
             e.preventDefault()
-            if (note.trim()) place({ note: note.trim(), recipeId: undefined, leftoversOf: undefined })
+            if (note.trim())
+              place({ note: note.trim(), recipeId: undefined, leftoversOf: undefined })
           }}
         >
-          <Input aria-label="Free-text dinner" placeholder="Takeout, Out, Dinner at Sam's" value={note} onChange={(e) => setNote(e.target.value)} />
+          <Input
+            aria-label="Free-text dinner"
+            placeholder="Takeout, Out, Dinner at Sam's"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
           <Button type="submit" variant="secondary" size="lg" disabled={!note.trim()}>
             Add
           </Button>
@@ -198,7 +279,17 @@ function PickBody({ date, today, ctx, entry, onClose }: { date: string; today: s
 
 /* ------------------------------------------------------------------ */
 
-function Row({ icon: Icon, label, onClick, danger }: { icon: typeof Check; label: string; onClick: () => void; danger?: boolean }) {
+function Row({
+  icon: Icon,
+  label,
+  onClick,
+  danger,
+}: {
+  icon: typeof Check
+  label: string
+  onClick: () => void
+  danger?: boolean
+}) {
   return (
     <li>
       <button
@@ -229,11 +320,63 @@ function MenuBody({
   onCooked: (date: string) => void
 }) {
   const clearPlanEntry = useStore((s) => s.clearPlanEntry)
+  const setServings = useStore((s) => s.setServings)
+  const setPlanEntry = useStore((s) => s.setPlanEntry)
+  const cookingFor = useStore((s) => s.settings.cookingFor)
+  const avoid = useAvoid()
+  const ctx = useAppContext()
+
+  // Re-roll just this night, avoiding what else is planned this week.
+  function somethingElse() {
+    const s = useStore.getState()
+    const week = new Set(weekOf(date))
+    const taken = s.plan.filter((p) => week.has(p.date) && p.recipeId).map((p) => p.recipeId!)
+    const ranked = suggest({
+      recipes: s.recipes,
+      pantry: s.pantry,
+      tastes: s.settings.tastes,
+      context: ctx,
+      recent: s.cooked.map((c) => c.recipeId),
+      exclude: taken,
+      avoid,
+    })
+    const pick = pickNext(ranked, [])
+    if (!pick) {
+      toast('No other dinners fit. Add a recipe or loosen a filter.')
+      return
+    }
+    setPlanEntry({
+      date,
+      slot: 'dinner',
+      recipeId: pick.recipe.id,
+      cookId: entry?.cookId,
+      servings: entry?.servings,
+    })
+    toast(`${pick.recipe.title} instead`)
+    onClose()
+  }
+
   const hasMeal = !!entry && !!(entry.recipeId || entry.leftoversOf)
   const hasContent = !!entry && !!(entry.recipeId || entry.leftoversOf || entry.note)
   return (
     <ul className="-mx-3 space-y-1">
-      <Row icon={Pencil} label={hasContent ? 'Change' : 'Pick something'} onClick={() => setKind('pick')} />
+      {entry?.recipeId && (
+        <li className="flex min-h-[3.5rem] items-center justify-between gap-3 px-3">
+          <span className="font-medium">Cooking for</span>
+          <Stepper
+            value={entry.servings ?? cookingFor}
+            onChange={(v) => setServings(date, v)}
+            min={1}
+            max={24}
+            label="Cooking for"
+          />
+        </li>
+      )}
+      <Row
+        icon={Pencil}
+        label={hasContent ? 'Change' : 'Pick something'}
+        onClick={() => setKind('pick')}
+      />
       {hasMeal && !entry?.done && (
         <Row
           icon={Check}
@@ -244,15 +387,30 @@ function MenuBody({
           }}
         />
       )}
-      <Row icon={UserRound} label="Claim night" onClick={() => setKind('claim')} />
-      {hasContent && <Row icon={Repeat} label="Move to..." onClick={() => setKind('move')} />}
+      <Row icon={UserRound} label="Choose who cooks" onClick={() => setKind('claim')} />
+      {entry?.recipeId && !entry.done && (
+        <Row icon={Shuffle} label="Something else" onClick={somethingElse} />
+      )}
+      {hasContent && <Row icon={Repeat} label="Move or swap..." onClick={() => setKind('move')} />}
+      {entry?.note !== 'Not cooking' && (
+        <Row
+          icon={Moon}
+          label="Not cooking this night"
+          onClick={() => {
+            withUndo('Marked as not cooking', () =>
+              setPlanEntry({ date, slot: 'dinner', note: 'Not cooking', cookId: entry?.cookId })
+            )
+            onClose()
+          }}
+        />
+      )}
       {entry && (
         <Row
           icon={Trash2}
           label="Remove"
           danger
           onClick={() => {
-            clearPlanEntry(date, 'dinner')
+            withUndo('Dinner removed', () => clearPlanEntry(date, 'dinner'))
             onClose()
           }}
         />
@@ -261,10 +419,19 @@ function MenuBody({
   )
 }
 
-function ClaimBody({ date, entry, onClose }: { date: string; entry?: PlanEntry; onClose: () => void }) {
+function ClaimBody({
+  date,
+  entry,
+  onClose,
+}: {
+  date: string
+  entry?: PlanEntry
+  onClose: () => void
+}) {
   const members = useStore((s) => s.members)
   const claimNight = useStore((s) => s.claimNight)
-  if (members.length === 0) return <p className="text-[15px] text-ink-2">Add someone to your household first.</p>
+  if (members.length === 0)
+    return <p className="text-[0.9375rem] text-ink-2">Add someone to your household first.</p>
   return (
     <ul className="space-y-2">
       {members.map((m) => (
@@ -280,7 +447,9 @@ function ClaimBody({ date, entry, onClose }: { date: string; entry?: PlanEntry; 
           >
             <Avatar member={m} />
             <span className="flex-1 font-medium">{m.name}</span>
-            {entry?.cookId === m.id && <Check className="h-5 w-5 text-secondary" aria-label="Current cook" />}
+            {entry?.cookId === m.id && (
+              <Check className="h-5 w-5 text-secondary" aria-label="Current cook" />
+            )}
           </button>
         </li>
       ))}
@@ -301,33 +470,81 @@ function ClaimBody({ date, entry, onClose }: { date: string; entry?: PlanEntry; 
   )
 }
 
-function MoveBody({ date, entry, weekDates, today, onClose }: { date: string; entry: PlanEntry; weekDates: string[]; today: string; onClose: () => void }) {
+function MoveBody({
+  date,
+  entry,
+  weekDates,
+  today,
+  onClose,
+}: {
+  date: string
+  entry: PlanEntry
+  weekDates: string[]
+  today: string
+  onClose: () => void
+}) {
   const movePlanEntry = useStore((s) => s.movePlanEntry)
   const plan = useStore((s) => s.plan)
   const recipes = useStore((s) => s.recipes)
   const days = weekDates.filter((d) => d !== date)
+  const dinnerOn = (d: string) => plan.find((p) => p.date === d && p.slot === 'dinner')
+  // Leftovers must come after the night they're cooked, in either direction of a swap.
+  const cookDateOf = (e?: PlanEntry) =>
+    e?.leftoversOf
+      ? plan
+          .filter((p) => p.recipeId === e.leftoversOf && p.date < e.date)
+          .map((p) => p.date)
+          .sort()
+          .pop()
+      : undefined
+  const leftoversDateOf = (e?: PlanEntry) =>
+    e?.recipeId
+      ? plan.find((p) => p.leftoversOf === e.recipeId && p.date === addDays(e.date, 1))?.date
+      : undefined
+  function problem(d: string): string | undefined {
+    const other = dinnerOn(d)
+    const cook = cookDateOf(entry)
+    if (cook && d <= cook) return 'Before it is cooked'
+    const left = leftoversDateOf(entry)
+    if (left && d >= left) return 'After its leftovers night'
+    const otherCook = cookDateOf(other)
+    if (otherCook && date <= otherCook) return 'Would put leftovers first'
+    return undefined
+  }
   return (
     <ul className="space-y-2">
       {days.map((d) => {
-        const other = plan.find((p) => p.date === d && p.slot === 'dinner')
-        const label = other?.recipeId ? recipes.find((r) => r.id === other.recipeId)?.title : other?.note
+        const other = dinnerOn(d)
+        const label = other?.recipeId
+          ? recipes.find((r) => r.id === other.recipeId)?.title
+          : other?.leftoversOf
+            ? 'Leftovers'
+            : other?.note
+        const why = problem(d)
         return (
           <li key={d}>
             <button
               type="button"
+              disabled={!!why}
               onClick={() => {
                 movePlanEntry(entry.id, d)
-                toast(label ? `Swapped with ${dayLabel(d, today)}` : `Moved to ${dayLabel(d, today)}`)
+                toast(
+                  label ? `Swapped with ${dayLabel(d, today)}` : `Moved to ${dayLabel(d, today)}`
+                )
                 onClose()
               }}
-              className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 text-left hover:border-ink-3"
+              className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 text-left hover:border-ink-3 disabled:opacity-50"
             >
               <CalendarDays className="h-5 w-5 text-ink-3" aria-hidden />
               <span className="flex-1">
                 <span className="block font-medium">
                   {shortDay(d)} {fromDateKey(d).getDate()}
                 </span>
-                {label && <span className="block truncate text-sm text-ink-2">Swaps with {label}</span>}
+                {why ? (
+                  <span className="block truncate text-sm text-ink-3">{why}</span>
+                ) : label ? (
+                  <span className="block truncate text-sm text-ink-2">Swaps with {label}</span>
+                ) : null}
               </span>
             </button>
           </li>

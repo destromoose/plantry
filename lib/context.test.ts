@@ -19,7 +19,12 @@ function recipe(id: string, aisle: 'meat-fish' | 'produce' = 'produce'): Recipe 
 }
 
 const settings = { mood: 'auto' as const, weatherEnabled: false }
-const dinner = (date: string, recipeId: string): PlanEntry => ({ id: `pl-${date}`, date, slot: 'dinner', recipeId })
+const dinner = (date: string, recipeId: string): PlanEntry => ({
+  id: `pl-${date}`,
+  date,
+  slot: 'dinner',
+  recipeId,
+})
 
 describe('moodForHour', () => {
   it('has the right boundaries', () => {
@@ -36,11 +41,58 @@ describe('moodForHour', () => {
 })
 
 describe('buildContext', () => {
-  it('targets tomorrow after 21:00 and tonight at 18:00', () => {
-    const late = buildContext({ now: new Date(2026, 10, 3, 21, 30), settings, plan: [], recipes: [] })
+  it('stays on tonight at 21:30 and after midnight', () => {
+    const at2130 = buildContext({
+      now: new Date(2026, 10, 3, 21, 30),
+      settings,
+      plan: [],
+      recipes: [],
+    })
+    expect(at2130.targetDate).toBe('2026-11-03')
+    // 01:00 on the 4th: the dinner to think about is the 4th, not the 5th.
+    const at1am = buildContext({
+      now: new Date(2026, 10, 4, 1, 0),
+      settings,
+      plan: [],
+      recipes: [],
+    })
+    expect(at1am.targetDate).toBe('2026-11-04')
+  })
+
+  it('keeps an uncooked planned dinner on screen late, and can be asked to stay', () => {
+    const plan = [dinner('2026-11-03', 'r1')]
+    const planned = buildContext({
+      now: new Date(2026, 10, 3, 22, 30),
+      settings,
+      plan,
+      recipes: [recipe('r1')],
+    })
+    expect(planned.targetDate).toBe('2026-11-03')
+    const asked = buildContext({
+      now: new Date(2026, 10, 3, 22, 30),
+      settings,
+      plan: [],
+      recipes: [],
+      stillTonight: true,
+    })
+    expect(asked.targetDate).toBe('2026-11-03')
+  })
+
+  it('targets tomorrow after 22:00 and tonight at 18:00', () => {
+    const late = buildContext({
+      now: new Date(2026, 10, 3, 22, 30),
+      settings,
+      plan: [],
+      recipes: [],
+    })
     expect(late.targetLabel).toBe('Tomorrow')
     expect(late.targetDate).toBe('2026-11-04')
-    const evening = buildContext({ now: new Date(2026, 10, 3, 18, 0), settings, plan: [], recipes: [] })
+    const evening = buildContext({
+      now: new Date(2026, 10, 3, 18, 0),
+      settings,
+      plan: [],
+      recipes: [],
+    })
     expect(evening.targetLabel).toBe('Tonight')
     expect(evening.targetDate).toBe('2026-11-03')
   })
@@ -53,13 +105,23 @@ describe('buildContext', () => {
 
   it('nudges to start now on a Tuesday evening with a planned dinner', () => {
     const r = recipe('soup')
-    const ctx = buildContext({ now: new Date(2026, 10, 3, 17, 30), settings, plan: [dinner('2026-11-03', 'soup')], recipes: [r] })
+    const ctx = buildContext({
+      now: new Date(2026, 10, 3, 17, 30),
+      settings,
+      plan: [dinner('2026-11-03', 'soup')],
+      recipes: [r],
+    })
     expect(ctx.nudge).toBe('start-now')
   })
 
   it('nudges to defrost in the morning when dinner has meat or fish', () => {
     const r = recipe('chicken', 'meat-fish')
-    const ctx = buildContext({ now: new Date(2026, 10, 3, 9, 0), settings, plan: [dinner('2026-11-03', 'chicken')], recipes: [r] })
+    const ctx = buildContext({
+      now: new Date(2026, 10, 3, 9, 0),
+      settings,
+      plan: [dinner('2026-11-03', 'chicken')],
+      recipes: [r],
+    })
     expect(ctx.nudge).toBe('defrost')
   })
 })
@@ -71,5 +133,17 @@ describe('weatherLean', () => {
     expect(weatherLean({ tempC: 30, precipitation: false, ...base })).toBe('light')
     expect(weatherLean({ tempC: 18, precipitation: false, ...base })).toBe('any')
     expect(weatherLean(undefined)).toBe('any')
+  })
+
+  it('moves on to tomorrow once tonight is cooked', () => {
+    const plan = [{ ...dinner('2026-11-03', 'r1'), done: true }]
+    const c = buildContext({
+      now: new Date(2026, 10, 3, 19, 0),
+      settings,
+      plan,
+      recipes: [recipe('r1')],
+    })
+    expect(c.targetDate).toBe('2026-11-04')
+    expect(c.canStayTonight).toBe(false)
   })
 })

@@ -1,20 +1,13 @@
 // Domain types for Plantry. Everything here is serializable (no Date objects)
 // so the whole store can be persisted and exported as JSON.
 
-export type Taste = 'cozy' | 'fresh' | 'fast' | 'one-pan' | 'veg-forward' | 'spicy' | 'big-batch' | 'kid-friendly'
+export type Taste =
+  'cozy' | 'fresh' | 'fast' | 'one-pan' | 'veg-forward' | 'spicy' | 'big-batch' | 'kid-friendly'
 
 export type PantryZone = 'fridge' | 'freezer' | 'cupboard' | 'counter'
 
 export type Aisle =
-  | 'produce'
-  | 'dairy'
-  | 'meat-fish'
-  | 'bakery'
-  | 'pantry'
-  | 'frozen'
-  | 'spices'
-  | 'drinks'
-  | 'other'
+  'produce' | 'dairy' | 'meat-fish' | 'bakery' | 'pantry' | 'frozen' | 'spices' | 'drinks' | 'other'
 
 export interface Ingredient {
   id: string
@@ -32,6 +25,8 @@ export interface Step {
   text: string
   /** Minutes, when the step contains a timer ("simmer 12 minutes"). */
   timerMinutes?: number
+  /** Safety note shown on the step, e.g. "The pan handle gets hot." */
+  caution?: string
 }
 
 export interface Recipe {
@@ -101,6 +96,8 @@ export interface ShopItem {
   checked: boolean
   /** Recipe ids this item was generated from; empty for loose items. */
   fromRecipeIds: string[]
+  /** Extra amounts in units that can't be added to the first (350 g + 2 tbsp). */
+  more?: { quantity: number; unit: string }[]
 }
 
 export interface Member {
@@ -109,6 +106,12 @@ export interface Member {
   /** One of the member color tokens. */
   color: 'terracotta' | 'saffron' | 'sage' | 'plum'
   isMe?: boolean
+  /** Allergens this person must never be served. */
+  avoid?: string[]
+  /** Diet this person follows. */
+  diet?: string
+  /** False for someone who eats but doesn't cook, like a small child. */
+  cooks?: boolean
 }
 
 export type Energy = 'up-for-it' | 'quick' | 'cant-tonight'
@@ -118,12 +121,21 @@ export type Mood = 'dawn' | 'day' | 'dusk' | 'night'
 export interface Settings {
   onboarded: boolean
   /** 'auto' follows the clock. */
-  mood: Mood | 'auto'
+  /** 'auto' follows the time of day; 'system' follows the device's light or dark setting. */
+  mood: Mood | 'auto' | 'system'
   reducedMotion: 'system' | 'on' | 'off'
   units: 'metric' | 'imperial'
   tastes: Taste[]
   weatherEnabled: boolean
   householdWord: 'household' | 'family' | 'home'
+  /** How many people dinner is usually for. */
+  cookingFor: number
+  /** Allergens and diets the whole household avoids (see lib/diet.ts). */
+  avoid: string[]
+  /** Show ask-a-grown-up notes on hot and sharp steps. */
+  cookingWithKids: boolean
+  highContrast: boolean
+  textSize: 'normal' | 'large' | 'larger'
 }
 
 export interface Weather {
@@ -137,9 +149,11 @@ export interface Context {
   mood: Mood
   hour: number
   isWeekend: boolean
-  /** The date whose dinner the Tonight screen is about. After 9 pm this is tomorrow. */
+  /** The date whose dinner the Tonight screen is about. After 10 pm this is tomorrow, unless tonight is still open. */
   targetDate: string
   targetLabel: 'Tonight' | 'Tomorrow'
+  /** True when Tonight jumped to tomorrow and can be asked to stay on today. */
+  canStayTonight?: boolean
   weather?: Weather
   weatherLean: 'warm' | 'light' | 'any'
   nudge: 'plan-week' | 'defrost' | 'start-now' | 'leftovers' | 'none'

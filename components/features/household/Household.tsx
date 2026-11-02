@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { MAX_PEOPLE } from '@/components/features/onboarding/Onboarding'
+import { withUndo } from '@/lib/undo'
+import { avoidLabel } from '@/lib/diet'
+import { AvoidPicker } from './AvoidPicker'
 import { useAppContext } from '@/components/shell/Providers'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +15,7 @@ import { Card, SectionTitle } from '@/components/ui/Card'
 import { Tag } from '@/components/ui/Chip'
 import { Input } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { fromDateKey, pluralize, shortDay, weekOf } from '@/lib/utils'
@@ -33,6 +38,12 @@ export function Household() {
   const [newName, setNewName] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [claimDate, setClaimDate] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
+  const [avoidFor, setAvoidFor] = useState<string | null>(null)
+  const setMemberAvoid = useStore((s) => s.setMemberAvoid)
+  const setMemberCooks = useStore((s) => s.setMemberCooks)
+  const cooks = members.filter((m) => m.cooks !== false)
+  const avoidMember = members.find((m) => m.id === avoidFor)
 
   const word = settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)
   const week = weekOf(today)
@@ -54,18 +65,25 @@ export function Household() {
     (p) => p.slot === 'dinner' && weekSet.has(p.date) && p.date <= today && (p.recipeId || p.note)
   ).length
   const cookedThisWeek = cooked.filter((c) => weekSet.has(c.date))
-  const open = week.filter((d) => d >= today && !(dinner(d)?.recipeId || dinner(d)?.note || dinner(d)?.leftoversOf)).length
+  const open = week.filter(
+    (d) => d >= today && !(dinner(d)?.recipeId || dinner(d)?.note || dinner(d)?.leftoversOf)
+  ).length
 
   return (
     <div className="space-y-10 pb-8">
-      <header>
-        <h1 className="font-display text-fluid-2xl font-semibold leading-[1.05] tracking-tight">{word}</h1>
-        <p className="mt-1 text-ink-2">The dinner load, shared.</p>
-      </header>
+      <PageHeader
+        className="mb-0"
+        title={word}
+        subtitle={
+          members.length > 1
+            ? 'Who cooks which night, and what everyone avoids.'
+            : 'Add the people you cook for, and what they avoid.'
+        }
+      />
 
       <section aria-labelledby="members-h">
         <SectionTitle>
-          <span id="members-h">Who&apos;s cooking</span>
+          <span id="members-h">Who&apos;s at the table</span>
         </SectionTitle>
         <Card className="p-2">
           <ul>
@@ -96,10 +114,29 @@ export function Household() {
                   >
                     <span className="truncate">{m.name}</span>
                     {m.isMe && <span className="ml-2 text-sm font-normal text-ink-3">you</span>}
+                    {m.cooks === false && (
+                      <span className="ml-2 text-sm font-normal text-ink-3">eats only</span>
+                    )}
                   </button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-ink-2"
+                  aria-label={`${m.name}: cooking and foods to avoid`}
+                  onClick={() => setAvoidFor(m.id)}
+                >
+                  {m.avoid?.length
+                    ? `Avoids ${m.avoid.length === 1 ? avoidLabel(m.avoid[0]).toLowerCase() : m.avoid.length}`
+                    : 'Details'}
+                </Button>
                 {!m.isMe && (
-                  <Button variant="ghost" size="icon" aria-label={`Remove ${m.name}`} onClick={() => removeMember(m.id)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${m.name}`}
+                    onClick={() => setRemoving({ id: m.id, name: m.name })}
+                  >
                     <X className="h-5 w-5" />
                   </Button>
                 )}
@@ -111,13 +148,28 @@ export function Household() {
             onSubmit={(e) => {
               e.preventDefault()
               if (!newName.trim()) return
+              if (members.length >= MAX_PEOPLE) {
+                toast(`Up to ${MAX_PEOPLE} people for now.`)
+                return
+              }
               addMember(newName)
               toast(`${newName.trim()} is in`)
               setNewName('')
             }}
           >
-            <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Add someone" aria-label="Add someone" />
-            <Button type="submit" variant="secondary" disabled={!newName.trim()} className="shrink-0">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Add someone"
+              aria-label="Add someone"
+              maxLength={40}
+            />
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={!newName.trim()}
+              className="shrink-0"
+            >
               <Plus className="h-4 w-4" aria-hidden /> Add
             </Button>
           </form>
@@ -128,7 +180,12 @@ export function Household() {
         <SectionTitle>
           <span id="week-h">This week</span>
         </SectionTitle>
-        <motion.ul variants={staggerContainer} initial="hidden" animate="show" className="card divide-y divide-line overflow-hidden p-0">
+        <motion.ul
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="card divide-y divide-line overflow-hidden p-0"
+        >
           {week.map((date, i) => {
             const cook = member(dinner(date)?.cookId)
             const isToday = date === today
@@ -140,11 +197,24 @@ export function Household() {
                   aria-label={`${shortDay(date)}: ${describeDinner(date)}. ${cook ? `Cooking: ${cook.name}` : 'Nobody yet'}. Change who cooks.`}
                   className="flex min-h-[3.5rem] w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-surface-2"
                 >
-                  <span className={`w-10 shrink-0 text-sm font-semibold ${isToday ? 'text-accent' : 'text-ink-3'}`}>{shortDay(date)}</span>
-                  <span className={`min-w-0 flex-1 truncate ${describeDinner(date) === 'Open' ? 'text-ink-3' : 'font-display text-lg'}`}>
+                  <span
+                    className={`w-10 shrink-0 text-sm font-semibold ${isToday ? 'text-accent' : 'text-ink-3'}`}
+                  >
+                    {shortDay(date)}
+                  </span>
+                  <span
+                    className={`min-w-0 flex-1 truncate ${describeDinner(date) === 'Open' ? 'text-ink-3' : 'font-display text-lg'}`}
+                  >
                     {describeDinner(date)}
                   </span>
-                  {cook ? <Avatar member={cook} /> : <span className="h-8 w-8 rounded-full border border-dashed border-line" aria-hidden />}
+                  {cook ? (
+                    <Avatar member={cook} />
+                  ) : (
+                    <span
+                      className="h-8 w-8 rounded-full border border-dashed border-line"
+                      aria-hidden
+                    />
+                  )}
                 </button>
               </motion.li>
             )
@@ -156,8 +226,13 @@ export function Household() {
         <SectionTitle>
           <span id="handoffs-h">Hand-offs</span>
         </SectionTitle>
+        <p className="-mt-2 mb-3 text-sm text-ink-3">
+          These stay on this device. Nothing is sent to anyone.
+        </p>
         {handoffs.length === 0 ? (
-          <p className="card p-5 text-ink-2">No hand-offs yet. On the Tonight screen, tap Hand off to pass a night to someone.</p>
+          <p className="card p-5 text-ink-2">
+            No hand-offs yet. On Tonight, open More and pick Ask someone else to cook.
+          </p>
         ) : (
           <ul className="space-y-3">
             {[...handoffs]
@@ -168,11 +243,15 @@ export function Household() {
                   <li key={h.id} className="card flex items-center gap-3 p-4">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">
-                        {member(h.fromId)?.name ?? 'Someone'} handed {member(h.toId)?.name ?? 'someone'}{' '}
-                        {fromDateKey(h.date).toLocaleDateString(undefined, { weekday: 'long' })}&apos;s dinner
+                        {member(h.fromId)?.name ?? 'Someone'} handed{' '}
+                        {member(h.toId)?.name ?? 'someone'}{' '}
+                        {fromDateKey(h.date).toLocaleDateString(undefined, { weekday: 'long' })}
+                        &apos;s dinner
                       </p>
                       {title && <p className="font-display text-lg">{title}</p>}
-                      {h.message && <p className="text-sm italic text-ink-2">&ldquo;{h.message}&rdquo;</p>}
+                      {h.message && (
+                        <p className="text-sm italic text-ink-2">&ldquo;{h.message}&rdquo;</p>
+                      )}
                     </div>
                     {h.accepted ? (
                       <Tag>
@@ -201,21 +280,29 @@ export function Household() {
           <SectionTitle>
             <span id="recap-h">This week</span>
           </SectionTitle>
-          <ul className="space-y-1.5 text-[15px] text-ink-2">
+          <ul className="space-y-1.5 text-[0.9375rem] text-ink-2">
             <li>You decided dinner {pluralize(decided, 'time')} so far.</li>
-            {members.map((m) => (
+            {cooks.map((m) => (
               <li key={m.id}>
                 {m.name} cooked {cookedThisWeek.filter((c) => c.cookId === m.id).length}.
               </li>
             ))}
-            <li>{open === 0 ? 'Every night is spoken for.' : `${pluralize(open, 'night')} still open.`}</li>
+            <li>
+              {open === 0
+                ? 'Every night is spoken for.'
+                : `${pluralize(open, 'night')} still open.`}
+            </li>
           </ul>
         </Card>
       </section>
 
-      <Sheet open={!!claimDate} onClose={() => setClaimDate(null)} title={claimDate ? `Who's cooking ${shortDay(claimDate)}?` : undefined}>
+      <Sheet
+        open={!!claimDate}
+        onClose={() => setClaimDate(null)}
+        title={claimDate ? `Who's cooking ${shortDay(claimDate)}?` : undefined}
+      >
         <ul className="space-y-1">
-          {members.map((m) => (
+          {cooks.map((m) => (
             <li key={m.id}>
               <button
                 type="button"
@@ -228,7 +315,9 @@ export function Household() {
               >
                 <Avatar member={m} />
                 <span className="font-medium">{m.name}</span>
-                {claimDate && dinner(claimDate)?.cookId === m.id && <Check className="ml-auto h-4 w-4 text-secondary" aria-label="Current cook" />}
+                {claimDate && dinner(claimDate)?.cookId === m.id && (
+                  <Check className="ml-auto h-4 w-4 text-secondary" aria-label="Current cook" />
+                )}
               </button>
             </li>
           ))}
@@ -245,6 +334,73 @@ export function Household() {
             </button>
           </li>
         </ul>
+      </Sheet>
+
+      <Sheet open={!!avoidMember} onClose={() => setAvoidFor(null)} title={avoidMember?.name}>
+        {avoidMember && (
+          <>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={avoidMember.cooks !== false}
+              onClick={() => setMemberCooks(avoidMember.id, avoidMember.cooks === false)}
+              className="mb-6 flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-2 text-left"
+            >
+              <span>
+                <span className="block font-medium">Helps cook</span>
+                <span className="block text-sm text-ink-2">
+                  Off for someone who eats but doesn&apos;t cook, like a small child.
+                </span>
+              </span>
+              <span
+                className={`relative h-6 w-10 shrink-0 rounded-pill transition-colors ${avoidMember.cooks !== false ? 'bg-accent' : 'bg-line-strong'}`}
+                aria-hidden
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow-card transition-all ${avoidMember.cooks !== false ? 'right-0.5' : 'left-0.5'}`}
+                />
+              </span>
+            </button>
+            <h3 className="mb-1 font-semibold">Foods to avoid</h3>
+            <p className="mb-4 text-ink-2">
+              Dinners with these are never suggested for anyone in your {settings.householdWord}.
+            </p>
+            <AvoidPicker
+              value={avoidMember.avoid ?? []}
+              onChange={(v) => setMemberAvoid(avoidMember.id, v)}
+            />
+            <Button className="mt-6 w-full" onClick={() => setAvoidFor(null)}>
+              Done
+            </Button>
+          </>
+        )}
+      </Sheet>
+
+      <Sheet
+        open={!!removing}
+        onClose={() => setRemoving(null)}
+        title={`Remove ${removing?.name ?? ''}?`}
+      >
+        <p className="mb-5 text-ink-2">
+          Their claimed nights go back to open. Dinners stay planned.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (removing) {
+                const { id, name } = removing
+                withUndo(`${name} removed`, () => removeMember(id))
+              }
+              setRemoving(null)
+            }}
+          >
+            Remove {removing?.name}
+          </Button>
+          <Button variant="ghost" onClick={() => setRemoving(null)}>
+            Keep
+          </Button>
+        </div>
       </Sheet>
     </div>
   )

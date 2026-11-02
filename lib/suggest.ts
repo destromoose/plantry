@@ -1,5 +1,6 @@
 import type { Context, Energy, PantryItem, Recipe, Taste } from './types'
-import { daysBetween, toDateKey } from './utils'
+import { isSafe } from './diet'
+import { isUseSoon, toDateKey } from './utils'
 
 export interface Scored {
   recipe: Recipe
@@ -18,6 +19,8 @@ export interface SuggestInput {
   /** Recipe ids cooked recently, most recent first. Penalized so dinner does not repeat. */
   recent?: string[]
   exclude?: string[]
+  /** Allergens and diets to respect. Recipes that break one are never suggested. */
+  avoid?: string[]
 }
 
 /** Coverage of a recipe's required ingredients by the pantry. */
@@ -33,17 +36,14 @@ export function coverage(recipe: Recipe, pantry: PantryItem[]) {
  * can later replace it behind the same interface.
  */
 export function suggest(input: SuggestInput): Scored[] {
-  const { recipes, pantry, tastes, energy, context, recent = [], exclude = [] } = input
+  const { recipes, pantry, tastes, energy, context, recent = [], exclude = [], avoid = [] } = input
   const today = toDateKey(new Date(context.now))
-  const aging = new Set(
-    pantry
-      .filter((p) => daysBetween(p.addedAt.slice(0, 10), today) >= p.softLifeDays * 0.6)
-      .map((p) => p.key)
-  )
+  const aging = new Set(pantry.filter((p) => isUseSoon(p, today)).map((p) => p.key))
 
   const out: Scored[] = []
   for (const recipe of recipes) {
     if (exclude.includes(recipe.id)) continue
+    if (avoid.length && !isSafe(recipe, avoid)) continue
     const reasons: string[] = []
     let score = 0
 
@@ -51,7 +51,8 @@ export function suggest(input: SuggestInput): Scored[] {
     const ratio = cov.total ? cov.have / cov.total : 0
     score += ratio * 40
     if (cov.missing.length === 0 && cov.total > 0) reasons.push('You have everything')
-    else if (cov.missing.length <= 2 && cov.total > 0) reasons.push(`Only missing ${cov.missing.join(' and ')}`)
+    else if (cov.missing.length <= 2 && cov.total > 0)
+      reasons.push(`Only missing ${cov.missing.join(' and ')}`)
 
     const usesAging = recipe.ingredients.filter((i) => aging.has(i.key))
     if (usesAging.length) {
@@ -80,7 +81,12 @@ export function suggest(input: SuggestInput): Scored[] {
       score += 10
       reasons.push(context.weatherLean === 'warm' ? 'Good for a cold night' : 'Nothing heavy')
     }
-    if (context.weatherLean !== 'any' && recipe.weather && recipe.weather !== 'any' && recipe.weather !== context.weatherLean)
+    if (
+      context.weatherLean !== 'any' &&
+      recipe.weather &&
+      recipe.weather !== 'any' &&
+      recipe.weather !== context.weatherLean
+    )
       score -= 6
 
     if (!context.isWeekend && recipe.totalMinutes > 60) score -= 8

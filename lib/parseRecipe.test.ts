@@ -36,12 +36,18 @@ describe('parseRecipe', () => {
   })
 
   it('strips trailing prep notes from names', () => {
-    expect(parseIngredientLine('2 cloves garlic, minced')).toEqual({ name: 'garlic', quantity: 2, unit: 'cloves' })
+    expect(parseIngredientLine('2 cloves garlic, minced')).toEqual({
+      name: 'garlic',
+      quantity: 2,
+      unit: 'cloves',
+    })
   })
 
   it('strips step markers and joins wrapped lines', () => {
     const r = parseRecipe(full)
-    expect(r.steps[0].text).toBe('Boil the pasta in salted water for 10 minutes. Drain, keep a cup of the water.')
+    expect(r.steps[0].text).toBe(
+      'Boil the pasta in salted water for 10 minutes. Drain, keep a cup of the water.'
+    )
     expect(r.steps[2].text).toBe('Toss everything together and serve.')
   })
 
@@ -67,7 +73,9 @@ Squeeze over the lemon and serve.`)
   })
 
   it('does not take a numeric first line as a title', () => {
-    const r = parseRecipe('2 eggs\n1 cup milk\nWhisk the eggs with the milk and cook it gently in a buttered pan until just set, about 4 minutes.')
+    const r = parseRecipe(
+      '2 eggs\n1 cup milk\nWhisk the eggs with the milk and cook it gently in a buttered pan until just set, about 4 minutes.'
+    )
     expect(r.title).toBeUndefined()
     expect(r.ingredients).toHaveLength(2)
     expect(r.steps[0].timerMinutes).toBe(4)
@@ -75,5 +83,30 @@ Squeeze over the lemon and serve.`)
 
   it('returns empty lists for empty input', () => {
     expect(parseRecipe('  \n ')).toEqual({ ingredients: [], steps: [] })
+  })
+})
+
+describe('detectTimer, more shapes', () => {
+  it('reads hours, seconds and ranges', () => {
+    expect(detectTimer('Roast for 1 hour 10 minutes')).toBe(70)
+    expect(detectTimer('Braise 1½ hours')).toBe(90)
+    expect(detectTimer('Microwave 90 seconds')).toBe(1.5)
+    expect(detectTimer('Cook 10-12 mins until golden')).toBe(12)
+  })
+  it('ignores words that only start like a unit', () => {
+    expect(detectTimer('Add 2 minced garlic cloves')).toBeUndefined()
+  })
+})
+
+describe('recipe details in pasted text', () => {
+  it('reads servings and times and keeps them out of the steps', () => {
+    const r = parseRecipe(
+      'Lemon pasta\nServes 3\nPrep time: 10 mins\nCook time: 1 hr 5 mins\n\nIngredients\n200 g spaghetti\n\nMethod\n1. Boil the pasta.'
+    )
+    expect(r.servings).toBe(3)
+    expect(r.activeMinutes).toBe(10)
+    expect(r.totalMinutes).toBe(75)
+    expect(r.steps).toHaveLength(1)
+    expect(r.ingredients).toHaveLength(1)
   })
 })

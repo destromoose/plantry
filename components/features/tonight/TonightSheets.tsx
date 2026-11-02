@@ -35,17 +35,26 @@ export function SaveSheet({
 
   return (
     <Sheet open={open} onClose={onClose} title="Save for another night">
-      <p className="mb-4 text-[15px] text-ink-2">{recipe.title} will be waiting. Which night?</p>
+      <p className="mb-4 text-[0.9375rem] text-ink-2">
+        {recipe.title} will be waiting. Which night?
+      </p>
       <ul className="space-y-2">
         {days.map((d) => {
           const entry = plan.find((p) => p.date === d && p.slot === 'dinner')
-          const taken = entry?.recipeId ? recipes.find((r) => r.id === entry.recipeId)?.title : entry?.note ?? (entry?.leftoversOf ? 'Leftovers' : undefined)
+          const taken = entry?.recipeId
+            ? recipes.find((r) => r.id === entry.recipeId)?.title
+            : (entry?.note ?? (entry?.leftoversOf ? 'Leftovers' : undefined))
           return (
             <li key={d}>
               <button
                 type="button"
                 onClick={() => {
-                  setPlanEntry({ date: d, slot: 'dinner', recipeId: recipe.id, cookId: entry?.cookId })
+                  setPlanEntry({
+                    date: d,
+                    slot: 'dinner',
+                    recipeId: recipe.id,
+                    cookId: entry?.cookId,
+                  })
                   toast(`Saved for ${dayLabel(d, today)}`)
                   onSaved()
                   onClose()
@@ -55,10 +64,15 @@ export function SaveSheet({
                 <span>
                   <span className="block font-medium">{dayLabel(d, today)}</span>
                   <span className="block text-sm text-ink-3">
-                    {fromDateKey(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {fromDateKey(d).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
                   </span>
                 </span>
-                <span className="max-w-[55%] truncate text-sm text-ink-2">{taken ? `Replaces ${taken}` : 'Free'}</span>
+                <span className="max-w-[55%] truncate text-sm text-ink-2">
+                  {taken ? `Replaces ${taken}` : 'Free'}
+                </span>
               </button>
             </li>
           )
@@ -73,34 +87,45 @@ export function HandoffSheet({
   onClose,
   recipe,
   date,
-  onBeforeHandoff,
+  planned,
+  when = 'tonight',
 }: {
   open: boolean
   onClose: () => void
   recipe?: Recipe
   date: string
-  /** Called first so an unplanned suggestion is locked in before it is handed over. */
-  onBeforeHandoff?: () => void
+  /** Only a planned dinner is passed on. Otherwise the night is, and they choose. */
+  planned?: boolean
+  /** "tonight", "tomorrow" or a weekday. */
+  when?: string
 }) {
   const members = useStore((s) => s.members)
   const createHandoff = useStore((s) => s.createHandoff)
   const [message, setMessage] = useState('')
   const me = members.find((m) => m.isMe) ?? members[0]
-  const others = members.filter((m) => m.id !== me?.id)
+  const others = members.filter((m) => m.id !== me?.id && m.cooks !== false)
 
   return (
-    <Sheet open={open} onClose={onClose} title="Hand off dinner">
+    <Sheet open={open} onClose={onClose} title="Ask someone else to cook">
       {others.length === 0 || !me ? (
         <div>
-          <p className="text-[15px] text-ink-2">Add someone to your household first. Then you can pass the apron.</p>
-          <Link href="/household" onClick={onClose} className={cn(buttonVariants({ variant: 'primary' }), 'mt-5')}>
+          <p className="text-[0.9375rem] text-ink-2">
+            Add someone who cooks to your household first. Then you can pass the apron.
+          </p>
+          <Link
+            href="/household"
+            onClick={onClose}
+            className={cn(buttonVariants({ variant: 'primary' }), 'mt-5')}
+          >
             Go to household
           </Link>
         </div>
       ) : (
         <div>
-          <p className="mb-4 text-[15px] text-ink-2">
-            {recipe ? `Pass ${recipe.title} to someone.` : 'Pass tonight to someone.'}
+          <p className="mb-4 text-[0.9375rem] text-ink-2">
+            {planned && recipe
+              ? `Who's cooking ${recipe.title} ${when}?`
+              : `Who's cooking ${when}? They pick what to make.`}
           </p>
           <Label htmlFor="handoff-msg">Add a note (optional)</Label>
           <Input
@@ -117,9 +142,14 @@ export function HandoffSheet({
                 <button
                   type="button"
                   onClick={() => {
-                    onBeforeHandoff?.()
-                    createHandoff({ date, fromId: me.id, toId: m.id, recipeId: recipe?.id, message: message.trim() || undefined })
-                    toast(`Handed to ${m.name}`)
+                    createHandoff({
+                      date,
+                      fromId: me.id,
+                      toId: m.id,
+                      recipeId: planned ? recipe?.id : undefined,
+                      message: message.trim() || undefined,
+                    })
+                    toast(`${m.name} is cooking ${when}`)
                     setMessage('')
                     onClose()
                   }}
@@ -131,6 +161,10 @@ export function HandoffSheet({
               </li>
             ))}
           </ul>
+          <p className="mt-4 text-sm text-ink-3">
+            Nothing is sent to them. Plantry only lives on this device, so tell them or show them
+            this screen.
+          </p>
         </div>
       )}
     </Sheet>

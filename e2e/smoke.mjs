@@ -11,7 +11,11 @@ const PORT = process.env.PORT || 3123
 const BASE = `http://localhost:${PORT}`
 mkdirSync('e2e/screenshots', { recursive: true })
 
-const server = spawn('npx', ['next', 'start', '-p', String(PORT)], { stdio: 'pipe', shell: true })
+const server = spawn('npx', ['next', 'start', '-p', String(PORT)], {
+  stdio: 'pipe',
+  shell: true,
+  detached: true,
+})
 server.stdout.on('data', (d) => process.stdout.write(`[next] ${d}`))
 server.stderr.on('data', (d) => process.stderr.write(`[next] ${d}`))
 
@@ -31,12 +35,19 @@ let failed = false
 try {
   await waitForServer()
   const proxy = process.env.HTTPS_PROXY || process.env.https_proxy
-  const browser = await chromium.launch(proxy ? { proxy: { server: proxy, bypass: 'localhost,127.0.0.1' } } : {})
+  const browser = await chromium.launch(
+    proxy ? { proxy: { server: proxy, bypass: 'localhost,127.0.0.1' } } : {}
+  )
   for (const [name, viewport, mobile] of [
     ['phone', { width: 390, height: 844 }, true],
     ['desktop', { width: 1280, height: 860 }, false],
   ]) {
-    const ctx = await browser.newContext({ viewport, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: 2 })
+    const ctx = await browser.newContext({
+      viewport,
+      isMobile: mobile,
+      hasTouch: mobile,
+      deviceScaleFactor: 2,
+    })
     const page = await ctx.newPage()
     page.on('console', (m) => m.type() === 'error' && errors.push(`${name}: ${m.text()}`))
     page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`))
@@ -53,16 +64,53 @@ try {
     await page.waitForTimeout(400)
     await page.screenshot({ path: `e2e/screenshots/${name}-02-onboarding-taste.png` })
     await page.getByRole('button', { name: 'Next' }).click()
+    await page.getByRole('button', { name: 'Peanuts' }).click()
+    await page.getByRole('button', { name: 'Next' }).click()
     await page.screenshot({ path: `e2e/screenshots/${name}-03-onboarding-pantry.png` })
     await page.getByRole('button', { name: 'Show me tonight' }).click()
     await page.waitForURL(`${BASE}/`)
     await page.waitForTimeout(900)
+    if (/peanut/i.test(await page.locator('main').innerText()))
+      throw new Error(`${name}: a peanut dish was suggested to a peanut-free household`)
     await page.screenshot({ path: `e2e/screenshots/${name}-04-tonight.png`, fullPage: true })
 
-    for (const [i, route] of ['week', 'recipes', 'pantry', 'shop', 'household', 'settings'].entries()) {
+    // Navigate by clicking, the way people do. page.goto hides transition bugs.
+    for (const label of ['Week', 'Recipes', 'Pantry', 'Shop', 'Tonight', 'Week', 'Shop']) {
+      await page
+        .locator('nav[aria-label="Primary"]:visible')
+        .getByRole('link', { name: label, exact: true })
+        .click()
+      await page.waitForTimeout(700)
+      const opacity = await page.evaluate(() =>
+        Number(getComputedStyle(document.querySelector('main')).opacity)
+      )
+      if (opacity < 0.95)
+        throw new Error(
+          `${name}: page stayed invisible after clicking ${label} (opacity ${opacity})`
+        )
+    }
+    await page.goBack()
+    await page.waitForTimeout(700)
+    const backOpacity = await page.evaluate(() =>
+      Number(getComputedStyle(document.querySelector('main')).opacity)
+    )
+    if (backOpacity < 0.95)
+      throw new Error(`${name}: page stayed invisible after Back (opacity ${backOpacity})`)
+
+    for (const [i, route] of [
+      'week',
+      'recipes',
+      'pantry',
+      'shop',
+      'household',
+      'settings',
+    ].entries()) {
       await page.goto(`${BASE}/${route}`)
       await page.waitForTimeout(700)
-      await page.screenshot({ path: `e2e/screenshots/${name}-${String(i + 5).padStart(2, '0')}-${route}.png`, fullPage: true })
+      await page.screenshot({
+        path: `e2e/screenshots/${name}-${String(i + 5).padStart(2, '0')}-${route}.png`,
+        fullPage: true,
+      })
     }
 
     // Recipe detail and cook mode from the first recipe card.
@@ -84,10 +132,17 @@ try {
       await page.waitForTimeout(400)
       await page.getByRole('button', { name: 'Shuffle' }).click()
       await page.waitForTimeout(1500)
-      await page.getByRole('button', { name: 'Lock it in' }).last().click()
+      await page
+        .getByRole('button', { name: /^Cook this (tonight|tomorrow)$/ })
+        .last()
+        .click()
       await page.waitForTimeout(500)
-      await page.screenshot({ path: `e2e/screenshots/${name}-14-tonight-locked.png`, fullPage: true })
-      if (!(await page.getByRole('link', { name: /^Cook/ }).count())) throw new Error('Cook link missing after lock in')
+      await page.screenshot({
+        path: `e2e/screenshots/${name}-14-tonight-locked.png`,
+        fullPage: true,
+      })
+      if (!(await page.getByRole('link', { name: /^Start cooking/ }).count()))
+        throw new Error('Cook link missing after lock in')
 
       await page.goto(`${BASE}/week`)
       await page.getByRole('button', { name: 'Fill my week' }).click()
@@ -106,7 +161,7 @@ try {
       await page.waitForTimeout(500)
 
       await page.goto(`${BASE}/`)
-      await page.getByRole('link', { name: /^Cook/ }).click()
+      await page.getByRole('link', { name: /^Start cooking/ }).click()
       await page.waitForURL('**/cook/**')
       await page.waitForTimeout(600)
       await page.keyboard.press('ArrowRight')
@@ -131,11 +186,16 @@ try {
   failed = true
   console.error(e)
 } finally {
-  server.kill('SIGTERM')
+  // Kill the whole process group so next-server does not outlive the test.
+  try {
+    process.kill(-server.pid, 'SIGTERM')
+  } catch {}
 }
 
 // Image hosts may be unreachable in a sandbox; a failed resource load is not an app error.
-const realErrors = errors.filter((e) => !/favicon|Download the React DevTools|Failed to load resource/i.test(e))
+const realErrors = errors.filter(
+  (e) => !/favicon|Download the React DevTools|Failed to load resource/i.test(e)
+)
 if (realErrors.length) {
   console.error('Console errors:\n' + realErrors.join('\n'))
   failed = true

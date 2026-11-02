@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Heart, Link2, PencilLine, Plus, Search, SearchX } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { AvoidBadge } from '@/components/features/household/AvoidWarning'
 import { coverage } from '@/lib/suggest'
 import type { Taste } from '@/lib/types'
 import { formatMinutes, cn } from '@/lib/utils'
@@ -15,8 +16,12 @@ import { Chip, Tag } from '@/components/ui/Chip'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { RecipeImage } from './RecipeImage'
 import { allTastes, tasteLabels } from './tastes'
+
+/** How many recipes to show at a time. */
+const PAGE = 24
 
 export function RecipeLibrary() {
   const router = useRouter()
@@ -30,6 +35,24 @@ export function RecipeLibrary() {
   const [favOnly, setFavOnly] = useState(false)
   const [canMake, setCanMake] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [shown, setShown] = useState(PAGE)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  // A new search or filter starts from the top of the list again.
+  useEffect(() => setShown(PAGE), [debounced, tastes, favOnly, canMake])
+
+  // "/" jumps to search, as on many sites.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      if (t.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
+      e.preventDefault()
+      searchRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(query.trim().toLowerCase()), 180)
@@ -44,7 +67,9 @@ export function RecipeLibrary() {
         if (canMake && !(cov.missing.length === 0 && cov.total > 0)) return false
         if (tastes.length && !tastes.every((t) => recipe.tastes.includes(t))) return false
         if (debounced) {
-          const hay = [recipe.title, recipe.description, ...recipe.ingredients.map((i) => i.name)].join(' ').toLowerCase()
+          const hay = [recipe.title, recipe.description, ...recipe.ingredients.map((i) => i.name)]
+            .join(' ')
+            .toLowerCase()
           if (!hay.includes(debounced)) return false
         }
         return true
@@ -62,33 +87,53 @@ export function RecipeLibrary() {
 
   return (
     <div className="pb-6">
-      <header className="flex items-end justify-between gap-4 pt-2">
-        <div>
-          <h1 className="font-display text-fluid-xl font-semibold leading-tight tracking-tight">Recipes</h1>
-          <p className="text-sm text-ink-3">{recipes.length} saved</p>
-        </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="h-4 w-4" aria-hidden /> Add
-        </Button>
-      </header>
+      <PageHeader
+        className="mb-0"
+        title="Recipes"
+        subtitle={`${recipes.length} saved`}
+        actions={
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden /> Add
+          </Button>
+        }
+      />
 
       <div className="relative mt-5">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" aria-hidden />
+        <Search
+          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+          aria-hidden
+        />
         <Input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search recipes or ingredients"
           aria-label="Search recipes"
+          ref={searchRef}
           className="pl-11"
         />
       </div>
 
-      <div className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0" role="group" aria-label="Filters">
-        <Chip size="sm" tone="secondary" selected={canMake} onClick={() => setCanMake((v) => !v)} className="shrink-0">
+      <div
+        className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:px-0"
+        role="group"
+        aria-label="Filters"
+      >
+        <Chip
+          size="sm"
+          tone="secondary"
+          selected={canMake}
+          onClick={() => setCanMake((v) => !v)}
+          className="shrink-0"
+        >
           Can make now
         </Chip>
-        <Chip size="sm" selected={favOnly} onClick={() => setFavOnly((v) => !v)} className="shrink-0">
+        <Chip
+          size="sm"
+          selected={favOnly}
+          onClick={() => setFavOnly((v) => !v)}
+          className="shrink-0"
+        >
           <Heart className="h-3.5 w-3.5" aria-hidden /> Favorites
         </Chip>
         {allTastes.map((t) => (
@@ -96,7 +141,9 @@ export function RecipeLibrary() {
             key={t}
             size="sm"
             selected={tastes.includes(t)}
-            onClick={() => setTastes((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]))}
+            onClick={() =>
+              setTastes((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]))
+            }
             className="shrink-0"
           >
             {tasteLabels[t]}
@@ -104,12 +151,19 @@ export function RecipeLibrary() {
         ))}
       </div>
 
-      <div className="mt-5" aria-live="polite">
+      <p className="sr-only" aria-live="polite">
+        {filtered.length === 1 ? '1 recipe' : `${filtered.length} recipes`}
+      </p>
+      <div className="mt-5">
         {filtered.length === 0 ? (
           <EmptyState
             icon={SearchX}
             title="Nothing matches"
-            body={hasFilters ? 'Try fewer filters, or a different word.' : 'Add your first recipe to get going.'}
+            body={
+              hasFilters
+                ? 'Try fewer filters, or a different word.'
+                : 'Add your first recipe to get going.'
+            }
             action={
               hasFilters ? (
                 <Button variant="secondary" onClick={clear}>
@@ -128,24 +182,37 @@ export function RecipeLibrary() {
             className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4"
           >
             <AnimatePresence mode="popLayout" initial>
-              {filtered.map(({ recipe, cov }, i) => (
+              {filtered.slice(0, shown).map(({ recipe, cov }, i) => (
                 <motion.li
                   key={recipe.id}
-                  layout
-                  variants={reveal}
+                  // Only the first page animates in. Long lists appear at once and stay quick.
+                  layout={filtered.length <= PAGE}
+                  variants={i < PAGE ? reveal : undefined}
                   custom={i}
-                  initial="hidden"
+                  initial={i < PAGE ? 'hidden' : false}
                   animate="show"
-                  exit="exit"
+                  exit={i < PAGE ? 'exit' : undefined}
                   className="card group relative overflow-hidden"
                 >
-                  <Link href={`/recipes/${recipe.id}`} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                    <motion.div layoutId={`recipe-image-${recipe.id}`} className="relative aspect-[4/3] overflow-hidden">
-                      <RecipeImage url={recipe.imageUrl} seed={recipe.id} sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, 46vw" />
+                  <Link
+                    href={`/recipes/${recipe.id}`}
+                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <motion.div
+                      layoutId={`recipe-image-${recipe.id}`}
+                      className="relative aspect-[4/3] overflow-hidden"
+                    >
+                      <RecipeImage
+                        url={recipe.imageUrl}
+                        seed={recipe.id}
+                        sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, 46vw"
+                      />
                     </motion.div>
                     <div className="space-y-1.5 p-3">
-                      <h2 className="font-display text-[17px] font-semibold leading-snug tracking-tight">{recipe.title}</h2>
-                      <p className="flex items-center gap-1.5 text-[13px] text-ink-2">
+                      <h2 className="font-display text-[1.0625rem] font-semibold leading-snug tracking-tight">
+                        {recipe.title}
+                      </h2>
+                      <p className="flex items-center gap-1.5 text-[0.8125rem] text-ink-2">
                         <span>{formatMinutes(recipe.activeMinutes)}</span>
                         <span aria-hidden className="text-ink-3">
                           ·
@@ -153,11 +220,15 @@ export function RecipeLibrary() {
                         <span className="inline-flex items-center gap-1">
                           <span
                             aria-hidden
-                            className={cn('h-2 w-2 rounded-full', cov.missing.length === 0 ? 'bg-secondary' : 'bg-ink-3/60')}
+                            className={cn(
+                              'h-2 w-2 rounded-full',
+                              cov.missing.length === 0 ? 'bg-secondary' : 'bg-ink-3/60'
+                            )}
                           />
-                          {cov.have} of {cov.total}
+                          {cov.have} of {cov.total} at home
                         </span>
                       </p>
+                      <AvoidBadge recipe={recipe} />
                       {recipe.tastes.length > 0 && (
                         <div className="flex flex-wrap gap-1 pt-0.5">
                           {recipe.tastes.slice(0, 2).map((t) => (
@@ -171,7 +242,11 @@ export function RecipeLibrary() {
                     variant="glass"
                     size="icon-sm"
                     className="absolute right-2 top-2"
-                    aria-label={recipe.isFavorite ? `Remove ${recipe.title} from favorites` : `Add ${recipe.title} to favorites`}
+                    aria-label={
+                      recipe.isFavorite
+                        ? `Remove ${recipe.title} from favorites`
+                        : `Add ${recipe.title} to favorites`
+                    }
                     aria-pressed={recipe.isFavorite}
                     onClick={(e) => {
                       e.preventDefault()
@@ -179,22 +254,45 @@ export function RecipeLibrary() {
                       toggleFavorite(recipe.id)
                     }}
                   >
-                    <Heart className={cn('h-4 w-4', recipe.isFavorite && 'fill-accent text-accent')} aria-hidden />
+                    <Heart
+                      className={cn('h-4 w-4', recipe.isFavorite && 'fill-accent text-accent')}
+                      aria-hidden
+                    />
                   </Button>
                 </motion.li>
               ))}
             </AnimatePresence>
           </motion.ul>
         )}
+        {filtered.length > shown && (
+          <div className="mt-6 flex flex-col items-center gap-1">
+            <Button variant="secondary" onClick={() => setShown((n) => n + PAGE)}>
+              Show more
+            </Button>
+            <p className="text-sm text-ink-3">
+              Showing {shown} of {filtered.length}
+            </p>
+          </div>
+        )}
       </div>
 
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="Add a recipe">
         <div className="space-y-2">
-          <Button variant="secondary" size="lg" className="w-full justify-start" onClick={() => router.push('/recipes/new')}>
-            <PencilLine className="h-5 w-5" aria-hidden /> Paste or type
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full justify-start"
+            onClick={() => router.push('/recipes/new')}
+          >
+            <PencilLine className="h-5 w-5" aria-hidden /> Type it in
           </Button>
-          <Button variant="secondary" size="lg" className="w-full justify-start" onClick={() => router.push('/recipes/new?tab=link')}>
-            <Link2 className="h-5 w-5" aria-hidden /> Import from a link
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full justify-start"
+            onClick={() => router.push('/recipes/new?tab=link')}
+          >
+            <Link2 className="h-5 w-5" aria-hidden /> Paste recipe text
           </Button>
         </div>
       </Sheet>

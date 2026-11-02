@@ -10,7 +10,9 @@ export function Logo({ className, withWord = true }: { className?: string; withW
         <path d="M14 18c0-4 2.5-6.5 6.5-6.5C20.5 15.5 18 18 14 18Z" fill="currentColor" />
         <path d="M14 18l3-3" stroke="rgb(var(--canvas))" strokeWidth="1" strokeLinecap="round" />
       </svg>
-      {withWord && <span className="font-display text-xl font-semibold tracking-tight">Plantry</span>}
+      {withWord && (
+        <span className="font-display text-xl font-semibold tracking-tight">Plantry</span>
+      )}
     </span>
   )
 }

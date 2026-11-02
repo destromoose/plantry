@@ -3,6 +3,7 @@ import { Fraunces, Inter_Tight } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/shell/Providers'
 import { AppShell } from '@/components/shell/AppShell'
+import { ErrorBoundary } from '@/components/shell/ErrorBoundary'
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -18,7 +19,7 @@ const sans = Inter_Tight({
 })
 
 export const metadata: Metadata = {
-  title: 'Plantry. Dinner, decided.',
+  title: { default: 'Plantry. Dinner, decided.', template: '%s · Plantry' },
   description:
     'The app that answers "what\'s for dinner?" before you ask. Built from your pantry, your energy, and the day outside.',
   applicationName: 'Plantry',
@@ -32,16 +33,29 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
+const prePaint = `try{var d=document.documentElement,m=localStorage.getItem('plantry-mood');if(m&&/^(dawn|day|dusk|night)$/.test(m))d.dataset.mood=m;var s=JSON.parse(localStorage.getItem('plantry-v1')||'{}').state;s=s&&s.settings;if(s){if(s.highContrast)d.dataset.contrast='more';if(s.textSize&&s.textSize!=='normal')d.dataset.text=s.textSize}}catch(e){}`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-mood="day" className={`${display.variable} ${sans.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      data-mood="day"
+      className={`${display.variable} ${sans.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Paint in the last mood before the app loads, so night mode doesn't flash cream. */}
+        <script dangerouslySetInnerHTML={{ __html: prePaint }} />
+      </head>
       <body className="grain font-sans">
         <div className="ambient" aria-hidden>
           <i />
         </div>
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        <ErrorBoundary>
+          <Providers>
+            <AppShell>{children}</AppShell>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   )
