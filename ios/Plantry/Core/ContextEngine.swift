@@ -33,7 +33,9 @@ enum ContextEngine {
         let weekday = cal.component(.weekday, from: input.now)
         let isWeekend = weekday == 1 || weekday == 7
         let today = DateKey.key(input.now)
-        let lateNight = hour >= 21 || hour < 5
+        // From 9pm Tonight looks at tomorrow. After midnight "today" has already rolled
+        // over, so the new day's dinner is the target again.
+        let lateNight = hour >= 21
         let targetDate = lateNight ? DateKey.addDays(today, 1) : today
         let targetLabel = lateNight ? "Tomorrow" : "Tonight"
         let mood: Mood = input.settings.mood == .auto ? mood(forHour: hour) : Mood(rawValue: input.settings.mood.rawValue) ?? .day

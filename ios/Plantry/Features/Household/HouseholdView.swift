@@ -33,7 +33,7 @@ struct HouseholdView: View {
     var body: some View {
         let week = DateKey.weekOf(today)
         let weekSet = Set(week)
-        let decided = plan.filter { $0.slot == .dinner && weekSet.contains($0.date) && $0.date <= today && ($0.recipeId != nil || $0.note != nil) }.count
+        let decided = plan.filter { $0.slot == .dinner && weekSet.contains($0.date) && $0.date <= today && $0.isDecided }.count
         let cookedThisWeek = cooked.filter { weekSet.contains($0.date) }
         let open = week.filter { $0 >= today && !(dinner($0)?.isDecided ?? false) }.count
         let byCook = Dictionary(grouping: cookedThisWeek, by: { $0.cookId ?? "" }).mapValues(\.count)

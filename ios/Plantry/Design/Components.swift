@@ -498,7 +498,10 @@ struct RemoteImage: View {
     }
 
     private func load() async {
-        guard let url, let u = URL(string: url) else { return }
+        // A new url must not keep showing the last one's picture or failure.
+        image = nil
+        failed = false
+        guard let url, let u = URL(string: url) else { failed = true; return }
         if let cached = ImageCache.shared.image(for: u) { image = cached; return }
         var req = URLRequest(url: u)
         req.cachePolicy = .returnCacheDataElseLoad

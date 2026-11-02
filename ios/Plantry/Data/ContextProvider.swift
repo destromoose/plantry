@@ -41,7 +41,8 @@ final class ContextProvider {
 
     var today: String { DateKey.key(context.now) }
 
-    /// Fires once at the next mood boundary (5, 10, 17, 21) so the palette and copy follow the clock.
+    /// Fires once at the next mood boundary (5, 10, 17, 21) or at midnight, so the palette,
+    /// copy and today's date follow the clock.
     private func scheduleBandChange() {
         bandTimer?.invalidate()
         let cal = DateKey.calendar
@@ -80,7 +81,9 @@ final class ContextProvider {
 /// Coordinates are rounded to one decimal (about 10 km) before they leave the phone.
 final class WeatherService: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
     private let manager = CLLocationManager()
-    private var continuation: CheckedContinuation<CLLocation?, Never>?
+    /// Every caller waiting on the one in-flight location request. A second fetch joins
+    /// the first instead of replacing it, so no continuation is ever dropped.
+    private var waiters: [CheckedContinuation<CLLocation?, Never>] = []
 
     override init() {
         super.init()
@@ -103,7 +106,8 @@ final class WeatherService: NSObject, CLLocationManagerDelegate, @unchecked Send
 
     private func location() async -> CLLocation? {
         await withCheckedContinuation { cont in
-            continuation = cont
+            waiters.append(cont)
+            guard waiters.count == 1 else { return }
             switch manager.authorizationStatus {
             case .notDetermined: manager.requestWhenInUseAuthorization()
             case .authorizedAlways, .authorizedWhenInUse: manager.requestLocation()
@@ -113,12 +117,13 @@ final class WeatherService: NSObject, CLLocationManagerDelegate, @unchecked Send
     }
 
     private func finish(_ loc: CLLocation?) {
-        continuation?.resume(returning: loc)
-        continuation = nil
+        let pending = waiters
+        waiters = []
+        pending.forEach { $0.resume(returning: loc) }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        guard continuation != nil else { return }
+        guard !waiters.isEmpty else { return }
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse: manager.requestLocation()
         case .notDetermined: break

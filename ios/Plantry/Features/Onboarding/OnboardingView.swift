@@ -9,14 +9,16 @@ struct OnboardingView: View {
     private enum Step: Int, CaseIterable { case who, taste, pantry }
 
     @State private var step: Step = .who
-    @State private var names: [String] = [""]
+    /// Each row has a stable id so removing a middle name never rebinds a field to the wrong person.
+    private struct NameRow: Identifiable { let id = UUID(); var name = "" }
+    @State private var rows: [NameRow] = [NameRow()]
     @State private var tastes: [Taste] = []
     @State private var picked: Set<String> = Set(Seed.quickPicks.prefix(8))
     @FocusState private var focused: Int?
 
     private var canNext: Bool {
         switch step {
-        case .who: names.contains { !$0.isBlank }
+        case .who: rows.contains { !$0.name.isBlank }
         case .taste: !tastes.isEmpty
         case .pantry: true
         }
@@ -86,7 +88,7 @@ struct OnboardingView: View {
         if let n = Step(rawValue: step.rawValue + 1) {
             withAnimation(reduce ? nil : Motion.settle) { step = n }
         } else {
-            store.completeOnboarding(names: names, tastes: tastes, pantryNames: Array(picked))
+            store.completeOnboarding(names: rows.map(\.name), tastes: tastes, pantryNames: Array(picked))
             ctx.refresh()
             Haptic.success()
         }
@@ -103,22 +105,23 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 32) {
             heading("Who eats here?", "First names only. You first. Nobody signs in, nobody gets an email. This stays on your device.")
             VStack(spacing: 12) {
-                ForEach(names.indices, id: \.self) { i in
+                ForEach($rows) { $row in
+                    let i = rows.firstIndex { $0.id == row.id } ?? 0
                     HStack(spacing: 8) {
-                        PField(placeholder: i == 0 ? "Your name" : "Another name", text: $names[i]) { if canNext { next() } }
+                        PField(placeholder: i == 0 ? "Your name" : "Another name", text: $row.name) { if canNext { next() } }
                             .focused($focused, equals: i)
                             .textContentType(.givenName)
                             .accessibilityLabel(i == 0 ? "Your name" : "Household member \(i + 1)")
                         if i > 0 {
-                            Button { names.remove(at: i) } label: { Image(systemName: "xmark").iconButton() }
+                            Button { let id = row.id; rows.removeAll { $0.id == id } } label: { Image(systemName: "xmark").iconButton() }
                                 .pbutton(.ghost, .icon)
                                 .accessibilityLabel("Remove")
                         }
                     }
                     .reveal(i)
                 }
-                if names.count < 6 {
-                    Button { names.append(""); focused = names.count - 1 } label: { Label("Add someone", systemImage: "plus") }
+                if rows.count < 6 {
+                    Button { rows.append(NameRow()); focused = rows.count - 1 } label: { Label("Add someone", systemImage: "plus") }
                         .pbutton(.ghost, .sm)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

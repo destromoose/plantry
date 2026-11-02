@@ -38,6 +38,10 @@ final class ContextEngineTests: XCTestCase {
         let evening = ContextEngine.build(.init(now: date(2026, 11, 3, 18), settings: Settings(), weather: nil, plan: [], recipes: []))
         XCTAssertEqual(evening.targetLabel, "Tonight")
         XCTAssertEqual(evening.targetDate, "2026-11-03")
+        // Past midnight the date has rolled over, so the new day's dinner is the target.
+        let small = ContextEngine.build(.init(now: date(2026, 11, 4, 0, 30), settings: Settings(), weather: nil, plan: [], recipes: []))
+        XCTAssertEqual(small.targetLabel, "Tonight")
+        XCTAssertEqual(small.targetDate, "2026-11-04")
     }
 
     func testNudges() {
