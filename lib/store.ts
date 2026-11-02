@@ -26,7 +26,7 @@ import {
   localizeRecipes,
   newSeedRecipes,
 } from './seed/localize'
-import { SEED_VERSION } from './seed/recipes'
+import { SEED_VERSION, seedRecipes } from './seed/recipes'
 import { staples } from './seed/pantry'
 import { checkImport, cleanData, defaultSettings } from './schema'
 import { createSafeStorage, useStorageStatus } from './storage'
@@ -145,7 +145,7 @@ const amountsOf = (i: ShopItem): Amount[] =>
 const memberColors: Member['color'][] = ['terracotta', 'sage', 'saffron', 'plum']
 
 /** The least-used member colour, so colours don't collide after someone is removed. */
-function nextColor(members: Member[]): Member['color'] {
+export function nextColor(members: Member[]): Member['color'] {
   const counts = memberColors.map((c) => members.filter((m) => m.color === c).length)
   return memberColors[counts.indexOf(Math.min(...counts))]
 }
@@ -740,6 +740,13 @@ export const useStore = create<PlantryState>()(
         if (data.shop) data.shop = data.shop.map((i) => ({ ...i, key: keyOf(i.name) }))
         let recipes =
           data.recipes && data.recipes.length ? localizeRecipes(data.recipes) : current.recipes
+        // Starter photos can be swapped for better ones; keep saved kitchens up to date.
+        const seedPhoto = new Map(seedRecipes.map((r) => [r.id, r.imageUrl]))
+        recipes = recipes.map((r) =>
+          !r.custom && seedPhoto.has(r.id) && seedPhoto.get(r.id) !== r.imageUrl
+            ? { ...r, imageUrl: seedPhoto.get(r.id) }
+            : r
+        )
         const settings = { ...current.settings, ...(data.settings ?? {}) }
         // Kitchens saved before newer starter recipes shipped get them once.
         if (data.recipes?.length && settings.seedVersion < SEED_VERSION) {

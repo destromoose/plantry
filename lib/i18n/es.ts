@@ -946,4 +946,11 @@ export const es: Record<string, string> = {
     'Rellenado desde tu texto. Revísalo y guárdalo.',
   'Try another link': 'Probar otro enlace',
   'Back to the text': 'Volver al texto',
+  'Hand-offs are shared with everyone in your household.':
+    'Los relevos se comparten con todos en tu hogar.',
+  'Hand-offs show up on other phones once your household shares.':
+    'Los relevos aparecen en otros teléfonos cuando tu hogar comparte.',
+  'Set up sharing': 'Configurar compartir',
+  'Someone new': 'Alguien nuevo',
+  'The rest is on your list': 'Lo demás ya está en tu lista',
 }

@@ -15,6 +15,7 @@ import {
 } from 'framer-motion'
 import {
   ArrowRight,
+  Check,
   Clock,
   HandHeart,
   Lock,
@@ -313,9 +314,17 @@ function PlannedOrSuggested({
   const [more, setMore] = useState(false)
   const addShopItem = useStore((s) => s.addShopItem)
   const seen = useStore((s) => s.shuffleSeen)
+  const shop = useStore((s) => s.shop)
+  // What's missing and not already waiting on the shopping list.
   const missingIngs = recipe.ingredients.filter(
-    (i) => !i.optional && !pantry.some((p) => p.key === i.key)
+    (i) =>
+      !i.optional &&
+      !pantry.some((p) => p.key === i.key) &&
+      !shop.some((s) => !s.checked && s.key === i.key)
   )
+  const onList =
+    !missingIngs.length &&
+    recipe.ingredients.some((i) => !i.optional && shop.some((s) => !s.checked && s.key === i.key))
   function addMissing() {
     let added = 0
     for (const i of missingIngs)
@@ -450,11 +459,18 @@ function PlannedOrSuggested({
               <span className="text-ink-2">{coverLine}.</span>
             </>
           )}
-          {missingIngs.length > 0 && (
+          {missingIngs.length > 0 ? (
             <Button variant="ghost" size="sm" className="ml-1 text-accent" onClick={addMissing}>
               <Plus className="h-3.5 w-3.5" aria-hidden />{' '}
               {t('Add {length} to list', { length: missingIngs.length })}
             </Button>
+          ) : (
+            onList && (
+              <span className="ml-2 inline-flex items-center gap-1 text-sm text-ink-2">
+                <Check className="h-3.5 w-3.5 text-accent" aria-hidden />
+                {t('The rest is on your list')}
+              </span>
+            )
           )}
         </p>
 

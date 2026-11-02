@@ -245,7 +245,7 @@ export function Pantry() {
                 variants={staggerContainer}
                 initial="hidden"
                 animate="show"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
               >
                 <AnimatePresence mode="popLayout">
                   {z.items.map((item, i) => (
@@ -330,7 +330,9 @@ const Tile = memo(function Tile({
           <Sprout className="h-4 w-4 text-ink-2" aria-hidden />
         </ProgressRing>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-ink">{item.name}</span>
+          <span className="line-clamp-2 break-words font-medium leading-snug text-ink">
+            {item.name}
+          </span>
           {item.quantity !== undefined && (
             <span className="block text-xs text-ink-3">
               {formatAmount(item.quantity, item.unit, {

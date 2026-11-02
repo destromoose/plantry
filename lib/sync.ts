@@ -7,7 +7,8 @@ import { t } from '@/lib/i18n'
 // "Share with my household", and only to the household's code.
 
 import { create } from 'zustand'
-import { useStore, type PlantryState } from './store'
+import { nextColor, useStore, type PlantryState } from './store'
+import { uid } from './utils'
 import { localizeRecipes } from './seed/localize'
 import { cleanData } from './schema'
 import { docsEqual, emptyDoc, mergeDocs, toDoc, type SyncDoc } from './syncDoc'
@@ -242,11 +243,22 @@ export async function peekHousehold(input: string) {
  * Join a household. This phone's plan, pantry, list and history are replaced by the
  * household's; recipes this phone added that the household doesn't have are kept and shared.
  */
-export function joinHousehold(peek: { code: string; rev: number; doc: SyncDoc }, meId?: string) {
+export function joinHousehold(
+  peek: { code: string; rev: number; doc: SyncDoc },
+  meId?: string,
+  /** A new person joining: added to the household and marked as this phone. */
+  newName?: string
+) {
   const s = useStore.getState()
   const theirs = new Set(peek.doc.recipes.map((r) => r.id))
   const mine = s.recipes.filter((r) => r.custom && !theirs.has(r.id))
-  const doc = { ...peek.doc, recipes: [...mine, ...peek.doc.recipes] }
+  let members = peek.doc.members
+  if (newName?.trim()) {
+    const m = { id: uid('m'), name: newName.trim().slice(0, 40), color: nextColor(members) }
+    members = [...members, m]
+    meId = m.id
+  }
+  const doc = { ...peek.doc, members, recipes: [...mine, ...peek.doc.recipes] }
   apply(doc, meId)
   useStore.setState({ settings: { ...useStore.getState().settings, onboarded: true } })
   // Base is the household's copy, so the kept recipes count as this phone's additions.

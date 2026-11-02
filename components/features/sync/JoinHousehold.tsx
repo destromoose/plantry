@@ -28,6 +28,8 @@ export function JoinHousehold() {
   const [code, setCode] = useState(params.get('code') ?? '')
   const [peek, setPeek] = useState<Peek | null>(null)
   const [me, setMe] = useState<string | undefined>()
+  /** Set when the person isn't on the list yet. */
+  const [newName, setNewName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const tried = useRef(false)
@@ -56,7 +58,7 @@ export function JoinHousehold() {
 
   function join() {
     if (!peek) return
-    joinHousehold(peek, me)
+    joinHousehold(peek, newName === null ? me : undefined, newName ?? undefined)
     toast(t('Joined. This phone now shares with your household.'))
     router.replace('/')
   }
@@ -132,13 +134,40 @@ export function JoinHousehold() {
                     role="radio"
                     aria-checked={me === m.id}
                     aria-pressed={undefined}
-                    selected={me === m.id}
-                    onClick={() => setMe(me === m.id ? undefined : m.id)}
+                    selected={newName === null && me === m.id}
+                    onClick={() => {
+                      setNewName(null)
+                      setMe(me === m.id ? undefined : m.id)
+                    }}
                   >
                     {m.name}
                   </Chip>
                 ))}
+                <Chip
+                  role="radio"
+                  aria-checked={newName !== null}
+                  aria-pressed={undefined}
+                  selected={newName !== null}
+                  onClick={() => setNewName(newName === null ? '' : null)}
+                >
+                  {t('Someone new')}
+                </Chip>
               </div>
+            </div>
+          )}
+          {(newName !== null || d!.members.length === 0) && (
+            <div>
+              <label htmlFor="new-name" className="mb-2 block text-sm font-medium text-ink-2">
+                {t('Your name')}
+              </label>
+              <Input
+                id="new-name"
+                value={newName ?? ''}
+                onChange={(e) => setNewName(e.target.value)}
+                maxLength={40}
+                autoComplete="given-name"
+                autoFocus={d!.members.length > 0}
+              />
             </div>
           )}
           {onboarded && hasData && (
