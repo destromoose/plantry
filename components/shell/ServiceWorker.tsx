@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useStore } from '@/lib/store'
+import { addDays, toDateKey } from '@/lib/utils'
 
 type PromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<unknown> }
 
@@ -29,6 +30,17 @@ export function clearInstallPrompt() {
 /** Registers the offline service worker in production, and saves recipe and cook pages for offline. */
 export function ServiceWorker() {
   const recipeIds = useStore((s) => s.recipes.map((r) => r.id).join(','))
+  // Cook links from Tonight and Week carry the plan date, and cook mode reads it from the URL
+  // the page was rendered for. Save those exact URLs so cooking a planned dinner offline still
+  // marks that night as cooked.
+  const plannedCooks = useStore((s) => {
+    const today = toDateKey(new Date())
+    const last = addDays(today, 14)
+    return s.plan
+      .filter((p) => p.slot === 'dinner' && p.recipeId && p.date >= today && p.date <= last)
+      .map((p) => `/cook/${encodeURIComponent(p.recipeId!)}?date=${p.date}`)
+      .join(',')
+  })
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
@@ -49,10 +61,13 @@ export function ServiceWorker() {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator) || !recipeIds)
       return
-    const urls = recipeIds.split(',').flatMap((id) => {
-      const e = encodeURIComponent(id)
-      return [`/recipes/${e}`, `/cook/${e}`]
-    })
+    const urls = [
+      ...(plannedCooks ? plannedCooks.split(',') : []),
+      ...recipeIds.split(',').flatMap((id) => {
+        const e = encodeURIComponent(id)
+        return [`/recipes/${e}`, `/cook/${e}`]
+      }),
+    ]
     // Wait for a quiet moment so warming never competes with the first screen.
     const t = window.setTimeout(() => {
       navigator.serviceWorker.ready
@@ -60,7 +75,7 @@ export function ServiceWorker() {
         .catch(() => {})
     }, 4000)
     return () => window.clearTimeout(t)
-  }, [recipeIds])
+  }, [recipeIds, plannedCooks])
 
   return null
 }

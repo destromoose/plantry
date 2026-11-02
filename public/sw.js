@@ -66,8 +66,9 @@ async function warm(urls) {
       if (await cache.match(url.href)) continue
       const res = await fetch(url.href, { credentials: 'same-origin' })
       if (!res.ok || res.type !== 'basic') continue
-      await cache.put(url.href, res.clone())
-      await warmAssets(await res.text())
+      // Save the page only once all its files are saved, so a half-saved page is retried next time.
+      await warmAssets(await res.clone().text())
+      await cache.put(url.href, res)
     } catch {
       return // offline or failing: try again on the next app open
     }
@@ -81,7 +82,8 @@ async function warmAssets(html) {
   for (const path of paths) {
     if (await cache.match(path)) continue
     const res = await fetch(path)
-    if (res.ok) await cache.put(path, res)
+    if (!res.ok) throw new Error(`Could not save ${path}`)
+    await cache.put(path, res)
   }
 }
 
