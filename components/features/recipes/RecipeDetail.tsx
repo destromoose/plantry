@@ -19,6 +19,7 @@ import {
   CalendarPlus,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { withUndo } from '@/lib/undo'
 import { cn, addDays, dayLabel, formatMinutes, formatQuantity, toDateKey } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
@@ -90,9 +91,9 @@ export function RecipeDetail({ id }: { id: string }) {
 
   function remove() {
     if (!recipe) return
-    deleteRecipe(recipe.id)
-    toast('Recipe deleted')
+    const id = recipe.id
     router.replace('/recipes')
+    withUndo('Recipe deleted', () => deleteRecipe(id))
   }
 
   return (

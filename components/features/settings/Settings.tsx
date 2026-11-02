@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Download, Upload } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { checkImport } from '@/lib/schema'
+import { useStorageStatus } from '@/lib/storage'
+import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { tasteOptions } from '@/components/features/onboarding/Onboarding'
 import { Button } from '@/components/ui/Button'
@@ -49,6 +52,13 @@ export function Settings() {
   const { mood } = useAppContext()
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirm, setConfirm] = useState(false)
+  const [pendingImport, setPendingImport] = useState<{
+    text: string
+    name: string
+    counts: string
+    dropped: number
+  } | null>(null)
+  const storage = useStorageStatus()
 
   function doExport() {
     const blob = new Blob([exportData()], { type: 'application/json' })
@@ -63,15 +73,45 @@ export function Settings() {
     toast('Exported')
   }
 
+  // Read and check the file first, then ask before replacing anything.
   async function doImport(file?: File) {
-    if (!file) return
-    try {
-      const res = importData(await file.text())
-      toast(res.ok ? 'Imported' : (res.error ?? 'Could not import that'))
-    } catch {
-      toast('Could not read that file')
-    }
     if (fileRef.current) fileRef.current.value = ''
+    if (!file) return
+    let text: string
+    let raw: unknown
+    try {
+      text = await file.text()
+      raw = JSON.parse(text)
+    } catch {
+      toast('Could not read that file.', { tone: 'error' })
+      return
+    }
+    const res = checkImport(raw)
+    if (!res.ok) {
+      toast(res.error, { tone: 'error' })
+      return
+    }
+    const d = res.data
+    const counts = [
+      `${d.recipes.length} recipes`,
+      `${d.pantry.length} pantry items`,
+      `${d.plan.length} planned meals`,
+      `${d.shop.length} list items`,
+      `${d.members.length} people`,
+    ].join(', ')
+    setPendingImport({ text, name: file.name, counts, dropped: res.dropped })
+  }
+
+  function confirmImport() {
+    if (!pendingImport) return
+    const { text } = pendingImport
+    setPendingImport(null)
+    let failed: string | undefined
+    withUndo('Imported. Your old data is one tap away.', () => {
+      const res = importData(text)
+      if (!res.ok) failed = res.error
+    })
+    if (failed) toast(failed, { tone: 'error' })
   }
 
   const toggleTaste = (t: SettingsT['tastes'][number]) =>
@@ -221,16 +261,30 @@ export function Settings() {
           aria-label="Import a Plantry export"
           onChange={(e) => doImport(e.target.files?.[0])}
         />
+        {storage.writeError && (
+          <p role="alert" className="mt-3 text-sm font-medium text-danger">
+            {storage.writeError === 'full'
+              ? 'Storage is full, so recent changes are not being saved. Export now, then remove old recipes or photos.'
+              : 'This browser is blocking storage, so changes are not being saved.'}
+          </p>
+        )}
+        {storage.bytes > 0 && (
+          <p className="mt-3 text-sm text-ink-3">
+            Using about {Math.max(1, Math.round(storage.bytes / 1024))} KB of this browser&apos;s
+            storage.
+          </p>
+        )}
       </Card>
 
       <p className="px-1 text-center text-sm text-ink-3">
-        Plantry keeps everything on this device. No account, no tracking.
+        Plantry keeps everything on this device, in this browser. Nothing syncs between devices; use
+        Export and Import to move it.
       </p>
 
       <Sheet open={confirm} onClose={() => setConfirm(false)} title="Start over?">
         <p className="mb-5 text-ink-2">
-          This clears your pantry, plan, list and household from this device. Export first if you
-          want a copy.
+          This clears your pantry, plan, list, household and the recipes you added from this device.
+          Export first if you want a copy.
         </p>
         <div className="flex flex-col gap-2">
           <Button
@@ -245,6 +299,28 @@ export function Settings() {
           </Button>
           <Button variant="ghost" onClick={() => setConfirm(false)}>
             Keep it
+          </Button>
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={!!pendingImport}
+        onClose={() => setPendingImport(null)}
+        title="Replace everything with this file?"
+      >
+        <p className="mb-2 text-ink-2">
+          {pendingImport?.name} has {pendingImport?.counts}.
+        </p>
+        <p className="mb-5 text-ink-2">
+          It replaces what is on this device now. You can undo right after.
+          {pendingImport?.dropped
+            ? ` ${pendingImport.dropped} unreadable ${pendingImport.dropped === 1 ? 'entry' : 'entries'} will be skipped.`
+            : ''}
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button onClick={confirmImport}>Replace with this file</Button>
+          <Button variant="ghost" onClick={() => setPendingImport(null)}>
+            Keep what I have
           </Button>
         </div>
       </Sheet>

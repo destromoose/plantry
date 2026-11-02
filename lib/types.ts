@@ -25,6 +25,8 @@ export interface Step {
   text: string
   /** Minutes, when the step contains a timer ("simmer 12 minutes"). */
   timerMinutes?: number
+  /** Safety note shown on the step, e.g. "The pan handle gets hot." */
+  caution?: string
 }
 
 export interface Recipe {
@@ -102,6 +104,10 @@ export interface Member {
   /** One of the member color tokens. */
   color: 'terracotta' | 'saffron' | 'sage' | 'plum'
   isMe?: boolean
+  /** Allergens this person must never be served. */
+  avoid?: string[]
+  /** Diet this person follows. */
+  diet?: string
 }
 
 export type Energy = 'up-for-it' | 'quick' | 'cant-tonight'

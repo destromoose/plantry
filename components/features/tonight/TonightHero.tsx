@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Clock, HandHeart, Lock, RefreshCw, Users, UtensilsCrossed } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { withUndo } from '@/lib/undo'
 import { pickNext, coverage, type Scored } from '@/lib/suggest'
 import type { Energy, PlanEntry, Recipe } from '@/lib/types'
 import { daysBetween, formatMinutes, cn } from '@/lib/utils'
@@ -327,7 +328,14 @@ function PlannedOrSuggested({
             <HandHeart className="h-4 w-4" aria-hidden /> Hand off
           </Button>
           {planned ? (
-            <Button variant="ghost" onClick={() => clearPlanEntry(targetDate, 'dinner')}>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                withUndo('Cleared tonight. Pick another.', () =>
+                  clearPlanEntry(targetDate, 'dinner')
+                )
+              }
+            >
               Not feeling it
             </Button>
           ) : (

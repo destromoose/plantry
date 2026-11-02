@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
 import type {
   Aisle,
   Energy,
@@ -18,6 +18,8 @@ import type {
 import { addDays, keyOf, toDateKey, uid } from './utils'
 import { seedRecipes } from './seed/recipes'
 import { staples } from './seed/pantry'
+import { checkImport, cleanData, defaultSettings } from './schema'
+import { createSafeStorage, useStorageStatus } from './storage'
 
 export interface PlantryState {
   settings: Settings
@@ -93,21 +95,17 @@ export interface PlantryState {
 
   // data
   exportData: () => string
-  importData: (json: string) => { ok: boolean; error?: string }
+  importData: (json: string) => { ok: boolean; error?: string; dropped?: number }
   resetAll: () => void
 }
 
-const defaultSettings: Settings = {
-  onboarded: false,
-  mood: 'auto',
-  reducedMotion: 'system',
-  units: 'metric',
-  tastes: [],
-  weatherEnabled: false,
-  householdWord: 'household',
-}
-
 const memberColors: Member['color'][] = ['terracotta', 'sage', 'saffron', 'plum']
+
+/** The least-used member colour, so colours don't collide after someone is removed. */
+function nextColor(members: Member[]): Member['color'] {
+  const counts = memberColors.map((c) => members.filter((m) => m.color === c).length)
+  return memberColors[counts.indexOf(Math.min(...counts))]
+}
 
 function makePantryItem(name: string, now: string, patch: Partial<PantryItem> = {}): PantryItem {
   const key = keyOf(name)
@@ -124,6 +122,9 @@ function makePantryItem(name: string, now: string, patch: Partial<PantryItem> = 
     ...patch,
   }
 }
+
+export const STORAGE_KEY = 'plantry-v1'
+const storage = createSafeStorage<PlantryState>()
 
 export const useStore = create<PlantryState>()(
   persist(
@@ -170,11 +171,16 @@ export const useStore = create<PlantryState>()(
             {
               id: uid('m'),
               name: name.trim(),
-              color: memberColors[s.members.length % memberColors.length],
+              color: nextColor(s.members),
             },
           ],
         })),
-      removeMember: (id) => set((s) => ({ members: s.members.filter((m) => m.id !== id) })),
+      removeMember: (id) =>
+        set((s) => ({
+          members: s.members.filter((m) => m.id !== id),
+          plan: s.plan.map((p) => (p.cookId === id ? { ...p, cookId: undefined } : p)),
+          handoffs: s.handoffs.filter((h) => h.fromId !== id && h.toId !== id),
+        })),
       renameMember: (id, name) =>
         set((s) => ({ members: s.members.map((m) => (m.id === id ? { ...m, name } : m)) })),
       setWeather: (weather) => set({ weather }),
@@ -292,7 +298,7 @@ export const useStore = create<PlantryState>()(
           cooked: [
             { recipeId: entry.recipeId ?? entry.leftoversOf ?? '', date, cookId: entry.cookId },
             ...s.cooked,
-          ].slice(0, 60),
+          ],
         })
       },
       setEnergy: (date, energy) =>
@@ -420,25 +426,20 @@ export const useStore = create<PlantryState>()(
         )
       },
       importData: (json) => {
+        let raw: unknown
         try {
-          const data = JSON.parse(json) as Partial<PlantryState> & { version?: number }
-          if (!data || typeof data !== 'object' || !Array.isArray(data.recipes))
-            return { ok: false, error: 'That file does not look like a Plantry export.' }
-          set({
-            settings: { ...defaultSettings, ...(data.settings ?? {}), onboarded: true },
-            members: data.members ?? [],
-            recipes: data.recipes,
-            pantry: data.pantry ?? [],
-            plan: data.plan ?? [],
-            shop: data.shop ?? [],
-            handoffs: data.handoffs ?? [],
-            energyByDate: data.energyByDate ?? {},
-            cooked: data.cooked ?? [],
-          })
-          return { ok: true }
+          raw = JSON.parse(json)
         } catch {
           return { ok: false, error: 'Could not read that file.' }
         }
+        const res = checkImport(raw)
+        if (!res.ok) return { ok: false, error: res.error }
+        set({
+          ...res.data,
+          recipes: res.data.recipes.length ? res.data.recipes : seedRecipes,
+          shuffleSeen: [],
+        })
+        return { ok: true, dropped: res.dropped }
       },
       resetAll: () =>
         set({
@@ -456,23 +457,46 @@ export const useStore = create<PlantryState>()(
         }),
     }),
     {
-      name: 'plantry-v1',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({
-        settings: s.settings,
-        members: s.members,
-        recipes: s.recipes,
-        pantry: s.pantry,
-        plan: s.plan,
-        shop: s.shop,
-        handoffs: s.handoffs,
-        energyByDate: s.energyByDate,
-        cooked: s.cooked,
-        weather: s.weather,
-      }),
-      onRehydrateStorage: () => (state) => {
-        state?.setHydrated()
+      name: STORAGE_KEY,
+      version: 2,
+      storage,
+      partialize: (s) =>
+        ({
+          settings: s.settings,
+          members: s.members,
+          recipes: s.recipes,
+          pantry: s.pantry,
+          plan: s.plan,
+          shop: s.shop,
+          handoffs: s.handoffs,
+          energyByDate: s.energyByDate,
+          cooked: s.cooked,
+          weather: s.weather,
+        }) as unknown as PlantryState,
+      // Older saves have the same shape; anything off is cleaned in merge below.
+      migrate: (persisted) => persisted as PlantryState,
+      merge: (persisted, current) => {
+        const { data, dropped } = cleanData(persisted)
+        if (dropped) useStorageStatus.setState({ droppedItems: dropped })
+        return {
+          ...current,
+          ...data,
+          settings: { ...current.settings, ...(data.settings ?? {}) },
+          recipes: data.recipes && data.recipes.length ? data.recipes : current.recipes,
+        } as PlantryState
+      },
+      onRehydrateStorage: () => () => {
+        // Always leave the splash screen, even when reading failed. Deferred because the
+        // first hydration runs while useStore is still being created.
+        queueMicrotask(() => useStore.setState({ hydrated: true }))
       },
     }
   )
 )
+
+// Another open tab saved: load its copy so the two tabs don't overwrite each other.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) void useStore.persist.rehydrate()
+  })
+}

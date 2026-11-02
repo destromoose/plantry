@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Copy, ListChecks, Plus, ShoppingBasket, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { addDays, cn, formatQuantity } from '@/lib/utils'
 import { checkPop, reveal } from '@/lib/motion'
@@ -175,7 +176,11 @@ export function Shop() {
           >
             <span className="text-sm font-medium">{checked} in the basket</span>
             <span className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={clearChecked}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => withUndo('Cleared the ticked items', clearChecked)}
+              >
                 Clear checked
               </Button>
               <Button
@@ -216,7 +221,7 @@ function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
       }}
       onDragEnd={(_, info) => {
         setTimeout(() => (dragged.current = false), 0)
-        if (info.offset.x < -90) remove(item.id)
+        if (info.offset.x < -120) withUndo(`${item.name} removed`, () => remove(item.id))
       }}
       className="group relative flex touch-pan-y items-center gap-1 bg-surface pr-2"
     >
@@ -270,7 +275,7 @@ function Row({ item, fromTitle }: { item: ShopItem; fromTitle?: string }) {
         variant="ghost"
         size="icon-sm"
         aria-label={`Remove ${item.name}`}
-        onClick={() => remove(item.id)}
+        onClick={() => withUndo(`${item.name} removed`, () => remove(item.id))}
         className="shrink-0 opacity-60 hover:opacity-100 focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
       >
         <X className="h-4 w-4" />

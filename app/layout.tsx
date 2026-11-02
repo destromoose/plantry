@@ -3,6 +3,7 @@ import { Fraunces, Inter_Tight } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/shell/Providers'
 import { AppShell } from '@/components/shell/AppShell'
+import { ErrorBoundary } from '@/components/shell/ErrorBoundary'
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -44,9 +45,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="ambient" aria-hidden>
           <i />
         </div>
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        <ErrorBoundary>
+          <Providers>
+            <AppShell>{children}</AppShell>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   )

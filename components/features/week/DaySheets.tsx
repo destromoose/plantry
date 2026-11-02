@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Check, CalendarDays, Trash2, UserRound, Repeat, Pencil } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { withUndo } from '@/lib/undo'
 import { coverage, suggest } from '@/lib/suggest'
 import type { Context, PlanEntry, Taste } from '@/lib/types'
 import { cn, daysBetween, formatMinutes, fromDateKey, dayLabel, shortDay } from '@/lib/utils'
@@ -332,7 +333,7 @@ function MenuBody({
           label="Remove"
           danger
           onClick={() => {
-            clearPlanEntry(date, 'dinner')
+            withUndo('Dinner removed', () => clearPlanEntry(date, 'dinner'))
             onClose()
           }}
         />

@@ -19,6 +19,17 @@ import { page, settle } from '@/lib/motion'
 import { Logo } from '@/components/ui/Logo'
 import { Toaster } from '@/components/ui/Toast'
 import { useAppContext } from './Providers'
+import { setWriteErrorListener, useStorageStatus } from '@/lib/storage'
+import { toast } from '@/components/ui/Toast'
+
+setWriteErrorListener((kind) =>
+  toast(
+    kind === 'full'
+      ? 'Out of space: this change was not saved. Export your data in Settings.'
+      : 'This browser is blocking storage, so changes are not saved.',
+    { tone: 'error', ms: 8000 }
+  )
+)
 
 export const tabs = [
   { href: '/', label: 'Tonight', icon: Sparkles },
@@ -42,6 +53,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const hydrated = useStore((s) => s.hydrated)
   const onboarded = useStore((s) => s.settings.onboarded)
   const ctx = useAppContext()
+
+  // Tell people once if some saved data could not be read.
+  useEffect(() => {
+    if (!hydrated) return
+    const { backupKey, droppedItems, memoryOnly } = useStorageStatus.getState()
+    const err = { tone: 'error' as const, ms: 8000 }
+    if (backupKey)
+      toast('Some saved data could not be read. A backup copy was kept on this device.', err)
+    else if (droppedItems)
+      toast(
+        `Skipped ${droppedItems} saved ${droppedItems === 1 ? 'entry' : 'entries'} that could not be read.`,
+        err
+      )
+    if (memoryOnly)
+      toast('This browser blocks storage, so nothing is kept after you close the tab.', err)
+  }, [hydrated])
 
   useEffect(() => {
     if (!hydrated) return

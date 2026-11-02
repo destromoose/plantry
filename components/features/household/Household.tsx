@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
@@ -33,6 +34,7 @@ export function Household() {
   const [newName, setNewName] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [claimDate, setClaimDate] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
 
   const word = settings.householdWord.charAt(0).toUpperCase() + settings.householdWord.slice(1)
   const week = weekOf(today)
@@ -107,7 +109,7 @@ export function Household() {
                     variant="ghost"
                     size="icon"
                     aria-label={`Remove ${m.name}`}
-                    onClick={() => removeMember(m.id)}
+                    onClick={() => setRemoving({ id: m.id, name: m.name })}
                   >
                     <X className="h-5 w-5" />
                   </Button>
@@ -298,6 +300,33 @@ export function Household() {
             </button>
           </li>
         </ul>
+      </Sheet>
+
+      <Sheet
+        open={!!removing}
+        onClose={() => setRemoving(null)}
+        title={`Remove ${removing?.name ?? ''}?`}
+      >
+        <p className="mb-5 text-ink-2">
+          Their claimed nights go back to open. Dinners stay planned.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (removing) {
+                const { id, name } = removing
+                withUndo(`${name} removed`, () => removeMember(id))
+              }
+              setRemoving(null)
+            }}
+          >
+            Remove {removing?.name}
+          </Button>
+          <Button variant="ghost" onClick={() => setRemoving(null)}>
+            Keep
+          </Button>
+        </div>
       </Sheet>
     </div>
   )

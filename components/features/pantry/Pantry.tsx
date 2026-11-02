@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChefHat, Plus, Refrigerator, Sprout } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { withUndo } from '@/lib/undo'
 import { useAppContext } from '@/components/shell/Providers'
 import { suggest, coverage } from '@/lib/suggest'
 import { quickPicks, staples } from '@/lib/seed/pantry'
@@ -252,10 +253,9 @@ function Tile({
       }}
       onDragEnd={(_, info) => {
         setTimeout(() => (dragged.current = false), 0)
-        if (info.offset.x < -90) {
-          usedUp(item.id)
-          toast(`${item.name} used up`)
-        } else if (info.offset.x > 90) {
+        if (info.offset.x < -120) {
+          withUndo(`${item.name} used up`, () => usedUp(item.id))
+        } else if (info.offset.x > 120) {
           restock(item.id)
           toast(`${item.name} restocked`)
         }
@@ -305,8 +305,7 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
           <Button
             variant="secondary"
             onClick={() => {
-              usedUp(shown.id)
-              toast(`${shown.name} used up`)
+              withUndo(`${shown.name} used up`, () => usedUp(shown.id))
               onClose()
             }}
           >
@@ -315,8 +314,7 @@ function ItemSheet({ item, onClose }: { item: PantryItem | null; onClose: () => 
           <Button
             variant="danger"
             onClick={() => {
-              remove(shown.id)
-              toast(`${shown.name} removed`)
+              withUndo(`${shown.name} removed`, () => remove(shown.id))
               onClose()
             }}
           >

@@ -50,6 +50,7 @@ export function Week() {
   }
 
   function fillWeek() {
+    const before = useStore.getState().plan
     const s = useStore.getState()
     const used = new Set<string>(
       s.plan
@@ -100,8 +101,15 @@ export function Week() {
       s.setPlanEntry({ date, slot: 'dinner', recipeId: pick.recipe.id, cookId: current?.cookId })
       filled++
     }
+    if (!filled) {
+      toast('Nothing left to fill this week')
+      return
+    }
     toast(
-      filled ? "Week filled. Shuffle anything you don't fancy." : 'Nothing left to fill this week'
+      `Filled ${filled} ${filled === 1 ? 'night' : 'nights'}. Planned nights stayed as they were.`,
+      {
+        action: { label: 'Undo', onClick: () => useStore.setState({ plan: before }) },
+      }
     )
   }
 
