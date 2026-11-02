@@ -24,6 +24,7 @@ import { cn, toDateKey } from '@/lib/utils'
 import type { Settings as SettingsT } from '@/lib/types'
 import { currencies, formatMoney } from '@/lib/cost'
 import { Input } from '@/components/ui/Field'
+import { SyncCard } from '@/components/features/sync/SyncCard'
 
 function Choice<T extends string>({
   label,
@@ -354,6 +355,8 @@ export function Settings() {
         />
       </Card>
 
+      <SyncCard />
+
       <Card>
         <SectionTitle>Your data</SectionTitle>
         <div className="flex flex-wrap gap-2">
@@ -391,8 +394,8 @@ export function Settings() {
       </Card>
 
       <p className="px-1 text-center text-sm text-ink-3">
-        Plantry keeps everything on this device, in this browser. Nothing syncs between devices; use
-        Export and Import to move it.
+        Plantry keeps everything on this device, in this browser, unless you share it with your
+        household above. Export and Import move it by hand.
       </p>
 
       <Sheet open={confirm} onClose={() => setConfirm(false)} title="Start over?">

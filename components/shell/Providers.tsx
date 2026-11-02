@@ -7,6 +7,7 @@ import { buildContext, fetchWeather, msUntilNextChange } from '@/lib/context'
 import { toDateKey } from '@/lib/utils'
 import type { Context } from '@/lib/types'
 import { toast } from '@/components/ui/Toast'
+import { initSync } from '@/lib/sync'
 
 const ContextCtx = createContext<Context | null>(null)
 const StayCtx = createContext<(on: boolean) => void>(() => {})
@@ -32,6 +33,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [stayDate, setStayDate] = useState<string | null>(null)
   const [prefersDark, setPrefersDark] = useState(false)
   const updateSettings = useStore((s) => s.updateSettings)
+  const hydrated = useStore((s) => s.hydrated)
+
+  // Household sync runs in the background once saved data is loaded.
+  useEffect(() => {
+    if (hydrated) initSync()
+  }, [hydrated])
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')

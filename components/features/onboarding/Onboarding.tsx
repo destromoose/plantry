@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
@@ -295,6 +296,15 @@ export function Onboarding() {
                 aria-label="Plantry backup file"
                 onChange={(e) => restore(e.target.files?.[0])}
               />
+            </p>
+            <p className="mt-1 text-sm text-ink-2">
+              Someone at home already uses Plantry?{' '}
+              <Link
+                href="/join"
+                className="inline-flex min-h-[44px] items-center font-medium text-accent underline-offset-2 hover:underline"
+              >
+                Join with their code
+              </Link>
             </p>
           </section>
         )}

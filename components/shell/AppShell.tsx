@@ -48,7 +48,7 @@ const secondary = [
 ] as const
 
 /** Routes that take the whole screen with no tab bar. */
-const immersive = ['/onboarding', '/cook']
+const immersive = ['/onboarding', '/cook', '/join']
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -75,7 +75,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
-    if (!onboarded && pathname !== '/onboarding') router.replace('/onboarding')
+    if (!onboarded && pathname !== '/onboarding' && pathname !== '/join')
+      router.replace('/onboarding')
     if (onboarded && pathname === '/onboarding') router.replace('/')
   }, [hydrated, onboarded, pathname, router])
 
