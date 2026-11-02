@@ -21,6 +21,14 @@ const units: Record<string, { dim: Dim; factor: number }> = {
   tbsp: { dim: 'volume', factor: 15 },
   cup: { dim: 'volume', factor: 240 },
   cups: { dim: 'volume', factor: 240 },
+  quart: { dim: 'volume', factor: 960 },
+  quarts: { dim: 'volume', factor: 960 },
+  'fl oz': { dim: 'volume', factor: 29.57 },
+  pound: { dim: 'mass', factor: 453.6 },
+  pounds: { dim: 'mass', factor: 453.6 },
+  ounce: { dim: 'mass', factor: 28.35 },
+  ounces: { dim: 'mass', factor: 28.35 },
+  lbs: { dim: 'mass', factor: 453.6 },
 }
 
 /** Units that mean "a number of things": shown as whole numbers on a shopping list. */
@@ -98,6 +106,57 @@ export function subtract(need: Amount, have: Amount): Amount | undefined {
   return { unit: need.unit, quantity: Math.max(0, left) }
 }
 
+export type UnitSystem = 'metric' | 'imperial'
+
+/** Round to the nearest step, never down to zero. */
+const roundTo = (q: number, step: number) => Math.max(step, Math.round(q / step) * step)
+
+/**
+ * Show an amount in the kitchen's own units. Metric kitchens keep spoons but get grams and
+ * millilitres for cups, ounces and pounds; imperial kitchens get ounces, pounds, cups and
+ * spoons for grams and millilitres. Counted things ("2 cloves") never change.
+ */
+export function toSystem(a: Amount, system: UnitSystem): Amount {
+  const info = unitInfo(a.unit)
+  if (!info) return a
+  const f = info.factor
+  const imperialMass = f === 28.35 || f === 453.6
+  const imperialVolume = f === 29.57 || f === 240 || f === 960
+  const base = a.quantity * info.factor // grams or millilitres
+  if (system === 'metric') {
+    if (info.dim === 'mass') {
+      if (imperialMass) return { quantity: roundTo(base, base < 100 ? 5 : 10), unit: 'g' }
+      return a
+    }
+    if (imperialVolume) return { quantity: roundTo(base, base < 100 ? 5 : 10), unit: 'ml' }
+    return a
+  }
+  if (info.dim === 'mass') {
+    if (imperialMass) return a
+    const oz = base / 28.35
+    if (oz >= 16) return { quantity: roundTo(oz / 16, 0.25), unit: 'lb' }
+    return { quantity: roundTo(oz, oz < 4 ? 0.25 : 0.5), unit: 'oz' }
+  }
+  // Volume: spoons stay spoons; millilitres and litres become the nearest spoon or cup.
+  if (f === 5 || f === 15 || imperialVolume) return a
+  if (base < 15) return { quantity: roundTo(base / 5, 0.25), unit: 'tsp' }
+  if (base < 60) return { quantity: roundTo(base / 15, 0.5), unit: 'tbsp' }
+  const cups = base / 240
+  if (cups > 8) return { quantity: roundTo(cups / 4, 0.25), unit: 'quart' }
+  return { quantity: roundTo(cups, 0.25), unit: 'cup' }
+}
+
+/**
+ * Oven and pan temperatures: "Bake at 200°C" reads "Bake at 200°C (390°F)" in metric and
+ * "Bake at 390°F (200°C)" in imperial. Fahrenheit rounds to the nearest 5, like oven dials.
+ */
+export function withTemperatures(text: string, system: UnitSystem = 'metric'): string {
+  return text.replace(/(\d{2,3})\s?°\s?C\b(?!\s*\()/g, (m, c: string) => {
+    const f = Math.round(((Number(c) * 9) / 5 + 32) / 5) * 5
+    return system === 'imperial' ? `${f}°F (${c}°C)` : `${m} (${f}°F)`
+  })
+}
+
 const fractions: [number, string][] = [
   [1 / 8, '⅛'],
   [1 / 4, '¼'],
@@ -134,6 +193,7 @@ const plural: Record<string, string> = {
   fillet: 'fillets',
   handful: 'handfuls',
   cup: 'cups',
+  quart: 'quarts',
   pinch: 'pinches',
 }
 
@@ -141,7 +201,16 @@ const plural: Record<string, string> = {
  * "12 cloves", "2.4 kg", "1½ tbsp", "3" (for eggs). `forShopping` rounds things you
  * count up to whole numbers, because nobody buys 10½ eggs.
  */
-export function formatAmount(q?: number, unit = '', opts: { forShopping?: boolean } = {}): string {
+export function formatAmount(
+  q?: number,
+  unit = '',
+  opts: { forShopping?: boolean; system?: UnitSystem } = {}
+): string {
+  if (opts.system && q !== undefined && Number.isFinite(q) && q > 0) {
+    const c = toSystem({ quantity: q, unit }, opts.system)
+    q = c.quantity
+    unit = c.unit
+  }
   const u = unit.trim()
   if (q === undefined || !Number.isFinite(q) || q <= 0) return u === 'whole' ? '' : u
   let n = q
@@ -162,7 +231,10 @@ export function formatAmount(q?: number, unit = '', opts: { forShopping?: boolea
   return `${num} ${word}`
 }
 
-export const formatAmounts = (list: Amount[], opts?: { forShopping?: boolean }) =>
+export const formatAmounts = (
+  list: Amount[],
+  opts?: { forShopping?: boolean; system?: UnitSystem }
+) =>
   list
     .map((a) => formatAmount(a.quantity, a.unit, opts))
     .filter(Boolean)

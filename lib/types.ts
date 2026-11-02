@@ -136,6 +136,14 @@ export interface Settings {
   cookingWithKids: boolean
   highContrast: boolean
   textSize: 'normal' | 'large' | 'larger'
+  /** Show rough nutrition per serving on recipes. */
+  showNutrition: boolean
+  /** Currency for rough costs. */
+  currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'MXN'
+  /** How pricey shops are nearby, so cost estimates land closer. */
+  priceLevel: 'low' | 'average' | 'high'
+  /** Dinner budget for a week, in `currency`. 0 means no budget. */
+  weeklyBudget: number
 }
 
 export interface Weather {
@@ -158,6 +166,20 @@ export interface Context {
   weatherLean: 'warm' | 'light' | 'any'
   nudge: 'plan-week' | 'defrost' | 'start-now' | 'leftovers' | 'none'
   reason: string
+}
+
+/** How a cooked dinner went, so the good ones come back and the bad ones don't. */
+export type Rating = 'loved' | 'fine' | 'not-again'
+
+/** One dinner in the cooking history. */
+export interface CookedEntry {
+  recipeId: string
+  /** ISO date, YYYY-MM-DD. */
+  date: string
+  cookId?: string
+  rating?: Rating
+  /** A note for next time, like "less chili" or "double the sauce". */
+  note?: string
 }
 
 export interface Handoff {

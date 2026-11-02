@@ -22,6 +22,9 @@ import { toast } from '@/components/ui/Toast'
 import { settle } from '@/lib/motion'
 import { cn, toDateKey } from '@/lib/utils'
 import type { Settings as SettingsT } from '@/lib/types'
+import { currencies, formatMoney } from '@/lib/cost'
+import { Input } from '@/components/ui/Field'
+import { SyncCard } from '@/components/features/sync/SyncCard'
 
 function Choice<T extends string>({
   label,
@@ -272,7 +275,68 @@ export function Settings() {
         </p>
       </Card>
 
-      {/* Units stay hidden until amounts can actually be converted. */}
+      <Card>
+        <SectionTitle>Units</SectionTitle>
+        <Choice
+          label="Units"
+          value={settings.units}
+          onChange={(v) => update({ units: v })}
+          options={[
+            { id: 'metric', label: 'Grams and millilitres' },
+            { id: 'imperial', label: 'Cups, ounces and °F' },
+          ]}
+        />
+        <p className="mt-3 text-sm text-ink-3">
+          Recipes, the list and oven temperatures switch over. Spoons and counted things stay as
+          they are.
+        </p>
+      </Card>
+
+      <Card id="budget" className="scroll-mt-24">
+        <SectionTitle>Budget</SectionTitle>
+        <p className="mb-3 text-[0.9375rem] text-ink-2">
+          Recipes, Week and Shop show about what dinner costs. With a weekly budget, Fill my week
+          leans toward cheaper dinners.
+        </p>
+        <label className="mb-4 flex items-center justify-between gap-4">
+          <span className="text-[0.9375rem] text-ink">Dinners each week, at most</span>
+          <BudgetInput
+            value={settings.weeklyBudget}
+            currency={settings.currency}
+            onChange={(v) => update({ weeklyBudget: v })}
+          />
+        </label>
+        <Choice
+          label="Currency"
+          value={settings.currency}
+          onChange={(v) => update({ currency: v })}
+          options={currencies.map((c) => ({ id: c, label: c }))}
+        />
+        <p className="mb-2 mt-4 text-sm font-medium text-ink-2">Shops near you are</p>
+        <Choice
+          label="Shop prices near you"
+          value={settings.priceLevel}
+          onChange={(v) => update({ priceLevel: v })}
+          options={[
+            { id: 'low', label: 'Cheaper than most' },
+            { id: 'average', label: 'About average' },
+            { id: 'high', label: 'Pricey' },
+          ]}
+        />
+        <p className="mt-3 text-sm text-ink-3">
+          Costs are rough, from typical supermarket prices. Good for comparing dinners, not for the
+          till.
+        </p>
+      </Card>
+
+      <Card>
+        <SectionTitle>Nutrition</SectionTitle>
+        <Toggle
+          checked={settings.showNutrition}
+          onChange={(v) => update({ showNutrition: v })}
+          label="Show rough calories, protein, carbs, fat and fibre on recipes"
+        />
+      </Card>
 
       <Card>
         <SectionTitle>Words</SectionTitle>
@@ -290,6 +354,8 @@ export function Settings() {
           ]}
         />
       </Card>
+
+      <SyncCard />
 
       <Card>
         <SectionTitle>Your data</SectionTitle>
@@ -328,8 +394,8 @@ export function Settings() {
       </Card>
 
       <p className="px-1 text-center text-sm text-ink-3">
-        Plantry keeps everything on this device, in this browser. Nothing syncs between devices; use
-        Export and Import to move it.
+        Plantry keeps everything on this device, in this browser, unless you share it with your
+        household above. Export and Import move it by hand.
       </p>
 
       <Sheet open={confirm} onClose={() => setConfirm(false)} title="Start over?">
@@ -376,5 +442,40 @@ export function Settings() {
         </div>
       </Sheet>
     </div>
+  )
+}
+
+/** A whole-number budget. Empty or 0 means no budget. Saves when you leave the box. */
+function BudgetInput({
+  value,
+  currency,
+  onChange,
+}: {
+  value: number
+  currency: SettingsT['currency']
+  onChange: (v: number) => void
+}) {
+  const [text, setText] = useState(value ? String(value) : '')
+  const commit = () => {
+    const n = Math.round(Number(text.replace(/[^\d.]/g, '')))
+    const v = Number.isFinite(n) && n > 0 ? Math.min(n, 100000) : 0
+    setText(v ? String(v) : '')
+    if (v !== value) {
+      onChange(v)
+      toast(v ? `Budget set to ${formatMoney(v, currency)} a week` : 'No budget')
+    }
+  }
+  return (
+    <Input
+      inputMode="numeric"
+      aria-label={`Weekly dinner budget in ${currency}`}
+      placeholder="No budget"
+      className="w-32 text-right"
+      value={text}
+      maxLength={7}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === 'Enter' && commit()}
+    />
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { ratingsOf } from '@/lib/history'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -28,6 +29,8 @@ import { ProgressRing } from '@/components/ui/ProgressRing'
 import { toast } from '@/components/ui/Toast'
 import { Thumb } from './Thumb'
 import { DaySheets, type SheetKind } from './DaySheets'
+import { WeekBudget } from '@/components/features/budget/WeekBudget'
+import { recipeCost } from '@/lib/cost'
 
 export function Week() {
   const ctx = useAppContext()
@@ -118,7 +121,14 @@ export function Week() {
         tastes: s.settings.tastes,
         context: { ...ctx, isWeekend: dow === 0 || dow === 6 },
         recent: s.cooked.map((c) => c.recipeId),
+        ratings: ratingsOf(s.cooked),
         exclude: [...used],
+        ...(s.settings.weeklyBudget > 0
+          ? {
+              costOf: (r) => recipeCost(r, r.servings, s.settings).perServing,
+              budgetPerServing: s.settings.weeklyBudget / (7 * Math.max(1, s.settings.cookingFor)),
+            }
+          : {}),
         avoid,
       })
       // A weighted pick from the top few, so filling twice doesn't give the same week.
@@ -187,6 +197,7 @@ export function Week() {
             <Sparkles className="h-4 w-4" aria-hidden /> Fill my week
           </Button>
         </div>
+        <WeekBudget dates={weekDates} className="mt-4" />
       </header>
 
       <motion.ul

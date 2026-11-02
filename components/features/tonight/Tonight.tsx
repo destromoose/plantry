@@ -1,5 +1,6 @@
 'use client'
 
+import { ratingsOf } from '@/lib/history'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -52,6 +53,7 @@ export function Tonight() {
         energy,
         context: ctx,
         recent: cooked.map((c) => c.recipeId),
+        ratings: ratingsOf(cooked),
         avoid,
       }),
     [recipes, pantry, settings.tastes, energy, ctx, cooked, avoid]

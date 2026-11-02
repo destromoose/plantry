@@ -1,5 +1,9 @@
 'use client'
 
+import { RecipeFacts } from '@/components/features/nutrition/RecipeFacts'
+import { agoLabel, historyFor, ratingLabels } from '@/lib/history'
+import { formatAmount, withTemperatures } from '@/lib/quantity'
+import { useUnits } from '@/lib/useUnits'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -22,18 +26,9 @@ import {
 import { copyOfRecipe } from '@/lib/recipeCopy'
 import { useStore } from '@/lib/store'
 import { loadCookSession } from '@/lib/cookSession'
-import { withFahrenheit } from '@/lib/safety'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
-import {
-  cn,
-  addDays,
-  dayLabel,
-  formatMinutes,
-  formatQuantity,
-  pluralize,
-  toDateKey,
-} from '@/lib/utils'
+import { cn, addDays, dayLabel, formatMinutes, pluralize, toDateKey } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { Tag } from '@/components/ui/Chip'
@@ -55,6 +50,7 @@ export function RecipeDetail({ id }: { id: string }) {
   const deleteRecipe = useStore((s) => s.deleteRecipe)
   const addRecipe = useStore((s) => s.addRecipe)
   const cookingFor = useStore((s) => s.settings.cookingFor)
+  const units = useUnits()
 
   const [servings, setServings] = useState<number | null>(null)
   useEffect(() => {
@@ -187,11 +183,15 @@ export function RecipeDetail({ id }: { id: string }) {
             {recipe.leftovers && <Tag>Leftovers</Tag>}
           </div>
           <AvoidWarning recipe={recipe} className="mt-4" />
+          <CookedLine recipeId={recipe.id} />
           <dl className="mt-4 grid grid-cols-3 gap-3">
             <Stat icon={Flame} label="Active" value={formatMinutes(recipe.activeMinutes)} />
             <Stat icon={Clock} label="Total" value={formatMinutes(recipe.totalMinutes)} />
             <Stat icon={Users} label="Serves" value={String(recipe.servings)} />
           </dl>
+          <div className="mt-4">
+            <RecipeFacts recipe={recipe} servings={current} />
+          </div>
           {!recipe.custom && (
             <div className="mt-4">
               <Button
@@ -260,7 +260,7 @@ export function RecipeDetail({ id }: { id: string }) {
                     </span>
                   )}
                   <span className="shrink-0 text-sm tabular-nums text-ink-2">
-                    {formatQuantity(ing.quantity * scale, ing.unit)}
+                    {formatAmount(ing.quantity * scale, ing.unit, { system: units })}
                   </span>
                 </li>
               )
@@ -288,7 +288,7 @@ export function RecipeDetail({ id }: { id: string }) {
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-base leading-relaxed">{withFahrenheit(step.text)}</p>
+                  <p className="text-base leading-relaxed">{withTemperatures(step.text, units)}</p>
                   {step.timerMinutes && (
                     <Tag className="mt-2 gap-1">
                       <Timer className="h-3 w-3" aria-hidden /> {step.timerMinutes} min
@@ -371,6 +371,26 @@ function Stat({ icon: Icon, label, value }: { icon: typeof Clock; label: string;
         <Icon className="h-3.5 w-3.5" aria-hidden /> {label}
       </dt>
       <dd className="mt-1 font-display text-lg font-semibold">{value}</dd>
+    </div>
+  )
+}
+
+/** "Cooked 3 times, last 5 days ago · Loved it", plus the latest note. */
+function CookedLine({ recipeId }: { recipeId: string }) {
+  const cooked = useStore((s) => s.cooked)
+  const h = useMemo(() => historyFor(recipeId, cooked), [recipeId, cooked])
+  if (!h.times || !h.lastDate) return null
+  const today = toDateKey(new Date())
+  return (
+    <div className="mt-4 rounded-2xl bg-surface-2 px-4 py-3 text-[0.9375rem]">
+      <p className="text-ink-2">
+        Cooked {h.times === 1 ? 'once' : `${h.times} times`}, last {agoLabel(h.lastDate, today)}
+        {h.rating ? ` · ${ratingLabels[h.rating]}` : ''}.{' '}
+        <Link href="/history" className="font-medium text-ink underline underline-offset-2">
+          History
+        </Link>
+      </p>
+      {h.note && <p className="mt-1 italic text-ink">“{h.note}”</p>}
     </div>
   )
 }

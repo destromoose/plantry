@@ -13,7 +13,8 @@ import { suggest, coverage } from '@/lib/suggest'
 import { quickPicks, staples } from '@/lib/seed/pantry'
 import { guessZone } from '@/lib/pantryGuess'
 import { reveal, staggerContainer } from '@/lib/motion'
-import { cn, formatQuantity, freshnessOf, isUseSoon, pluralize, toDateKey } from '@/lib/utils'
+import { formatAmount } from '@/lib/quantity'
+import { cn, freshnessOf, isUseSoon, pluralize, toDateKey } from '@/lib/utils'
 import type { PantryItem, PantryZone } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Tag } from '@/components/ui/Chip'
@@ -323,7 +324,9 @@ const Tile = memo(function Tile({
           <span className="block truncate font-medium text-ink">{item.name}</span>
           {item.quantity !== undefined && (
             <span className="block text-xs text-ink-3">
-              {formatQuantity(item.quantity, item.unit)}
+              {formatAmount(item.quantity, item.unit, {
+                system: useStore.getState().settings.units,
+              })}
             </span>
           )}
           {isUseSoon(item, today) && <Tag className={cn('mt-1', 'text-ink-2')}>Use soon</Tag>}

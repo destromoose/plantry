@@ -11,6 +11,7 @@ import {
   Refrigerator,
   ShoppingBasket,
   Users,
+  NotebookPen,
   Settings as SettingsIcon,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
@@ -42,11 +43,12 @@ export const tabs = [
 
 const secondary = [
   { href: '/household', label: 'Household', icon: Users },
+  { href: '/history', label: 'History', icon: NotebookPen },
   { href: '/settings', label: 'Settings', icon: SettingsIcon },
 ] as const
 
 /** Routes that take the whole screen with no tab bar. */
-const immersive = ['/onboarding', '/cook']
+const immersive = ['/onboarding', '/cook', '/join']
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -73,7 +75,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
-    if (!onboarded && pathname !== '/onboarding') router.replace('/onboarding')
+    if (!onboarded && pathname !== '/onboarding' && pathname !== '/join')
+      router.replace('/onboarding')
     if (onboarded && pathname === '/onboarding') router.replace('/')
   }, [hydrated, onboarded, pathname, router])
 

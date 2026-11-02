@@ -4,6 +4,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
   Aisle,
+  CookedEntry,
+  Rating,
   Energy,
   Handoff,
   Member,
@@ -22,6 +24,7 @@ import { seedRecipes } from './seed/recipes'
 import { staples } from './seed/pantry'
 import { checkImport, cleanData, defaultSettings } from './schema'
 import { createSafeStorage, useStorageStatus } from './storage'
+import { guessCurrency } from './cost'
 
 export interface PlantryState {
   settings: Settings
@@ -35,8 +38,8 @@ export interface PlantryState {
   handoffs: Handoff[]
   /** Energy answer for a given date key. */
   energyByDate: Record<string, Energy>
-  /** Recipe ids cooked, most recent first. */
-  cooked: { recipeId: string; date: string; cookId?: string }[]
+  /** Dinners cooked, most recent first. */
+  cooked: CookedEntry[]
   weather?: Weather
   /** Recipe ids seen by the shuffle today, so it does not repeat. */
   shuffleSeen: string[]
@@ -89,8 +92,16 @@ export interface PlantryState {
   claimNight: (date: string, cookId?: string) => void
   markCooked: (
     date: string,
-    opts?: { leftovers?: boolean; usePantry?: boolean; replaceTomorrow?: boolean }
+    opts?: {
+      leftovers?: boolean
+      usePantry?: boolean
+      replaceTomorrow?: boolean
+      rating?: Rating
+      note?: string
+    }
   ) => void
+  /** Rate a dinner in the history, or change its note. */
+  rateCooked: (date: string, recipeId: string, patch: { rating?: Rating; note?: string }) => void
   setEnergy: (date: string, energy: Energy) => void
   setShuffleSeen: (ids: string[]) => void
 
@@ -150,6 +161,17 @@ function makePantryItem(name: string, now: string, patch: Partial<PantryItem> = 
   }
 }
 
+/** Units and currency that fit where this device is, picked once at onboarding. */
+function localDefaults(): Partial<Settings> {
+  if (typeof navigator === 'undefined') return {}
+  const region = (navigator.language.split('-')[1] ?? '').toUpperCase()
+  const currency = guessCurrency(region)
+  return {
+    ...(currency ? { currency } : {}),
+    ...(region === 'US' || region === 'LR' || region === 'MM' ? { units: 'imperial' } : {}),
+  }
+}
+
 export const STORAGE_KEY = 'plantry-v1'
 const storage = createSafeStorage<PlantryState>()
 
@@ -193,6 +215,7 @@ export const useStore = create<PlantryState>()(
             tastes,
             avoid,
             cookingFor: Math.max(1, newMembers.length),
+            ...localDefaults(),
           },
           pantry: pantryNames.map((n) => makePantryItem(n, now)),
         }))
@@ -394,11 +417,30 @@ export const useStore = create<PlantryState>()(
           shop,
           plan,
           cooked: [
-            { recipeId: entry.recipeId ?? entry.leftoversOf ?? '', date, cookId: entry.cookId },
+            {
+              recipeId: entry.recipeId ?? entry.leftoversOf ?? '',
+              date,
+              cookId: entry.cookId,
+              ...(opts.rating ? { rating: opts.rating } : {}),
+              ...(opts.note?.trim() ? { note: opts.note.trim().slice(0, 500) } : {}),
+            },
             ...s.cooked,
           ],
         })
       },
+      rateCooked: (date, recipeId, patch) =>
+        set((s) => {
+          const i = s.cooked.findIndex((c) => c.date === date && c.recipeId === recipeId)
+          if (i === -1) return {}
+          const cooked = [...s.cooked]
+          const note = patch.note === undefined ? cooked[i].note : patch.note.trim().slice(0, 500)
+          cooked[i] = {
+            ...cooked[i],
+            ...('rating' in patch ? { rating: patch.rating } : {}),
+            note: note || undefined,
+          }
+          return { cooked }
+        }),
       setEnergy: (date, energy) =>
         set((s) => ({ energyByDate: { ...s.energyByDate, [date]: energy } })),
       setShuffleSeen: (ids) => set({ shuffleSeen: ids }),

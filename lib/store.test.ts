@@ -274,3 +274,22 @@ describe('household and hand-offs', () => {
     expect(useStore.getState().shop).toHaveLength(0)
   })
 })
+
+describe('cooking history', () => {
+  it('keeps a rating and a note, and lets you change them later', () => {
+    useStore.setState({
+      recipes: [recipe('r1', [{ key: 'tomato' }])],
+      plan: [{ id: 'a', date: '2026-11-03', slot: 'dinner', recipeId: 'r1' }],
+      cooked: [],
+    })
+    s().markCooked('2026-11-03', { rating: 'loved', note: '  more garlic ' })
+    expect(s().cooked[0]).toMatchObject({ rating: 'loved', note: 'more garlic' })
+    s().rateCooked('2026-11-03', 'r1', { rating: 'fine', note: '' })
+    expect(s().cooked[0].rating).toBe('fine')
+    expect(s().cooked[0].note).toBeUndefined()
+    const json = s().exportData()
+    s().resetAll()
+    s().importData(json)
+    expect(s().cooked[0]).toMatchObject({ recipeId: 'r1', rating: 'fine' })
+  })
+})

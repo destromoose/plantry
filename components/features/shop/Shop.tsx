@@ -4,6 +4,7 @@ import { memo, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Copy, ListChecks, Pencil, Plus, Share2, ShoppingBasket, Trash2, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { formatMoney, shopCost } from '@/lib/cost'
 import { formatAmounts, niceNumber, parseAmount } from '@/lib/quantity'
 import { useTapGuard } from '@/lib/useTapGuard'
 import { withUndo } from '@/lib/undo'
@@ -47,6 +48,9 @@ export function Shop() {
   const titles = useMemo(() => new Map(recipes.map((r) => [r.id, r.title])), [recipes])
   const unchecked = shop.filter((i) => !i.checked).length
   const checked = shop.length - unchecked
+  const currency = useStore((s) => s.settings.currency)
+  const priceLevel = useStore((s) => s.settings.priceLevel)
+  const cost = useMemo(() => shopCost(shop, { currency, priceLevel }), [shop, currency, priceLevel])
 
   const groups = useMemo(
     () =>
@@ -121,7 +125,9 @@ export function Shop() {
             ? 'Your list is empty'
             : unchecked === 0
               ? 'Everything is in the basket'
-              : `${pluralize(unchecked, 'thing')} to get`
+              : `${pluralize(unchecked, 'thing')} to get${
+                  cost.total > 0.5 ? `, about ${formatMoney(cost.total, currency)}` : ''
+                }`
         }
         actions={
           <>
@@ -261,7 +267,8 @@ function amountText(i: ShopItem) {
     ...(i.quantity ? [{ quantity: i.quantity, unit: i.unit ?? '' }] : []),
     ...(i.more ?? []),
   ]
-  return formatAmounts(list, { forShopping: true })
+  // Read once per render: the list remounts when units change in Settings.
+  return formatAmounts(list, { forShopping: true, system: useStore.getState().settings.units })
 }
 
 /** The add box keeps its own state, so typing doesn't redraw the whole list. */

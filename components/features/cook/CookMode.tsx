@@ -1,5 +1,7 @@
 'use client'
 
+import { formatAmount, withTemperatures } from '@/lib/quantity'
+import { useUnits } from '@/lib/useUnits'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -18,12 +20,12 @@ import { useStore } from '@/lib/store'
 import { announce as say } from '@/lib/announce'
 import { addDays, toDateKey } from '@/lib/utils'
 import { clearCookSession, loadCookSession, saveCookSession } from '@/lib/cookSession'
-import { cautionsFor, needsGrownUp, withFahrenheit } from '@/lib/safety'
+import { cautionsFor, needsGrownUp } from '@/lib/safety'
 import { withUndo } from '@/lib/undo'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { Stepper } from '@/components/ui/Stepper'
 import { useTapGuard } from '@/lib/useTapGuard'
-import { cn, formatQuantity, pluralize } from '@/lib/utils'
+import { cn, pluralize } from '@/lib/utils'
 import { checkPop, settle } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -32,6 +34,9 @@ import { Sheet } from '@/components/ui/Sheet'
 import { toast } from '@/components/ui/Toast'
 import { StepTimer, formatClock } from './StepTimer'
 import { Toggle } from './Toggle'
+import { RatingPicker } from '@/components/features/history/RatingPicker'
+import { Input } from '@/components/ui/Field'
+import type { Rating } from '@/lib/types'
 import { remainingOf, useTimers } from './useTimers'
 
 /** A short name for a step's timer: "Simmer the sauce" rather than "Step 3". */
@@ -106,6 +111,7 @@ export function CookMode({
   )
   const markCooked = useStore((s) => s.markCooked)
   const cookingFor = useStore((s) => s.settings.cookingFor)
+  const units = useUnits()
   const setPlanServings = useStore((s) => s.setServings)
   const setPlanEntry = useStore((s) => s.setPlanEntry)
   const kids = useStore((s) => s.settings.cookingWithKids)
@@ -137,6 +143,8 @@ export function CookMode({
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [usePantry, setUsePantry] = useState(true)
   const [leftovers, setLeftovers] = useState(recipe?.leftovers ?? false)
+  const [rating, setRating] = useState<Rating | undefined>()
+  const [note, setNote] = useState('')
   const steps = useMemo(() => recipe?.steps ?? [], [recipe])
   const { timers, now, start, pause, reset, announce } = useTimers(saved?.timers ?? {}, (sid) =>
     stepName(steps.find((s) => s.id === sid)?.text ?? '')
@@ -344,7 +352,13 @@ export function CookMode({
               servings: count,
               cookId: tonight?.cookId,
             })
-          markCooked(today, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
+          markCooked(today, {
+            usePantry,
+            leftovers,
+            replaceTomorrow: swapTomorrow,
+            rating,
+            note,
+          })
         }
       )
       router.push('/')
@@ -353,7 +367,7 @@ export function CookMode({
     if (date && entry) {
       const before = useStore.getState().pantry.length
       withUndo('Nice work.', () =>
-        markCooked(date, { usePantry, leftovers, replaceTomorrow: swapTomorrow })
+        markCooked(date, { usePantry, leftovers, replaceTomorrow: swapTomorrow, rating, note })
       )
       const used = before - useStore.getState().pantry.length
       if (used > 0) toast(`${pluralize(used, 'thing')} used up from your pantry.`)
@@ -469,7 +483,7 @@ export function CookMode({
                 Step {index + 1} of {steps.length}
               </Eyebrow>
               <p className="font-display text-fluid-step font-medium leading-tight tracking-tight">
-                {withFahrenheit(step.text)}
+                {withTemperatures(step.text, units)}
               </p>
               <StepCautions text={step.text} own={step.caution} kids={kids} />
             </div>
@@ -572,7 +586,7 @@ export function CookMode({
                     {ing.optional && ' (optional)'}
                   </span>
                   <span className="text-sm tabular-nums text-ink-2">
-                    {formatQuantity(ing.quantity * scale, ing.unit)}
+                    {formatAmount(ing.quantity * scale, ing.unit, { system: units })}
                   </span>
                 </button>
               </li>
@@ -602,6 +616,19 @@ export function CookMode({
           </p>
         ) : (
           <div className="mb-4 space-y-2">
+            <div className="mb-3 space-y-2">
+              <p className="text-sm font-medium text-ink-2">How was it?</p>
+              <RatingPicker value={rating} onChange={setRating} />
+              <label className="block">
+                <span className="sr-only">A note for next time</span>
+                <Input
+                  value={note}
+                  maxLength={500}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="A note for next time (optional)"
+                />
+              </label>
+            </div>
             <Toggle
               checked={usePantry}
               onChange={setUsePantry}

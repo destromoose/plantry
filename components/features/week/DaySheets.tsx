@@ -1,5 +1,6 @@
 'use client'
 
+import { ratingsOf } from '@/lib/history'
 import { useMemo, useState } from 'react'
 import { Check, CalendarDays, Moon, Pencil, Repeat, Shuffle, Trash2, UserRound } from 'lucide-react'
 import { useStore } from '@/lib/store'
@@ -134,6 +135,7 @@ function PickBody({
         tastes,
         context: { ...ctx, isWeekend: dow === 0 || dow === 6 },
         recent: cooked.map((c) => c.recipeId),
+        ratings: ratingsOf(cooked),
         avoid,
       }),
     [recipes, pantry, tastes, ctx, dow, cooked, avoid]
@@ -337,6 +339,7 @@ function MenuBody({
       tastes: s.settings.tastes,
       context: ctx,
       recent: s.cooked.map((c) => c.recipeId),
+      ratings: ratingsOf(s.cooked),
       exclude: taken,
       avoid,
     })

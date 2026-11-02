@@ -1,3 +1,5 @@
+import { withTemperatures } from './quantity'
+
 // Plain safety notes for steps, so someone new to cooking (or a 13-year-old on their own)
 // knows what to watch. Derived from the step text; a step can also carry its own caution.
 
@@ -48,10 +50,5 @@ export function cautionsFor(text: string, own?: string): Caution[] {
 /** True for steps where a younger cook should get help. */
 export const needsGrownUp = (c: Caution[]) => c.some((x) => x.kind !== 'raw')
 
-/** "Bake at 200°C" -> "Bake at 200°C (390°F)". Rounds to the nearest 5 like oven dials. */
-export function withFahrenheit(text: string): string {
-  return text.replace(/(\d{2,3})\s?°\s?C\b(?!\s*\()/g, (m, c: string) => {
-    const f = Math.round(((Number(c) * 9) / 5 + 32) / 5) * 5
-    return `${m} (${f}°F)`
-  })
-}
+/** "Bake at 200°C" -> "Bake at 200°C (390°F)". See withTemperatures for imperial kitchens. */
+export const withFahrenheit = (text: string) => withTemperatures(text, 'metric')
