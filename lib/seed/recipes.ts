@@ -225,7 +225,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Thai coconut tofu curry',
       description:
         'Golden tofu and crisp peppers in a fragrant green curry, ready in the time the rice takes.',
-      photo: '1761314037238-e4da5023e844',
+      photo: '1788016398860-9f9413cbdc73',
       active: 25,
       total: 35,
       servings: 4,
@@ -336,7 +336,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Baked tomato and feta pasta',
       description:
         'Cherry tomatoes burst around a block of feta in the oven, then get tossed through pasta.',
-      photo: '1590576502976-a7b6cd63f4dc',
+      photo: '1691948106030-d5e76d461b14',
       active: 15,
       total: 50,
       servings: 4,
@@ -459,7 +459,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Chili garlic spaghetti with spinach',
       description:
         'Pasta in a quick sauce of golden garlic, olive oil and chili, with lemon to brighten it.',
-      photo: '1726617956130-20bc88890acb',
+      photo: '1622973536968-3ead9e780960',
       active: 12,
       total: 20,
       servings: 2,
@@ -609,7 +609,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Lemon oregano chicken tray bake',
       description:
         'Crisp-skinned chicken thighs roasted on potatoes and onions, with tomatoes bursting at the end.',
-      photo: '1622768505337-ed0f06f22b54',
+      photo: '1701294740099-f52cbfbe3adb',
       active: 15,
       total: 60,
       servings: 4,
@@ -900,7 +900,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Potato and kale soup',
       description:
         'A rustic, filling soup of soft potato, paprika and chickpeas, with kale folded in at the end.',
-      photo: '1788723341411-de31b1b1dfc4',
+      photo: '1616501268826-ee9731c915d4',
       active: 20,
       total: 45,
       servings: 4,
@@ -1176,7 +1176,7 @@ export const seedRecipes: Recipe[] = [
       id: 'r-sausage-potato-traybake',
       title: 'Sausage, potato and green bean tray bake',
       description: 'Everything roasts together on one tray, with a sticky honey mustard glaze.',
-      photo: '1682334005004-b8020b71fdf2',
+      photo: '1675619450128-d8001229a56f',
       active: 10,
       total: 45,
       servings: 4,
