@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { imageProps } from '@/lib/imageLoader'
 import { isImageUrl } from '@/components/features/recipes/RecipeImage'
 
 /** A small recipe image with a plain background when there is none or it fails to load. */
@@ -23,7 +24,7 @@ export function Thumb({
           src={src.trim()}
           alt=""
           fill
-          unoptimized
+          {...imageProps(src.trim())}
           sizes={sizes}
           className="object-cover"
           onError={() => setFailed(src)}
