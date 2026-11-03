@@ -24,7 +24,10 @@ describe('similarRecipes', () => {
 
   it('keeps to the same kind of cooking', () => {
     const tacos = similarRecipes(byId('r-chicken-fajitas'), seedRecipes).slice(0, 3)
-    expect(tacos.some((r) => /taco|quesadilla|burrito/i.test(r.title))).toBe(true)
+    expect(
+      tacos.filter((r) => /taco|quesadilla|burrito/i.test(r.title)).length
+    ).toBeGreaterThanOrEqual(2)
+    expect(tacos.some((r) => /tacos/i.test(r.title))).toBe(true)
     const curry = similarRecipes(byId('r-cauliflower-chickpea-curry'), seedRecipes)[0]
     expect(curry.title).toMatch(/curry|dal/i)
     const pancakes = similarRecipes(byId('r-banana-oat-pancakes'), seedRecipes)
@@ -60,6 +63,11 @@ describe('similarRecipes', () => {
     const gofres = { ...base, id: 'es2', title: 'Gofres de plátano' }
     const cena = { ...base, id: 'es3', title: 'Carbonara rápida' }
     expect(similarRecipes(tortitas, [tortitas, cena, gofres])[0].id).toBe('es2')
+  })
+
+  it('does not treat chili garlic spaghetti as a soup', () => {
+    const out = similarRecipes(byId('r-chili-garlic-spaghetti'), seedRecipes).slice(0, 3)
+    expect(out.every((r) => !/soup|chili$|stew/i.test(r.title))).toBe(true)
   })
 
   it('leaves out recipes the household avoids', () => {

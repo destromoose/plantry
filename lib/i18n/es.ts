@@ -657,6 +657,8 @@ export const es: Record<string, string> = {
     'El plan, la despensa, la lista y el historial de este teléfono se reemplazan por los del hogar. Las recetas que añadiste aquí se conservan y se comparten. Exporta primero en Ajustes si quieres una copia.',
   'This week': 'Esta semana',
   "This will be logged as tonight's dinner.": 'Se guardará como la cena de hoy.',
+  "Tonight's dinner is already logged, so this one won't be saved.":
+    'La cena de hoy ya está guardada, así que esta no se guardará.',
   "Time's up": 'Se acabó el tiempo',
   Timer: 'Temporizador',
   'Timer done: {names}': 'Temporizador listo: {names}',

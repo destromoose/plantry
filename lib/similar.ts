@@ -52,7 +52,11 @@ const families: [string, RegExp, 'all' | 'title'][] = [
     /\b(pancakes?|oats?|oatmeal|porridge|granola|waffles?|french toast|tortitas?|panqueques?|avena|gachas|gofres?|torrijas?)\b/i,
     'title',
   ],
-  ['soup', /\b(soup|stew|chili|dal|sopa|guiso|estofado|caldo)\b/i, 'title'],
+  [
+    'soup',
+    /\b(soup|stew|chili|dal|sopa|guiso|estofado|caldo)\b(?!\s+(garlic|flakes?|oil|crisp))/i,
+    'title',
+  ],
 ]
 
 function familiesOf(r: Recipe): Set<string> {
@@ -60,6 +64,24 @@ function familiesOf(r: Recipe): Set<string> {
   return new Set(
     families.filter(([, re, where]) => re.test(where === 'title' ? r.title : all)).map(([f]) => f)
   )
+}
+
+/** The shape of a dish, from its title: tacos sit with tacos, soups with soups. */
+const forms: [string, RegExp][] = [
+  ['wrap', /\b(tacos?|fajitas?|burritos?|quesadillas?|wraps?|enchiladas?)\b/i],
+  ['curry', /\b(curry|curri|dal)\b/i],
+  ['noodles', /\b(noodles?|fideos?|ramen|udon)\b/i],
+  ['pasta', /\b(pasta|spaghetti|espaguetis?|penne|ragu|ragú|carbonara|macaroni|mac)\b/i],
+  ['soup', /\b(soup|sopa|stew|guiso|chili)\b(?!\s+(garlic|flakes?|oil|crisp))/i],
+  ['bowl', /\b(bowls?|bol|boles|cuencos?)\b/i],
+  ['tray', /\b(tray ?bake|sheet-pan|traybake|bandeja)\b/i],
+]
+
+function formsOf(r: Recipe): Set<string> {
+  const out = new Set(forms.filter(([, re]) => re.test(r.title)).map(([f]) => f))
+  // Anything folded into a tortilla eats like a taco, whatever it's called.
+  if (r.ingredients.some((i) => i.key === 'tortilla')) out.add('wrap')
+  return out
 }
 
 /**
@@ -76,6 +98,7 @@ export function similarRecipes(recipe: Recipe, all: Recipe[], avoid: string[] = 
   const mine = keysOf.get(recipe.id) ?? mainKeys(recipe)
   const tastes = new Set(recipe.tastes)
   const kin = familiesOf(recipe)
+  const shape = formsOf(recipe)
   return all
     .filter((r) => r.id !== recipe.id && isSafe(r, avoid))
     .map((r) => {
@@ -84,6 +107,7 @@ export function similarRecipes(recipe: Recipe, all: Recipe[], avoid: string[] = 
       for (const x of r.tastes) if (tastes.has(x)) score += 0.75
       const theirs = familiesOf(r)
       for (const f of theirs) if (kin.has(f)) score += 2.5
+      for (const f of formsOf(r)) if (shape.has(f)) score += 2
       // Breakfast and dinner don't stand in for each other.
       if (kin.has('breakfast') !== theirs.has('breakfast')) score -= 3
       if (Math.abs(r.activeMinutes - recipe.activeMinutes) <= 10) score += 0.3
