@@ -806,6 +806,10 @@ export const useStore = create<PlantryState>()(
           handoffs,
           energyByDate,
           cooked,
+          notes,
+          replies,
+          presence,
+          presenceWeekly,
         } = s
         return JSON.stringify(
           {
@@ -821,6 +825,10 @@ export const useStore = create<PlantryState>()(
             handoffs,
             energyByDate,
             cooked,
+            notes,
+            replies,
+            presence,
+            presenceWeekly,
           },
           null,
           2

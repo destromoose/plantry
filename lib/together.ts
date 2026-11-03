@@ -2,7 +2,7 @@
 // in a messaging app. Pure helpers; the store keeps the data and syncs it with the household.
 
 import type { HouseNote, MealSlot, Member, NoteReply, Presence } from './types'
-import { addDays, fromDateKey } from './utils'
+import { addDays, fromDateKey, toDateKey } from './utils'
 
 export const presenceKey = (date: string, slot: MealSlot, memberId: string) =>
   `${date}|${slot}|${memberId}`
@@ -86,10 +86,16 @@ export function notesFor(
     .sort((a, b) => (a.at < b.at ? 1 : -1))
 }
 
+/** The local day a note was written, so a morning note east of UTC isn't a day early. */
+function dayOf(iso: string): string {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso.slice(0, 10) : toDateKey(d)
+}
+
 /** Fridge board: pinned notes, and the rest for a week. */
 export function boardNotes(notes: HouseNote[], today: string): HouseNote[] {
   const since = addDays(today, -7)
-  return notesFor(notes, { on: 'board' }).filter((n) => n.pinned || n.at.slice(0, 10) >= since)
+  return notesFor(notes, { on: 'board' }).filter((n) => n.pinned || dayOf(n.at) >= since)
 }
 
 export const repliesTo = (replies: NoteReply[], noteId: string) =>
@@ -98,7 +104,7 @@ export const repliesTo = (replies: NoteReply[], noteId: string) =>
 /** Day and list notes are kept for 60 days after their day; board notes for 60 days unless pinned. */
 export function pruneNotes(notes: HouseNote[], replies: NoteReply[], today: string) {
   const cutoff = addDays(today, -60)
-  const kept = notes.filter((n) => n.pinned || (n.date ?? n.at.slice(0, 10)) >= cutoff)
+  const kept = notes.filter((n) => n.pinned || (n.date ?? dayOf(n.at)) >= cutoff)
   const ids = new Set(kept.map((n) => n.id))
   return { notes: kept, replies: replies.filter((r) => ids.has(r.noteId)) }
 }

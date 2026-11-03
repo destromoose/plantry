@@ -110,10 +110,13 @@ enum Together {
             .sorted { $0.at > $1.at }
     }
 
+    /// The local day a note was written, so a morning note east of UTC isn't a day early.
+    static func dayOf(_ iso: String) -> String { ISO.date(iso).map(DateKey.key) ?? String(iso.prefix(10)) }
+
     /// Fridge board: pinned notes, and the rest for a week.
     static func board(_ s: TogetherState, today: String) -> [HouseNote] {
         let since = DateKey.addDays(today, -7)
-        return notes(s, on: .board).filter { $0.isPinned || String($0.at.prefix(10)) >= since }
+        return notes(s, on: .board).filter { $0.isPinned || dayOf($0.at) >= since }
     }
 
     static func replies(_ s: TogetherState, to noteId: String) -> [NoteReply] {
@@ -123,7 +126,7 @@ enum Together {
     /// Notes go 60 days after their day unless pinned, and their replies with them.
     static func prune(_ s: inout TogetherState, today: String) {
         let cutoff = DateKey.addDays(today, -60)
-        s.notes = s.notes.filter { $0.isPinned || ($0.date ?? String($0.at.prefix(10))) >= cutoff }
+        s.notes = s.notes.filter { $0.isPinned || ($0.date ?? dayOf($0.at)) >= cutoff }
         let ids = Set(s.notes.map(\.id))
         s.replies = s.replies.filter { ids.contains($0.noteId) }
     }
