@@ -22,6 +22,7 @@ struct ShopView: View {
             return (a, items.filter { !$0.checked } + items.filter { $0.checked })
         }.filter { !$0.1.isEmpty }
         let dismissed = settingsRows.first?.shopDismissed.count ?? 0
+        let itemNotes = newestNotes()
 
         Page {
             VStack(alignment: .leading, spacing: 12) {
@@ -82,7 +83,7 @@ struct ShopView: View {
                         Text(aisle.label).font(Type.heading)
                         VStack(spacing: 6) {
                             ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                                ShopRow(item: item, fromTitles: item.fromRecipeIds.compactMap { titles[$0] }) { editing = item }
+                                ShopRow(item: item, fromTitles: item.fromRecipeIds.compactMap { titles[$0] }, note: itemNotes[item.key]) { editing = item }
                                     .reveal(i)
                             }
                         }
@@ -122,7 +123,7 @@ struct ShopView: View {
         }
         .motion(Motion.settle, value: checked > 0)
         .sheet(item: $editing) { item in
-            ShopItemSheet(item: item).presentationDetents([.medium])
+            ShopItemSheet(item: item).presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $confirmClear) {
             SheetChrome(title: "Clear the whole list?") {
@@ -172,12 +173,24 @@ struct ShopView: View {
     }
 }
 
+extension ShopView {
+    /// The newest note on each item, shown under its name: "get the Barilla one".
+    func newestNotes() -> [String: String] {
+        var out: [String: String] = [:]
+        for n in Together.notes(TogetherState.of(settingsRows), on: .shop) {
+            if let k = n.itemKey, out[k] == nil { out[k] = n.text }
+        }
+        return out
+    }
+}
+
 struct ShopRow: View {
     @Environment(Store.self) private var store
     @Environment(Toaster.self) private var toaster
     @Environment(\.theme) private var t
     var item: ShopItemModel
     var fromTitles: [String]
+    var note: String? = nil
     var onEdit: () -> Void
     @State private var drag: CGFloat = 0
 
@@ -211,15 +224,18 @@ struct ShopRow: View {
                     Text(item.name).font(Type.label).foregroundStyle(item.checked ? t.ink3 : t.ink).strikethrough(item.checked, color: t.ink3)
                     HStack(spacing: 6) {
                         if !qty.isEmpty { Text(qty) }
-                        if let from { Text(from) }
+                        if let from, note == nil { Text(from) }
                     }
                     .font(.system(size: 12)).foregroundStyle(t.ink3).lineLimit(1)
+                    if let note {
+                        Label(note, systemImage: "text.bubble").font(.system(size: 12, weight: .medium)).foregroundStyle(t.accent).lineLimit(1)
+                    }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Edit \(item.name)")
+            .accessibilityLabel("Change \(item.name) or leave a note\(note.map { ". Note: \($0)" } ?? "")")
 
             Button { remove() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).frame(width: 44, height: 44) }
                 .foregroundStyle(t.ink3)
@@ -280,6 +296,11 @@ struct ShopItemSheet: View {
                     dismiss()
                 }
                 .pbutton(.primary, .lg, fill: true)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Notes on this").font(Type.cardTitle)
+                    NotesThread(place: .shop, itemKey: item.key, placeholder: "Get the Barilla one, not the cheap one…")
+                }
+                .padding(.top, 8)
             }
         }
         .onAppear {

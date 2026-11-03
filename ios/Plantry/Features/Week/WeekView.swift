@@ -48,7 +48,8 @@ struct WeekView: View {
             VStack(spacing: 12) {
                 ForEach(Array(dates.enumerated()), id: \.element) { i, date in
                     DayRow(date: date, today: today, entry: entry(for: date), onPick: { active = DaySheet(date: date, kind: .pick) }, onMenu: { active = DaySheet(date: date, kind: .menu) },
-                           smallSlots: Meals.small(settingsRows.first?.meals ?? MealSlot.allCases), plan: plan, onMeal: { mealPick = MealPick(date: date, slot: $0) })
+                           smallSlots: Meals.small(settingsRows.first?.meals ?? MealSlot.allCases), plan: plan, onMeal: { mealPick = MealPick(date: date, slot: $0) },
+                           onSheet: { active = DaySheet(date: date, kind: $0) })
                         .reveal(i)
                 }
             }
@@ -150,6 +151,8 @@ struct DayRow: View {
     var smallSlots: [MealSlot] = []
     var plan: [PlanEntryModel] = []
     var onMeal: (MealSlot) -> Void = { _ in }
+    var onSheet: (DaySheet.Kind) -> Void = { _ in }
+    @Query private var settingsRows: [SettingsModel]
 
     var body: some View {
         let recipe = recipes.first { $0.id == entry?.recipeId }
@@ -227,10 +230,39 @@ struct DayRow: View {
             MealLines(date: date, today: today, slots: smallSlots, plan: plan, recipes: recipes, onTap: onMeal)
                 .opacity(past ? 0.8 : 1)
         }
+        togetherLine
         }
         .card()
         .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(isToday ? t.accent : .clear, lineWidth: 2))
         .motion(Motion.checkPop, value: done)
         .motion(Motion.settle, value: decided)
+    }
+
+    /// "Just you · 1 note": who's eating and what's been left for the day.
+    @ViewBuilder private var togetherLine: some View {
+        let s = TogetherState.of(settingsRows)
+        let sorted = members.sorted { $0.order < $1.order }
+        let line = Together.line(s, members: sorted.map { ($0.id, $0.name) }, date, .dinner, meId: sorted.first { $0.isMe }?.id)
+        let notes = Together.notes(s, on: .day, date: date).count
+        if line != nil || notes > 0 {
+            VStack(alignment: .leading, spacing: 0) {
+                Divider().overlay(t.line).padding(.bottom, 2)
+                HStack(spacing: 16) {
+                    if let line {
+                        Button { onSheet(.home) } label: { Label(line, systemImage: "person.2") }
+                    }
+                    if notes > 0 {
+                        Button { onSheet(.notes) } label: { Label(notes == 1 ? "1 note" : "\(notes) notes", systemImage: "text.bubble") }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 14))
+                .foregroundStyle(t.ink2)
+                .frame(minHeight: 40)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+        }
     }
 }

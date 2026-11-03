@@ -65,9 +65,9 @@ final class SyncDocTests: XCTestCase {
 
     func testPartsThisAppDoesNotKnowPassThrough() {
         var remote = doc([])
-        remote["notes"] = .array([.object(["id": .string("n1"), "text": .string("Get the Barilla one")])])
+        remote["chores"] = .array([.object(["id": .string("c1"), "text": .string("Bins out")])])
         let merged = SyncDoc.merge(base: doc([]), local: doc([item("a", "milk")]), remote: SyncDoc.clean(.object(remote)))
-        XCTAssertEqual(merged["notes"]?.array?.count, 1)
+        XCTAssertEqual(merged["chores"]?.array?.count, 1)
         XCTAssertEqual(names(merged), ["milk"])
     }
 
@@ -95,5 +95,19 @@ final class SyncDocTests: XCTestCase {
         XCTAssertEqual(u.map(\.label), ["Oats"])
         XCTAssertEqual(u.first?.count, 2)
         XCTAssertEqual(Meals.planned([.lunch]), [.lunch, .dinner])
+    }
+
+    func testNotesRepliesAndWhoIsHomeMergeFromTwoPhones() {
+        let base = SyncDoc.empty()
+        var mine = base
+        mine["notes"] = .array([.object(["id": .string("n1"), "text": .string("Defrost the chicken"), "on": .string("day"), "at": .string("x")])])
+        mine["presence"] = .object(["2026-11-03|dinner|a": .string("late")])
+        var theirs = base
+        theirs["replies"] = .array([.object(["id": .string("r1"), "noteId": .string("n0"), "text": .string("I'll cook"), "at": .string("x")])])
+        theirs["presence"] = .object(["2026-11-03|dinner|s": .string("out")])
+        let merged = SyncDoc.merge(base: base, local: mine, remote: SyncDoc.clean(.object(theirs)))
+        XCTAssertEqual(merged["notes"]?.array?.count, 1)
+        XCTAssertEqual(merged["replies"]?.array?.count, 1)
+        XCTAssertEqual(merged["presence"]?.object?.keys.sorted(), ["2026-11-03|dinner|a", "2026-11-03|dinner|s"])
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct DaySheet: Identifiable, Hashable {
-    enum Kind { case pick, menu, claim, move }
+    enum Kind { case pick, menu, claim, move, home, notes }
     var date: String
     var kind: Kind
     var id: String { date + String(describing: kind) }
@@ -24,6 +24,8 @@ struct DaySheets: View {
         case .claim: "Who is cooking?"
         case .move: "Move to which night?"
         case .menu: "\(DateKey.dayLabel(sheet.date, today: today)), \(DateKey.monthDay(sheet.date))"
+        case .home: "Who's home on \(DateKey.date(sheet.date).formatted(.dateTime.weekday(.wide)))"
+        case .notes: "Notes for \(DateKey.date(sheet.date).formatted(.dateTime.weekday(.wide)))"
         }
     }
 
@@ -35,6 +37,8 @@ struct DaySheets: View {
             case .menu: MenuBody(date: sheet.date, entry: entry, onCooked: onCooked) { setSheet(DaySheet(date: sheet.date, kind: $0)) }
             case .claim: ClaimBody(date: sheet.date, entry: entry)
             case .move: if let entry { MoveBody(date: sheet.date, entry: entry, weekDates: weekDates, today: today) }
+            case .home: WhoHomeBody(date: sheet.date)
+            case .notes: NotesThread(place: .day, date: sheet.date, placeholder: "Defrost the chicken, back at 8…")
             }
         }
     }
@@ -152,6 +156,7 @@ struct MenuBody: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.theme) private var t
     @Query private var settingsRows: [SettingsModel]
+    @Query private var members: [MemberModel]
     var date: String
     var entry: PlanEntryModel?
     var onCooked: (String) -> Void
@@ -175,6 +180,9 @@ struct MenuBody: View {
                 row("checkmark", "Mark cooked") { onCooked(date); dismiss() }
             }
             row("person", "Claim night") { setKind(.claim) }
+            if members.count > 1 { row("person.2", "Who's home") { setKind(.home) } }
+            let notes = Together.notes(TogetherState.of(settingsRows), on: .day, date: date).count
+            row("text.bubble", notes > 0 ? "Notes (\(notes))" : "Leave a note") { setKind(.notes) }
             if hasContent { row("arrow.left.arrow.right", "Move to...") { setKind(.move) } }
             if entry != nil {
                 row("trash", "Remove", danger: true) {

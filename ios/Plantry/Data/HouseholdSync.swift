@@ -104,6 +104,7 @@ final class HouseholdSync {
             "units": .string(s.units.rawValue),
         ]
         settings["meals"] = .array(s.meals.map { .string($0.rawValue) })
+        let tog = store.together
         let members: [JSONValue] = store.members.map { m in
             var v = m.value
             v.isMe = nil
@@ -121,6 +122,10 @@ final class HouseholdSync {
             "handoffs": .array(store.fetch(HandoffModel.self).map { JSONValue.from($0.value) }),
             "cooked": .array(store.fetch(CookedModel.self).sorted { $0.at > $1.at }.map { JSONValue.from($0.value) }),
             "energyByDate": .object(s.energyByDate.mapValues { .string($0.rawValue) }),
+            "notes": .array(tog.notes.map { JSONValue.from($0) }),
+            "replies": .array(tog.replies.map { JSONValue.from($0) }),
+            "presence": .object(tog.presence.mapValues { .string($0.rawValue) }),
+            "presenceWeekly": .object(tog.presenceWeekly.mapValues { .string($0.rawValue) }),
         ]
     }
 
@@ -227,6 +232,14 @@ final class HouseholdSync {
             } else { ctx.insert(HandoffModel(h)) }
         }
         for gone in handoffs.values { ctx.delete(gone) }
+
+        // Who's home and notes. Notes the app can't read are left out here; the server keeps them.
+        var tog = TogetherState()
+        tog.notes = items("notes", HouseNote.self)
+        tog.replies = items("replies", NoteReply.self)
+        tog.presence = (doc["presence"]?.object ?? [:]).compactMapValues { $0.string.flatMap(Presence.init(rawValue:)) }
+        tog.presenceWeekly = (doc["presenceWeekly"]?.object ?? [:]).compactMapValues { $0.string.flatMap(Presence.init(rawValue:)) }
+        store.together = tog
 
         // History has no ids: replace it when it differs, newest first.
         let cooked = items("cooked", CookedEntry.self)
