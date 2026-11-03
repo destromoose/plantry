@@ -28,6 +28,7 @@ import type { Settings as SettingsT } from '@/lib/types'
 import { currencies, formatMoney } from '@/lib/cost'
 import { Input } from '@/components/ui/Field'
 import { SyncCard } from '@/components/features/sync/SyncCard'
+import { CalendarCard } from '@/components/features/sync/CalendarCard'
 
 function Choice<T extends string>({
   label,
@@ -420,6 +421,8 @@ export function Settings() {
           {t('Sharing and your data')}
         </h2>
         <SyncCard />
+
+        <CalendarCard />
 
         <InstallCard />
 
