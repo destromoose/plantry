@@ -6,6 +6,7 @@ struct HouseholdView: View {
     @Environment(ContextProvider.self) private var ctxProvider
     @Environment(Toaster.self) private var toaster
     @Environment(\.theme) private var t
+    @Environment(HouseholdSync.self) private var sync
     @Query(sort: \MemberModel.order) private var members: [MemberModel]
     @Query private var plan: [PlanEntryModel]
     @Query private var recipes: [RecipeModel]
@@ -41,7 +42,7 @@ struct HouseholdView: View {
         Page {
             VStack(alignment: .leading, spacing: 4) {
                 Text(word).font(Type.hero).lineSpacing(-2)
-                Text("Everyone here is a person, not a shared password. Nothing about them leaves this phone.").font(Type.body).foregroundStyle(t.ink2)
+                Text(sync.isSharing ? "Everyone here is a person, not a shared password. Your household shares one plan, pantry and list." : "Everyone here is a person, not a shared password. Nothing about them leaves this phone until you share.").font(Type.body).foregroundStyle(t.ink2)
             }
 
             VStack(alignment: .leading, spacing: 0) {
@@ -112,6 +113,10 @@ struct HouseholdView: View {
                 Text("Whoever cooks doesn't wash up. The washing up rotates through everyone else, worked out from the date, so every phone agrees.")
                     .font(Type.small).foregroundStyle(t.ink3)
             }
+
+            ShareCard()
+
+            MealsCard()
 
             CalendarCard()
 

@@ -7,6 +7,7 @@ struct PlantryApp: App {
     @State private var store: Store
     @State private var contextProvider = ContextProvider()
     @State private var toaster = Toaster()
+    @State private var sync: HouseholdSync
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -20,6 +21,7 @@ struct PlantryApp: App {
         }
         let s = Store(container: container)
         _store = State(initialValue: s)
+        _sync = State(initialValue: HouseholdSync(store: s))
     }
 
     var body: some Scene {
@@ -28,10 +30,12 @@ struct PlantryApp: App {
                 .environment(store)
                 .environment(contextProvider)
                 .environment(toaster)
+                .environment(sync)
                 .modelContainer(container)
-                .onAppear { contextProvider.attach(store) }
+                .onAppear { contextProvider.attach(store); sync.becameActive() }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { contextProvider.becameActive() }
+                    if phase == .active { contextProvider.becameActive(); sync.becameActive() }
+                    if phase == .background { sync.wentToBackground() }
                 }
         }
     }

@@ -1,5 +1,10 @@
 # Household sync
 
+The website and the iPhone app use the same household, server and merge rules. The iPhone
+side is `ios/Plantry/Core/SyncDoc.swift` (the merge) and `ios/Plantry/Data/HouseholdSync.swift`
+(talking to the server, joining, leaving). It keeps the document as plain JSON and only
+replaces the fields it knows when it edits an item, so web-only fields survive an iPhone edit.
+
 Phones in one household share their plan, pantry, list, recipes and history through a small
 API on the web app's own server. There are no accounts: a household is a random 12-character
 code (`A-Z` without I, L, O, plus `2-9`), shown as `ABCD-EFGH-JKMN`.
