@@ -9,6 +9,7 @@ import type {
   Energy,
   Handoff,
   HouseNote,
+  MealIdea,
   MealSlot,
   Member,
   NoteReply,
@@ -16,6 +17,7 @@ import type {
   PantryItem,
   PlanEntry,
   Recipe,
+  RepeatMeal,
   Settings,
   ShopItem,
   ShopTrip,
@@ -42,6 +44,8 @@ import type { CapturedItem } from './capture'
 import { cleanBought, recordTrip, type Bought } from './usuals'
 import { eatersFor, presenceKey, pruneNotes, weeklyKey } from './together'
 import { splitByAisle } from './shopTogether'
+import { copyWeek, repeatsInto } from './planTogether'
+import { keepActivity, type Activity } from './activity'
 
 export interface PlantryState {
   settings: Settings
@@ -71,6 +75,14 @@ export interface PlantryState {
   replies: NoteReply[]
   /** Who's out shopping right now, shared with the household. */
   shopTrip: ShopTrip
+  /** Meals someone fancies, waiting for a night. */
+  ideas: MealIdea[]
+  /** Meals the household has every week. */
+  repeats: RepeatMeal[]
+  /** What the others changed, as this phone saw it come in. Not synced. */
+  activity: Activity[]
+  /** When this person last read it. */
+  activitySeenAt?: string
   hydrated: boolean
   setHydrated: () => void
 
@@ -145,6 +157,21 @@ export interface PlantryState {
   removeNote: (id: string) => void
   togglePinNote: (id: string) => void
   addReply: (noteId: string, text: string) => void
+
+  // planning ahead
+  addIdea: (idea: { text?: string; recipeId?: string }) => MealIdea | undefined
+  removeIdea: (id: string) => void
+  /** "Me too" on someone's idea, or take it back. */
+  toggleIdeaVote: (id: string) => void
+  /** Put an idea on a night's dinner; it leaves the pool. */
+  planIdea: (id: string, date: string) => void
+  /** Have this night's dinner every week on this weekday. */
+  repeatEveryWeek: (date: string, slot: MealSlot) => void
+  stopRepeat: (id: string) => void
+  /** Last week's meals and the weekly ones onto this week's empty slots. Returns how many. */
+  copyLastWeek: (dates: string[], today: string) => number
+  addActivity: (fresh: Activity[]) => void
+  markActivitySeen: () => void
 
   // shop
   /** Build the list from planned dinners on these dates. `kept` means nothing was planned, so the list was left alone. */
@@ -253,6 +280,9 @@ export const useStore = create<PlantryState>()(
       notes: [],
       replies: [],
       shopTrip: {},
+      ideas: [],
+      repeats: [],
+      activity: [],
       hydrated: false,
       setHydrated: () => set({ hydrated: true }),
 
@@ -534,6 +564,89 @@ export const useStore = create<PlantryState>()(
           else delete presenceWeekly[k]
           return { presenceWeekly }
         }),
+      addIdea: ({ text, recipeId }) => {
+        const clean = text?.trim().slice(0, 120)
+        if (!clean && !recipeId) return undefined
+        const s = get()
+        const dupe = s.ideas.find((i) =>
+          recipeId ? i.recipeId === recipeId : i.text?.toLowerCase() === clean?.toLowerCase()
+        )
+        if (dupe) return dupe
+        const idea: MealIdea = {
+          id: uid('id'),
+          ...(recipeId ? { recipeId } : { text: clean }),
+          by: s.members.find((m) => m.isMe)?.id,
+          at: new Date().toISOString(),
+        }
+        set({ ideas: [idea, ...s.ideas].slice(0, 60) })
+        return idea
+      },
+      removeIdea: (id) => set((s) => ({ ideas: s.ideas.filter((i) => i.id !== id) })),
+      toggleIdeaVote: (id) =>
+        set((s) => {
+          const me = s.members.find((m) => m.isMe)?.id
+          if (!me) return {}
+          return {
+            ideas: s.ideas.map((i) => {
+              if (i.id !== id) return i
+              const votes = i.votes ?? []
+              const next = votes.includes(me) ? votes.filter((v) => v !== me) : [...votes, me]
+              return { ...i, votes: next.length ? next : undefined }
+            }),
+          }
+        }),
+      planIdea: (id, date) => {
+        const s = get()
+        const idea = s.ideas.find((i) => i.id === id)
+        if (!idea) return
+        const cur = s.plan.find((p) => p.date === date && p.slot === 'dinner')
+        s.setPlanEntry({
+          date,
+          slot: 'dinner',
+          recipeId: idea.recipeId,
+          note: idea.recipeId ? undefined : idea.text,
+          cookId: cur?.cookId,
+        })
+        set((st) => ({ ideas: st.ideas.filter((i) => i.id !== id) }))
+      },
+      repeatEveryWeek: (date, slot) =>
+        set((s) => {
+          const e = s.plan.find((p) => p.date === date && p.slot === slot)
+          if (!e || !(e.recipeId || e.note)) return {}
+          const weekday = new Date(`${date}T12:00:00`).getDay()
+          const rest = s.repeats.filter((r) => !(r.weekday === weekday && r.slot === slot))
+          const r: RepeatMeal = {
+            id: uid('rp'),
+            weekday,
+            slot,
+            ...(e.recipeId ? { recipeId: e.recipeId } : { note: e.note }),
+            by: s.members.find((m) => m.isMe)?.id,
+          }
+          return { repeats: [...rest, r] }
+        }),
+      stopRepeat: (id) => set((s) => ({ repeats: s.repeats.filter((r) => r.id !== id) })),
+      copyLastWeek: (dates, today) => {
+        const s = get()
+        const weekly = repeatsInto(s.plan, s.repeats, dates, today)
+        const withWeekly = [...s.plan, ...weekly.map((e) => ({ ...e, id: 'tmp' }))]
+        const copied = copyWeek(withWeekly, dates, today)
+        const add = [...weekly, ...copied]
+        if (!add.length) return 0
+        set((st) => {
+          const taken = new Set(add.map((e) => `${e.date}|${e.slot}`))
+          return {
+            plan: [
+              ...st.plan.filter((p) => !taken.has(`${p.date}|${p.slot}`)),
+              ...add.map((e) => ({ ...e, id: uid('pl') })),
+            ],
+          }
+        })
+        return add.length
+      },
+      addActivity: (fresh) => {
+        if (fresh.length) set((s) => ({ activity: keepActivity(s.activity, fresh) }))
+      },
+      markActivitySeen: () => set({ activitySeenAt: new Date().toISOString() }),
       addNote: (input) => {
         const note: HouseNote = {
           ...input,
@@ -871,6 +984,8 @@ export const useStore = create<PlantryState>()(
           replies,
           presence,
           presenceWeekly,
+          ideas,
+          repeats,
         } = s
         return JSON.stringify(
           {
@@ -890,6 +1005,8 @@ export const useStore = create<PlantryState>()(
             replies,
             presence,
             presenceWeekly,
+            ideas,
+            repeats,
           },
           null,
           2
@@ -930,6 +1047,10 @@ export const useStore = create<PlantryState>()(
           notes: [],
           replies: [],
           shopTrip: {},
+          ideas: [],
+          repeats: [],
+          activity: [],
+          activitySeenAt: undefined,
           weather: undefined,
         }),
     }),
@@ -956,6 +1077,10 @@ export const useStore = create<PlantryState>()(
           shopTrip: s.shopTrip,
           notes: s.notes,
           replies: s.replies,
+          ideas: s.ideas,
+          repeats: s.repeats,
+          activity: s.activity,
+          activitySeenAt: s.activitySeenAt,
         }) as unknown as PlantryState,
       // Older saves have the same shape; anything off is cleaned in merge below.
       migrate: (persisted) => persisted as PlantryState,
@@ -981,7 +1106,26 @@ export const useStore = create<PlantryState>()(
           settings.seedVersion = SEED_VERSION
         }
         const bought = cleanBought((persisted as { bought?: unknown } | undefined)?.bought)
-        return { ...current, ...data, settings, recipes, bought } as PlantryState
+        const p = (persisted ?? {}) as { activity?: unknown; activitySeenAt?: unknown }
+        const activity = Array.isArray(p.activity)
+          ? p.activity.filter(
+              (a): a is Activity =>
+                !!a &&
+                typeof a.id === 'string' &&
+                typeof a.text === 'string' &&
+                typeof a.at === 'string'
+            )
+          : []
+        const activitySeenAt = typeof p.activitySeenAt === 'string' ? p.activitySeenAt : undefined
+        return {
+          ...current,
+          ...data,
+          settings,
+          recipes,
+          bought,
+          activity,
+          activitySeenAt,
+        } as PlantryState
       },
       onRehydrateStorage: () => () => {
         // Always leave the splash screen, even when reading failed. Deferred because the

@@ -69,6 +69,9 @@ struct TonightView: View {
             }
             .reveal(1)
 
+            SinceLookedCard()
+                .reveal(1)
+
             TonightTogether(date: target, label: ctx.targetLabel)
                 .reveal(1)
 

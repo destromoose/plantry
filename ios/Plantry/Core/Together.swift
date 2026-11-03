@@ -62,6 +62,10 @@ struct TogetherState: Codable, Hashable, Sendable {
     var presenceWeekly: [String: Presence] = [:]
     /// Who is out at the shop right now. Optional so data saved before it still reads.
     var shopTrip: ShopTrip?
+    /// Meals someone fancies, waiting for a night.
+    var ideas: [MealIdea]?
+    /// Meals the household has every week.
+    var repeats: [RepeatMeal]?
 }
 
 /// Someone is at the shop: who, and since when. Empty when nobody is.

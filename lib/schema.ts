@@ -144,6 +144,24 @@ export const noteSchema = z.object({
   pinned: z.boolean().optional(),
 })
 
+export const ideaSchema = z.object({
+  id: z.string(),
+  text: z.string().max(120).optional(),
+  recipeId: z.string().optional(),
+  by: z.string().optional(),
+  at: z.string(),
+  votes: z.array(z.string()).optional().catch(undefined),
+})
+
+export const repeatSchema = z.object({
+  id: z.string(),
+  weekday: z.number().int().min(0).max(6),
+  slot: z.enum(['breakfast', 'lunch', 'dinner']),
+  recipeId: z.string().optional(),
+  note: z.string().max(120).optional(),
+  by: z.string().optional(),
+})
+
 export const replySchema = z.object({
   id: z.string(),
   noteId: z.string(),
@@ -228,6 +246,8 @@ const collections = {
   cooked: cookedSchema,
   notes: noteSchema,
   replies: replySchema,
+  ideas: ideaSchema,
+  repeats: repeatSchema,
 } as const
 
 type CollectionKey = keyof typeof collections
@@ -245,6 +265,8 @@ export interface CleanData {
   energyByDate: Record<string, 'up-for-it' | 'quick' | 'cant-tonight'>
   notes: z.infer<typeof noteSchema>[]
   replies: z.infer<typeof replySchema>[]
+  ideas: z.infer<typeof ideaSchema>[]
+  repeats: z.infer<typeof repeatSchema>[]
   presence: Record<string, 'home' | 'late' | 'out'>
   presenceWeekly: Record<string, 'home' | 'late' | 'out'>
   shopTrip: { by?: string; since?: string }
@@ -376,6 +398,8 @@ export function checkImport(
       energyByDate: data.energyByDate ?? {},
       notes: data.notes ?? [],
       replies: data.replies ?? [],
+      ideas: data.ideas ?? [],
+      repeats: data.repeats ?? [],
       presence: data.presence ?? {},
       presenceWeekly: data.presenceWeekly ?? {},
       shopTrip: data.shopTrip ?? {},

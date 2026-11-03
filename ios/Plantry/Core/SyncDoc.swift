@@ -83,6 +83,8 @@ enum SyncDoc {
         ("cooked", { "\($0["date"]?.string ?? "")|\($0["recipeId"]?.string ?? "")|\($0["cookId"]?.string ?? "")" }, true),
         ("notes", { $0["id"]?.string ?? "" }, true),
         ("replies", { $0["id"]?.string ?? "" }, false),
+        ("ideas", { $0["id"]?.string ?? "" }, true),
+        ("repeats", { $0["id"]?.string ?? "" }, false),
     ]
 
     /// Parts of the document merged key by key.
@@ -102,6 +104,8 @@ enum SyncDoc {
         "cooked": ["recipeId", "date", "cookId", "rating", "note"],
         "notes": ["id", "text", "by", "at", "on", "date", "slot", "itemKey", "photo", "pinned"],
         "replies": ["id", "noteId", "by", "text", "at"],
+        "ideas": ["id", "text", "recipeId", "by", "at", "votes"],
+        "repeats": ["id", "weekday", "slot", "recipeId", "note", "by"],
     ]
 
     static func empty() -> [String: JSONValue] {

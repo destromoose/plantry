@@ -17,6 +17,7 @@ struct WeekView: View {
     @State private var offset = 0
     @State private var active: DaySheet?
     @State private var mealPick: MealPick?
+    @State private var showMonth = false
 
     private var today: String { ctxProvider.today }
     private var weekDates: [String] { DateKey.weekOf(DateKey.addDays(today, offset * 7)) }
@@ -26,10 +27,24 @@ struct WeekView: View {
     var body: some View {
         let dates = weekDates
         let decided = dates.filter { entry(for: $0)?.isDecided == true }.count
+        let together = TogetherState.of(settingsRows)
+        let planValues = plan.map(\.value)
+        let canRepeat = !PlanAhead.repeatsInto(planValues, together.repeats ?? [], dates: dates, today: today).isEmpty
+            || !PlanAhead.copyWeek(planValues, to: dates, today: today).isEmpty
         Page {
             VStack(alignment: .leading, spacing: 6) {
-                Eyebrow(text: "\(DateKey.monthDay(dates[0])) to \(DateKey.monthDay(dates[6]))")
-                Text("Your week").font(Type.hero).lineSpacing(-2)
+                Eyebrow(text: "\(DateKey.monthDay(dates[0])) to \(DateKey.monthDay(dates[6]))").opacity(showMonth ? 0 : 1)
+                HStack(alignment: .bottom) {
+                    Text(showMonth ? "Your month" : "Your week").font(Type.hero).lineSpacing(-2)
+                    Spacer(minLength: 8)
+                    Picker("Show", selection: $showMonth.animation(Motion.settle)) {
+                        Text("Week").tag(false)
+                        Text("Month").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 150)
+                }
+                if !showMonth {
                 HStack(spacing: 4) {
                     Button { withAnimation(Motion.settle) { offset -= 1 } } label: { Image(systemName: "chevron.left").iconButton() }
                         .accessibilityLabel("Previous week")
@@ -43,8 +58,23 @@ struct WeekView: View {
                 }
                 .foregroundStyle(t.ink)
                 .padding(.top, 10)
+                if canRepeat {
+                    Button { repeatWeek(dates) } label: { Label("Repeat last week", systemImage: "repeat") }
+                        .pbutton(.outline, .md, fill: true)
+                        .padding(.top, 4)
+                }
+                }
             }
 
+            if showMonth {
+                MonthView(today: today) { d in
+                    let from = DateKey.weekOf(today)[0]
+                    withAnimation(Motion.settle) {
+                        offset = DateKey.daysBetween(from, DateKey.weekOf(d)[0]) / 7
+                        showMonth = false
+                    }
+                }
+            } else {
             VStack(spacing: 12) {
                 ForEach(Array(dates.enumerated()), id: \.element) { i, date in
                     DayRow(date: date, today: today, entry: entry(for: date), onPick: { active = DaySheet(date: date, kind: .pick) }, onMenu: { active = DaySheet(date: date, kind: .menu) },
@@ -77,6 +107,9 @@ struct WeekView: View {
             .pbutton(decided == 0 ? .secondary : .primary, .lg, fill: true)
             .disabled(decided == 0)
             .padding(.top, -16)
+
+            IdeasCard(weekDates: dates, today: today)
+            }
         }
         .navigationTitle("Week")
         .toolbar(.hidden, for: .navigationBar)
@@ -87,6 +120,16 @@ struct WeekView: View {
         .sheet(item: $mealPick) { p in
             MealSheet(pick: p, today: today).presentationDetents([.medium, .large])
         }
+    }
+
+    private func repeatWeek(_ dates: [String]) {
+        guard TapGuard.allow("repeat-week") else { return }
+        var n = 0
+        let undo = store.undoable { n = store.copyLastWeek(dates, today: today) }
+        ctxProvider.refresh()
+        if n == 0 { toaster.show("Nothing from last week to copy"); return }
+        Haptic.success()
+        toaster.show("Copied \(pluralize(n, "meal")) from last week. Planned meals stayed as they were.") { undo(); ctxProvider.refresh() }
     }
 
     private func cookDay(_ date: String) {
@@ -120,6 +163,13 @@ struct WeekView: View {
         for date in dates where date >= today {
             let current = store.dinner(on: date)
             if current?.isDecided == true { continue }
+            // The household's weekly meal comes first: Friday is pizza night.
+            if let weekly = PlanAhead.repeatFor(store.repeats, date, .dinner) {
+                store.setDinner(date, recipeId: weekly.recipeId, note: weekly.note, cookId: current?.cookId)
+                if let r = weekly.recipeId { used.insert(r) }
+                filled += 1
+                continue
+            }
             let prev = store.dinner(on: DateKey.addDays(date, -1))
             if let prevRecipe = store.recipe(prev?.recipeId), prevRecipe.leftovers, date > today {
                 store.setDinner(date, leftoversOf: prevRecipe.id, cookId: current?.cookId)
@@ -139,6 +189,7 @@ struct WeekView: View {
 }
 
 struct DayRow: View {
+    @Environment(Store.self) private var store
     @Environment(Navigator.self) private var nav
     @Environment(\.theme) private var t
     @Query private var recipes: [RecipeModel]
@@ -201,6 +252,25 @@ struct DayRow: View {
                 }
                 .buttonStyle(.plain)
                 .transition(.opacity.combined(with: .offset(y: 6)))
+            } else if !past, let weekly = PlanAhead.repeatFor(TogetherState.of(settingsRows).repeats ?? [], date, .dinner) {
+                let what = recipes.first { $0.id == weekly.recipeId }?.title ?? weekly.note ?? ""
+                Button {
+                    store.setDinner(date, recipeId: weekly.recipeId, note: weekly.note, cookId: entry?.cookId)
+                    Haptic.tap()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "repeat").foregroundStyle(t.accent)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(what).font(Type.label).foregroundStyle(t.ink).lineLimit(1)
+                            Text("Every \(DateKey.weekdayName(date)). Tap to add").font(.system(size: 12)).foregroundStyle(t.ink3)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                }
+                .buttonStyle(RowButtonStyle(tint: .clear, dashed: true))
+                .accessibilityLabel("Add \(what) for \(DateKey.dayLabel(date, today: today)), as every week")
             } else {
                 Button(action: onPick) {
                     Label("Pick something", systemImage: "plus")

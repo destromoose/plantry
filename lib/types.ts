@@ -243,3 +243,26 @@ export interface NoteReply {
   text: string
   at: string
 }
+
+/** "We should have tacos soon": a meal someone in the household fancies, waiting for a night. */
+export interface MealIdea {
+  id: string
+  /** Free text, when it isn't one of the recipes. */
+  text?: string
+  recipeId?: string
+  by?: string
+  at: string
+  /** Members who said "me too". */
+  votes?: string[]
+}
+
+/** A meal the household has every week: "Pizza every Friday". */
+export interface RepeatMeal {
+  id: string
+  /** 0 is Sunday, the way Date.getDay() counts. */
+  weekday: number
+  slot: MealSlot
+  recipeId?: string
+  note?: string
+  by?: string
+}

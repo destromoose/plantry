@@ -137,6 +137,8 @@ final class HouseholdSync {
             "presence": .object(tog.presence.mapValues { .string($0.rawValue) }),
             "presenceWeekly": .object(tog.presenceWeekly.mapValues { .string($0.rawValue) }),
             "shopTrip": JSONValue.from(tog.shopTrip ?? ShopTrip()),
+            "ideas": .array((tog.ideas ?? []).map { JSONValue.from($0) }),
+            "repeats": .array((tog.repeats ?? []).map { JSONValue.from($0) }),
         ]
     }
 
@@ -249,6 +251,9 @@ final class HouseholdSync {
         tog.presence = (doc["presence"]?.object ?? [:]).compactMapValues { $0.string.flatMap(Presence.init(rawValue:)) }
         tog.presenceWeekly = (doc["presenceWeekly"]?.object ?? [:]).compactMapValues { $0.string.flatMap(Presence.init(rawValue:)) }
         tog.shopTrip = doc["shopTrip"]?.decode(ShopTrip.self) ?? ShopTrip()
+        let ideas = items("ideas", MealIdea.self), repeats = items("repeats", RepeatMeal.self)
+        tog.ideas = ideas.isEmpty ? nil : ideas
+        tog.repeats = repeats.isEmpty ? nil : repeats
         store.together = tog
 
         // History has no ids: replace it when it differs, newest first.
@@ -350,6 +355,8 @@ final class HouseholdSync {
         // Changes made on this phone while the request was out are replayed on top.
         let now = localDoc()
         let next = SyncDoc.equal(now, localWas) ? merged : SyncDoc.merge(base: localWas, local: now, remote: merged)
+        // What the others changed, for "Since you last looked".
+        if !SyncDoc.equal(now, next) { ActivityLog.add(ActivityLog.diff(before: now, after: next, meId: meId)) }
         apply(next)
         meta.rev = rev
         // The base is what this phone now holds, in its own shape, so the next merge only
