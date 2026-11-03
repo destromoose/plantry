@@ -104,6 +104,34 @@ struct PickBody: View {
             }
             .padding(.horizontal, -24)
 
+            let ideas = PlanAhead.rank(TogetherState.of(settingsRows).ideas ?? [])
+            if !ideas.isEmpty && needle.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("From your ideas", systemImage: "lightbulb").font(.system(size: 12, weight: .semibold)).textCase(.uppercase).kerning(1.4).foregroundStyle(t.ink3)
+                    ForEach(ideas.prefix(5)) { idea in
+                        let r = recipes.first { $0.id == idea.recipeId }
+                        let by = members.count > 1 ? members.first(where: { $0.id == idea.by }) : nil
+                        Button {
+                            store.planIdea(idea, on: date)
+                            ctxProvider.refresh()
+                            Haptic.tap()
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 12) {
+                                if let r { Thumb(url: r.imageUrl, size: 44, radius: 12) }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(store.ideaTitle(idea)).font(Type.label).lineLimit(1)
+                                    let sub = [by.map { "\($0.name)'s idea" }, (idea.votes?.count ?? 0) > 0 ? "\(idea.votes!.count) said me too" : nil].compactMap { $0 }
+                                    if !sub.isEmpty { Text(sub.joined(separator: " · ")).font(Type.small).foregroundStyle(t.ink2) }
+                                }
+                            }
+                            .padding(10).frame(minHeight: 56)
+                        }
+                        .buttonStyle(RowButtonStyle(tint: t.accent.opacity(0.08)))
+                    }
+                }
+            }
+
             if !leftovers.isEmpty && needle.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Eyebrow(text: "Leftovers of...")
@@ -184,6 +212,20 @@ struct MenuBody: View {
             let notes = Together.notes(TogetherState.of(settingsRows), on: .day, date: date).count
             row("text.bubble", notes > 0 ? "Notes (\(notes))" : "Leave a note") { setKind(.notes) }
             if hasContent { row("arrow.left.arrow.right", "Move to...") { setKind(.move) } }
+            let weekday = DateKey.weekdayName(date)
+            if let weekly = PlanAhead.repeatFor(TogetherState.of(settingsRows).repeats ?? [], date, .dinner) {
+                row("calendar.badge.minus", "Stop having this every \(weekday)") {
+                    let undo = store.undoable { store.stopRepeat(weekly.id) }
+                    toaster.show("No longer every \(weekday)") { undo() }
+                    dismiss()
+                }
+            } else if entry?.recipeId != nil || (entry?.note.map { !$0.isEmpty && $0 != "Not cooking" } ?? false) {
+                row("repeat", "Have this every \(weekday)") {
+                    let undo = store.undoable { store.repeatEveryWeek(date) }
+                    toaster.show("Every \(weekday) from now on") { undo() }
+                    dismiss()
+                }
+            }
             if entry != nil {
                 row("trash", "Remove", danger: true) {
                     let undo = store.undoable { store.clearDinner(date) }

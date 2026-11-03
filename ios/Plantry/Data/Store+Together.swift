@@ -100,3 +100,84 @@ extension Store {
         save()
     }
 }
+
+// MARK: - Planning ahead together
+
+extension Store {
+    var ideas: [MealIdea] { together.ideas ?? [] }
+    var repeats: [RepeatMeal] { together.repeats ?? [] }
+
+    private func changePlanAhead(_ change: (inout [MealIdea], inout [RepeatMeal]) -> Void) {
+        var s = together
+        var ideas = s.ideas ?? [], repeats = s.repeats ?? []
+        change(&ideas, &repeats)
+        s.ideas = ideas.isEmpty ? nil : ideas
+        s.repeats = repeats.isEmpty ? nil : repeats
+        together = s
+        save()
+    }
+
+    /// Typing a recipe's name links the idea to it, so planning it brings the recipe.
+    @discardableResult
+    func addIdea(_ text: String) -> MealIdea? {
+        let clean = String(text.trimmed.prefix(120))
+        guard !clean.isEmpty else { return nil }
+        let match = fetch(RecipeModel.self).first { $0.title.lowercased() == clean.lowercased() }
+        if let dupe = ideas.first(where: { match != nil ? $0.recipeId == match?.id : $0.text?.lowercased() == clean.lowercased() }) { return dupe }
+        let idea = MealIdea(id: IDs.make("id"), text: match == nil ? clean : nil, recipeId: match?.id,
+                            by: members.first { $0.isMe }?.id, at: ISO.now())
+        changePlanAhead { ideas, _ in ideas = Array(([idea] + ideas).prefix(60)) }
+        return idea
+    }
+
+    func removeIdea(_ id: String) { changePlanAhead { ideas, _ in ideas.removeAll { $0.id == id } } }
+
+    func toggleIdeaVote(_ id: String) {
+        guard let me = members.first(where: { $0.isMe })?.id else { return }
+        changePlanAhead { ideas, _ in
+            guard let i = ideas.firstIndex(where: { $0.id == id }) else { return }
+            var v = ideas[i].votes ?? []
+            if let j = v.firstIndex(of: me) { v.remove(at: j) } else { v.append(me) }
+            ideas[i].votes = v.isEmpty ? nil : v
+        }
+    }
+
+    func ideaTitle(_ idea: MealIdea) -> String {
+        if let rid = idea.recipeId { return recipe(rid)?.title ?? "A recipe" }
+        return idea.text ?? ""
+    }
+
+    /// Put an idea on a night's dinner; it leaves the pool.
+    func planIdea(_ idea: MealIdea, on date: String) {
+        setDinner(date, recipeId: idea.recipeId, note: idea.recipeId == nil ? idea.text : nil, cookId: dinner(on: date)?.cookId)
+        removeIdea(idea.id)
+    }
+
+    /// Have this night's dinner every week on this weekday.
+    func repeatEveryWeek(_ date: String) {
+        guard let e = dinner(on: date), e.recipeId != nil || (e.note?.isEmpty == false) else { return }
+        let weekday = Together.weekday(date)
+        let r = RepeatMeal(id: IDs.make("rp"), weekday: weekday, slot: .dinner, recipeId: e.recipeId,
+                           note: e.recipeId == nil ? e.note : nil, by: members.first { $0.isMe }?.id)
+        changePlanAhead { _, repeats in
+            repeats.removeAll { $0.weekday == weekday && $0.slot == .dinner }
+            repeats.append(r)
+        }
+    }
+
+    func stopRepeat(_ id: String) { changePlanAhead { _, repeats in repeats.removeAll { $0.id == id } } }
+
+    /// Weekly meals and last week's onto these dates' empty slots. Returns how many.
+    @discardableResult
+    func copyLastWeek(_ dates: [String], today: String) -> Int {
+        let plan = fetch(PlanEntryModel.self).map(\.value)
+        let weekly = PlanAhead.repeatsInto(plan, repeats, dates: dates, today: today)
+        let copied = PlanAhead.copyWeek(plan + weekly, to: dates, today: today)
+        let add = weekly + copied
+        for e in add {
+            if e.slot == .dinner { setDinner(e.date, recipeId: e.recipeId, note: e.note, cookId: e.cookId) }
+            else { setMeal(e.date, e.slot, recipeId: e.recipeId, note: e.note) }
+        }
+        return add.count
+    }
+}
