@@ -29,11 +29,11 @@ final class SyncDocTests: XCTestCase {
     func testEditKeepsFieldsThisAppDoesNotKnow() {
         let base = doc([item("a", "milk")])
         let local = doc([item("a", "milk", checked: true)])
-        let remote = doc([item("a", "milk", extra: ["addedBy": .string("m1")])])
+        let remote = doc([item("a", "milk", extra: ["price": .string("2.40")])])
         let merged = SyncDoc.merge(base: base, local: local, remote: remote)
         let a = merged["shop"]?.array?.first
         XCTAssertEqual(a?["checked"], .bool(true))
-        XCTAssertEqual(a?["addedBy"], .string("m1"))
+        XCTAssertEqual(a?["price"], .string("2.40"))
     }
 
     func testClearedFieldIsRemoved() {

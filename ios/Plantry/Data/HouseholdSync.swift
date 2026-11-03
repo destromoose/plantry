@@ -14,6 +14,7 @@ import Observation
 final class HouseholdSync {
     static let server = URL(string: "https://plantry.astrolabworks.com")!
     static let pullEvery: TimeInterval = 20
+    static let shoppingEvery: TimeInterval = 4
     static let pushAfter: TimeInterval = 1.5
 
     enum Status: Equatable { case off, idle, syncing, offline, error(String) }
@@ -28,6 +29,7 @@ final class HouseholdSync {
     private var observer: NSObjectProtocol?
     private var pushTask: Task<Void, Never>?
     private var pullTimer: Timer?
+    private var lastPull = Date.distantPast
     private var running = false
     private var again = false
     private var applying = false
@@ -72,8 +74,16 @@ final class HouseholdSync {
 
     private func startTimer() {
         pullTimer?.invalidate()
-        pullTimer = Timer.scheduledTimer(withTimeInterval: Self.pullEvery, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.syncNow() }
+        // Ticks every 4 s but only pulls every 20 s, unless someone is out shopping, so ticks
+        // and late adds show up on the other phone almost at once.
+        pullTimer = Timer.scheduledTimer(withTimeInterval: Self.shoppingEvery, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let every = ShopTogether.active(self.store.together.shopTrip) != nil ? Self.shoppingEvery : Self.pullEvery
+                guard Date().timeIntervalSince(self.lastPull) >= every - 0.5 else { return }
+                self.lastPull = Date()
+                self.syncNow()
+            }
         }
     }
 
@@ -126,6 +136,7 @@ final class HouseholdSync {
             "replies": .array(tog.replies.map { JSONValue.from($0) }),
             "presence": .object(tog.presence.mapValues { .string($0.rawValue) }),
             "presenceWeekly": .object(tog.presenceWeekly.mapValues { .string($0.rawValue) }),
+            "shopTrip": JSONValue.from(tog.shopTrip ?? ShopTrip()),
         ]
     }
 
@@ -217,9 +228,7 @@ final class HouseholdSync {
         var shop = Dictionary(store.fetch(ShopItemModel.self).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         for (i, item) in items("shop", ShopItem.self).enumerated() {
             if let m = shop.removeValue(forKey: item.id) {
-                m.name = item.name; m.key = item.key; m.aisle = item.aisle; m.checked = item.checked
-                m.fromRecipeIds = item.fromRecipeIds; m.order = i
-                m.apply(amounts: item.amounts)
+                m.update(from: item, order: i)
             } else { ctx.insert(ShopItemModel(item, order: i)) }
         }
         for gone in shop.values { ctx.delete(gone) }
@@ -239,6 +248,7 @@ final class HouseholdSync {
         tog.replies = items("replies", NoteReply.self)
         tog.presence = (doc["presence"]?.object ?? [:]).compactMapValues { $0.string.flatMap(Presence.init(rawValue:)) }
         tog.presenceWeekly = (doc["presenceWeekly"]?.object ?? [:]).compactMapValues { $0.string.flatMap(Presence.init(rawValue:)) }
+        tog.shopTrip = doc["shopTrip"]?.decode(ShopTrip.self) ?? ShopTrip()
         store.together = tog
 
         // History has no ids: replace it when it differs, newest first.

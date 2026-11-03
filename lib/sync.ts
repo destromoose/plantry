@@ -13,9 +13,11 @@ import { localizeRecipes } from './seed/localize'
 import { cleanData } from './schema'
 import { docsEqual, emptyDoc, mergeDocs, toDoc, type SyncDoc } from './syncDoc'
 import { normalizeCode } from './syncCode'
+import { activeTrip } from './shopTogether'
 
 const META_KEY = 'plantry-sync'
 const PULL_EVERY_MS = 20_000
+const SHOPPING_EVERY_MS = 4_000
 const PUSH_AFTER_MS = 1_500
 
 interface Meta {
@@ -99,6 +101,7 @@ function apply(doc: SyncDoc, meId?: string) {
       replies: doc.replies,
       presence: doc.presence,
       presenceWeekly: doc.presenceWeekly,
+      shopTrip: doc.shopTrip ?? {},
     } as Partial<PlantryState>)
   } finally {
     applying = false
@@ -307,6 +310,15 @@ export function initSync() {
   document.addEventListener('visibilitychange', () => visible() && void syncNow())
   window.addEventListener('online', () => void syncNow())
   window.addEventListener('focus', () => void syncNow())
-  setInterval(() => visible() && void syncNow(), PULL_EVERY_MS)
+  // Every 20 s, or every 4 s while someone in the household is out shopping, so ticks
+  // and late adds show up on the other phone almost at once.
+  let last = 0
+  setInterval(() => {
+    if (!visible()) return
+    const every = activeTrip(useStore.getState().shopTrip) ? SHOPPING_EVERY_MS : PULL_EVERY_MS
+    if (Date.now() - last < every - 500) return
+    last = Date.now()
+    void syncNow()
+  }, SHOPPING_EVERY_MS)
   void syncNow()
 }

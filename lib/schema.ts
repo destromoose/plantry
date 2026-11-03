@@ -102,6 +102,11 @@ export const shopSchema = z.object({
   checked: z.boolean().catch(false),
   fromRecipeIds: z.array(z.string()).catch([]),
   more: z.array(z.object({ quantity: num, unit: z.string() })).optional(),
+  addedBy: z.string().optional().catch(undefined),
+  addedAt: z.string().optional().catch(undefined),
+  checkedBy: z.string().optional().catch(undefined),
+  usedUp: z.boolean().optional().catch(undefined),
+  splitTo: z.string().optional().catch(undefined),
 })
 
 export const memberSchema = z.object({
@@ -242,6 +247,7 @@ export interface CleanData {
   replies: z.infer<typeof replySchema>[]
   presence: Record<string, 'home' | 'late' | 'out'>
   presenceWeekly: Record<string, 'home' | 'late' | 'out'>
+  shopTrip: { by?: string; since?: string }
   weather?: z.infer<typeof weatherSchema>
 }
 
@@ -322,6 +328,16 @@ export function cleanData(raw: unknown): CleanResult {
     out[key] = clean
   }
 
+  if ('shopTrip' in raw) {
+    const tr = raw.shopTrip
+    if (isObject(tr)) {
+      out.shopTrip =
+        typeof tr.by === 'string' && typeof tr.since === 'string'
+          ? { by: tr.by, since: tr.since }
+          : {}
+    } else badCollections.push('shopTrip')
+  }
+
   if ('weather' in raw && raw.weather !== undefined) {
     const w = weatherSchema.safeParse(raw.weather)
     if (w.success) out.weather = w.data
@@ -362,6 +378,7 @@ export function checkImport(
       replies: data.replies ?? [],
       presence: data.presence ?? {},
       presenceWeekly: data.presenceWeekly ?? {},
+      shopTrip: data.shopTrip ?? {},
     },
   }
 }

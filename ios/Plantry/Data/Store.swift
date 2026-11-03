@@ -285,7 +285,7 @@ final class Store {
         context.delete(p)
         save()
         guard value.isStaple else { return false }
-        addShopItem(value.name, aisle: value.aisle)
+        addShopItem(value.name, aisle: value.aisle, usedUp: true)
         return true
     }
 
@@ -444,7 +444,10 @@ final class Store {
             if cur.amounts.isEmpty { needed[key] = nil } else { needed[key] = cur }
         }
         let existing = fetch(ShopItemModel.self).sorted { $0.order < $1.order }
-        let old = Dictionary(existing.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+        // Copies, read before the rows are replaced below.
+        let old = Dictionary(existing.map { ($0.key, $0.value) }, uniquingKeysWith: { a, _ in a })
+        let meId = members.first { $0.isMe }?.id
+        let now = ISO.now()
         let generatedKeys = orderKeys.filter { needed[$0] != nil }
         // Never swap a list that has plan items for an empty one without asking.
         if generatedKeys.isEmpty && existing.contains(where: { !$0.fromRecipeIds.isEmpty }) { return (0, true) }
@@ -459,6 +462,11 @@ final class Store {
                 if prev.fromRecipeIds.isEmpty, let q = prev.quantity { all = Quantity.add(all, Amount(quantity: q, unit: prev.unit ?? "")) }
                 item.id = prev.id
                 item.checked = prev.checked
+                // Who added, ticked or was given a row stays with it when the list is rebuilt.
+                item.addedBy = prev.addedBy; item.addedAt = prev.addedAt; item.checkedBy = prev.checkedBy
+                item.usedUp = prev.usedUp; item.splitTo = prev.splitTo
+            } else {
+                item.addedBy = meId; item.addedAt = now
             }
             item.quantity = all.first?.quantity
             item.unit = all.first?.unit
@@ -473,24 +481,32 @@ final class Store {
     enum ShopAdd { case added, exists }
 
     @discardableResult
-    func addShopItem(_ name: String, aisle: Aisle? = nil, quantity: Double? = nil, unit: String? = nil, recipeId: String? = nil) -> ShopAdd {
+    func addShopItem(_ name: String, aisle: Aisle? = nil, quantity: Double? = nil, unit: String? = nil, recipeId: String? = nil, usedUp: Bool = false) -> ShopAdd {
         let key = keyOf(name)
         settings.shopDismissed.removeAll { $0 == key }
         if let existing = fetch(ShopItemModel.self, #Predicate { $0.key == key }).first {
             // Already there: add the amount and the recipe instead of a second row.
             if let quantity { existing.apply(amounts: Quantity.add(existing.amounts, Amount(quantity: quantity, unit: unit ?? ""))) }
             if let recipeId, !existing.fromRecipeIds.contains(recipeId) { existing.fromRecipeIds.append(recipeId) }
+            if usedUp && !existing.usedUp {
+                existing.usedUp = true
+                existing.addedBy = members.first { $0.isMe }?.id ?? existing.addedBy
+            }
             save()
             return .exists
         }
         let staple = Seed.staplesByKey[key]
         let order = ((try? context.fetchCount(FetchDescriptor<ShopItemModel>())) ?? 0) + 1000
-        context.insert(ShopItemModel(ShopItem(id: IDs.make("sh"), name: String(name.trimmed.prefix(60)), key: key, quantity: quantity, unit: quantity == nil ? nil : (unit ?? ""), aisle: aisle ?? staple?.aisle ?? PantryGuess.aisle(for: name), checked: false, fromRecipeIds: recipeId.map { [$0] } ?? []), order: order))
+        context.insert(ShopItemModel(ShopItem(id: IDs.make("sh"), name: String(name.trimmed.prefix(60)), key: key, quantity: quantity, unit: quantity == nil ? nil : (unit ?? ""), aisle: aisle ?? staple?.aisle ?? PantryGuess.aisle(for: name), checked: false, fromRecipeIds: recipeId.map { [$0] } ?? [], addedBy: members.first { $0.isMe }?.id, addedAt: ISO.now(), usedUp: usedUp ? true : nil), order: order))
         save()
         return .added
     }
 
-    func toggleShopItem(_ item: ShopItemModel) { item.checked.toggle(); save() }
+    func toggleShopItem(_ item: ShopItemModel) {
+        item.checked.toggle()
+        item.checkedBy = item.checked ? me?.id : nil
+        save()
+    }
 
     /// Removes a row. A plan item stays off the list until the next shop or `restoreDismissed`.
     func removeShopItem(_ item: ShopItemModel) {
@@ -532,7 +548,8 @@ final class Store {
     func capture(_ text: String) -> (added: Int, already: Int, outOf: Int) {
         var added = 0, already = 0, outOf = 0
         for item in Capture.parse(text) {
-            if addShopItem(item.name, quantity: item.quantity, unit: item.unit) == .added { added += 1 } else { already += 1 }
+            // "We're out of eggs" means someone used the last of them.
+            if addShopItem(item.name, quantity: item.quantity, unit: item.unit, usedUp: item.outOf) == .added { added += 1 } else { already += 1 }
             if item.outOf {
                 let key = keyOf(item.name)
                 for p in fetch(PantryItemModel.self, #Predicate { $0.key == key }) { context.delete(p); outOf += 1 }
@@ -569,6 +586,8 @@ final class Store {
             context.delete(item)
         }
         // Rows the person removed from the list stay off until they ask them back.
+        var tog = together
+        if tog.shopTrip?.by != nil { tog.shopTrip = ShopTrip(); together = tog }
         save()
     }
 

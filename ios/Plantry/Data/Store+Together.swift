@@ -69,4 +69,34 @@ extension Store {
             claimNight(date, cookId: me.id)
         }
     }
+
+    // MARK: - Shopping together
+
+    var shopTrip: ShopTogether.Trip? { ShopTogether.active(together.shopTrip) }
+
+    /// "I'm at the shop": the others see it, and what they add shows up marked New.
+    func startShopTrip() {
+        changeTogether { $0.shopTrip = ShopTrip(by: me?.id, since: ISO.now()) }
+    }
+
+    func endShopTrip() {
+        changeTogether { $0.shopTrip = ShopTrip() }
+    }
+
+    /// Split the open list by aisle between the cooks (or everyone). Returns how many were shared out.
+    @discardableResult
+    func splitShop() -> Int {
+        let cooks = members.filter(\.cooks).map(\.id)
+        let people = cooks.count > 1 ? cooks : members.map(\.id)
+        let rows = fetch(ShopItemModel.self)
+        let who = ShopTogether.splitByAisle(rows.sorted { $0.order < $1.order }.map(\.value), people: people)
+        for r in rows { if let m = who[r.id] { r.splitTo = m } }
+        if !who.isEmpty { save() }
+        return who.count
+    }
+
+    func clearSplit() {
+        for r in fetch(ShopItemModel.self) where r.splitTo != nil { r.splitTo = nil }
+        save()
+    }
 }

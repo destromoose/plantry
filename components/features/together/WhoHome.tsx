@@ -3,7 +3,9 @@
 import { t } from '@/lib/i18n'
 
 import { useState } from 'react'
-import { MessageSquare } from 'lucide-react'
+import Link from 'next/link'
+import { MessageSquare, ShoppingCart } from 'lucide-react'
+import { useTrip } from '@/components/features/shop/ShopTogether'
 import { useStore } from '@/lib/store'
 import { nextPresence, notesFor, presenceLine, presenceOf } from '@/lib/together'
 import { NotesSheet } from './Notes'
@@ -133,7 +135,9 @@ export function TonightTogether({ date, label }: { date: string; label: string }
   const members = useStore((s) => s.members)
   const notes = useStore((s) => s.notes)
   const [open, setOpen] = useState(false)
+  const trip = useTrip()
   if (members.length < 2) return null
+  const shopper = trip && members.find((m) => m.id === trip.by && !m.isMe)
   const dayNotes = notesFor(notes, { on: 'day', date })
   const latest = dayNotes[0]
   const author = latest && members.find((m) => m.id === latest.by)
@@ -143,6 +147,15 @@ export function TonightTogether({ date, label }: { date: string; label: string }
         {t("Who's eating {when}", { when: label.toLowerCase() })}
       </h2>
       <WhoHome date={date} slot="dinner" />
+      {shopper && (
+        <Link
+          href="/shop"
+          className="mt-3 flex min-h-[44px] items-center gap-2 rounded-xl bg-accent/10 px-3 text-sm font-medium text-ink hover:bg-accent/15"
+        >
+          <ShoppingCart className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+          {t('{name} is at the shop. Need anything?', { name: shopper.name })}
+        </Link>
+      )}
       <button
         type="button"
         onClick={() => setOpen(true)}

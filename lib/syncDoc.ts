@@ -24,6 +24,7 @@ import type {
   Recipe,
   Settings,
   ShopItem,
+  ShopTrip,
 } from './types'
 
 export const MAX_DOC_BYTES = 2_000_000
@@ -61,6 +62,7 @@ export interface SyncDoc {
   replies: NoteReply[]
   presence: Record<string, Presence>
   presenceWeekly: Record<string, Presence>
+  shopTrip: ShopTrip
 }
 
 export interface SyncSource {
@@ -78,6 +80,7 @@ export interface SyncSource {
   replies?: NoteReply[]
   presence?: Record<string, Presence>
   presenceWeekly?: Record<string, Presence>
+  shopTrip?: ShopTrip
 }
 
 /** The shared part of this phone's data. */
@@ -104,6 +107,7 @@ export function toDoc(s: SyncSource): SyncDoc {
     replies: s.replies ?? [],
     presence: s.presence ?? {},
     presenceWeekly: s.presenceWeekly ?? {},
+    shopTrip: s.shopTrip ?? {},
   }
 }
 
@@ -174,6 +178,10 @@ export function mergeDocs(base: SyncDoc | undefined, local: SyncDoc, remote: Syn
     replies: mergeList(b.replies, local.replies, remote.replies, byId),
     presence: mergeRecord(b.presence, local.presence, remote.presence),
     presenceWeekly: mergeRecord(b.presenceWeekly, local.presenceWeekly, remote.presenceWeekly),
+    // Who's out shopping is one value: whichever phone changed it last wins.
+    shopTrip: same(b.shopTrip ?? {}, local.shopTrip ?? {})
+      ? (remote.shopTrip ?? {})
+      : (local.shopTrip ?? {}),
   }
 }
 
@@ -194,6 +202,7 @@ export function emptyDoc(): SyncDoc {
     replies: [],
     presence: {},
     presenceWeekly: {},
+    shopTrip: {},
   }
 }
 
