@@ -106,7 +106,9 @@ enum Capture {
     static func parse(_ text: String, limit: Int = 30) -> [CapturedItem] {
         var out: [CapturedItem] = []
         var seen = Set<String>()
-        let cleaned = endings.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "")
+        // Phone keyboards type curly apostrophes ("we’re"); the lead phrases use straight ones.
+        let straight = text.replacingOccurrences(of: "’", with: "'").replacingOccurrences(of: "‘", with: "'")
+        let cleaned = endings.stringByReplacingMatches(in: straight, range: NSRange(straight.startIndex..., in: straight), withTemplate: "")
         let sentences = cleaned.components(separatedBy: CharacterSet(charactersIn: "\n.!?¡¿")).map { $0.trimmed }.filter { !$0.isEmpty }
         for sentence in sentences {
             var outOf = false

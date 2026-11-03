@@ -338,6 +338,9 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(items[2].quantity, 2)
         XCTAssertEqual(Capture.parse("mac and cheese, salt and pepper").map(\.name), ["Mac and cheese", "Salt and pepper"])
         XCTAssertEqual(Capture.parse("necesitamos dos limones y no queda leche").map(\.outOf), [false, true])
+        let curly = Capture.parse("milk, two onions, we’re out of eggs")
+        XCTAssertEqual(curly.map(\.name), ["Milk", "Onions", "Eggs"])
+        XCTAssertEqual(curly.last?.outOf, true)
     }
 
     func testUsualsNeedTwoTripsAndStayOffWhileListed() {
