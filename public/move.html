@@ -147,7 +147,9 @@
 
   function receive(payload) {
     var items = (payload && payload.items) || {}, fp = payload && payload.fp
-    if (!ls || !items[MAIN]) return go()
+    // An old address that was never set up has nothing worth bringing. Bringing it would wipe
+    // a kitchen set up here and send people back to the start of setup.
+    if (!ls || !items[MAIN] || !onboarded(items[MAIN])) return go()
     // The same data arriving again (an old bookmark opened later) is already here.
     if (fp && seen().indexOf(fp) !== -1) return go()
     var here = ls.getItem(MAIN)

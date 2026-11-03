@@ -28,3 +28,12 @@ export function fingerprint(text: string): string {
   }
   return (h >>> 0).toString(36) + ':' + text.length.toString(36)
 }
+
+/** Did this phone finish setting Plantry up at this address? */
+export function hasKitchen(saved: string | undefined): boolean {
+  try {
+    return !!saved && JSON.parse(saved)?.state?.settings?.onboarded === true
+  } catch {
+    return false
+  }
+}
