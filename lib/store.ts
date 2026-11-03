@@ -634,14 +634,27 @@ export const useStore = create<PlantryState>()(
           else cur.amounts = rest
         }
         const old = new Map(s.shop.map((i) => [i.key, i]))
+        const me = s.members.find((m) => m.isMe)?.id
+        const now = new Date().toISOString()
         const generated: ShopItem[] = [...needed.values()].map(({ item, amounts }) => {
           // A manual row for the same thing merges in instead of showing twice.
           const prev = old.get(item.key)
           let all = amounts
           if (prev && prev.fromRecipeIds.length === 0 && prev.quantity)
             all = addAmount(all, { quantity: prev.quantity, unit: prev.unit ?? '' })
+          // Who added, ticked or was given a row stays with it when the list is rebuilt.
+          const keep = prev
+            ? {
+                addedBy: prev.addedBy,
+                addedAt: prev.addedAt,
+                checkedBy: prev.checkedBy,
+                usedUp: prev.usedUp,
+                splitTo: prev.splitTo,
+              }
+            : { addedBy: me, addedAt: now }
           return {
             ...item,
+            ...Object.fromEntries(Object.entries(keep).filter(([, v]) => v !== undefined)),
             id: prev?.id ?? item.id,
             checked: prev?.checked ?? false,
             quantity: all[0]?.quantity,
@@ -663,7 +676,7 @@ export const useStore = create<PlantryState>()(
         const existing = get().shop.find((i) => i.key === key)
         if (existing) {
           // Already there: add the amount and the recipe instead of a second row.
-          if (opts.quantity || opts.recipeId)
+          if (opts.quantity || opts.recipeId || (opts.usedUp && !existing.usedUp))
             set((s) => ({
               shopDismissed: dismissed,
               shop: s.shop.map((i) => {
@@ -680,6 +693,9 @@ export const useStore = create<PlantryState>()(
                     opts.recipeId && !i.fromRecipeIds.includes(opts.recipeId)
                       ? [...i.fromRecipeIds, opts.recipeId]
                       : i.fromRecipeIds,
+                  ...(opts.usedUp && !i.usedUp
+                    ? { usedUp: true, addedBy: s.members.find((m) => m.isMe)?.id ?? i.addedBy }
+                    : {}),
                 }
               }),
             }))
@@ -768,6 +784,8 @@ export const useStore = create<PlantryState>()(
           const result = get().addShopItem(item.name, known?.aisle ?? guessAisle(item.name), {
             quantity: item.quantity,
             unit: item.unit,
+            // "We're out of eggs" means someone used the last of them.
+            usedUp: item.outOf,
           })
           ;(result === 'exists' ? already : added).push(item.name)
         }

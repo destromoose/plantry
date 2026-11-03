@@ -13,6 +13,7 @@ import { localizeRecipes } from './seed/localize'
 import { cleanData } from './schema'
 import { docsEqual, emptyDoc, mergeDocs, toDoc, type SyncDoc } from './syncDoc'
 import { normalizeCode } from './syncCode'
+import { activeTrip } from './shopTogether'
 
 const META_KEY = 'plantry-sync'
 const PULL_EVERY_MS = 20_000
@@ -314,7 +315,7 @@ export function initSync() {
   let last = 0
   setInterval(() => {
     if (!visible()) return
-    const every = useStore.getState().shopTrip?.by ? SHOPPING_EVERY_MS : PULL_EVERY_MS
+    const every = activeTrip(useStore.getState().shopTrip) ? SHOPPING_EVERY_MS : PULL_EVERY_MS
     if (Date.now() - last < every - 500) return
     last = Date.now()
     void syncNow()

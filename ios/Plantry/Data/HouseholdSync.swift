@@ -79,7 +79,7 @@ final class HouseholdSync {
         pullTimer = Timer.scheduledTimer(withTimeInterval: Self.shoppingEvery, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                let every = self.store.together.shopTrip?.by != nil ? Self.shoppingEvery : Self.pullEvery
+                let every = ShopTogether.active(self.store.together.shopTrip) != nil ? Self.shoppingEvery : Self.pullEvery
                 guard Date().timeIntervalSince(self.lastPull) >= every - 0.5 else { return }
                 self.lastPull = Date()
                 self.syncNow()

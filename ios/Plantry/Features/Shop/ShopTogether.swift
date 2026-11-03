@@ -26,7 +26,7 @@ struct ShopTogetherCard: View {
         let meId = members.first { $0.isMe }?.id
         let open = shop.filter { !$0.checked }
         let split = shop.contains { $0.splitTo != nil }
-        let mine = open.filter { $0.splitTo == meId }.count
+        let mine = open.filter { $0.splitTo == nil || $0.splitTo == meId }.count
         VStack(alignment: .leading, spacing: 12) {
             if let trip {
                 let shopper = members.first { $0.id == trip.by }
