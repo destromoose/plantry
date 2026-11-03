@@ -92,6 +92,23 @@ export const es: Record<string, string> = {
   'Add the people you cook for, and what they avoid.':
     'Añade a las personas para las que cocinas y lo que no comen.',
   'Add to list': 'Añadir a la lista',
+  // Dinners in the phone's calendar.
+  'Dinners in your calendar': 'Las cenas en tu calendario',
+  "See what's for dinner and who's cooking without opening Plantry. On mornings when something needs to come out of the freezer, the calendar says so.":
+    'Mira qué hay de cena y quién cocina sin abrir Plantry. Las mañanas en que hay que sacar algo del congelador, el calendario te lo dice.',
+  'This turns on sharing for your household, so the calendar can read the plan.':
+    'Esto activa compartir en tu hogar, para que el calendario pueda leer el plan.',
+  'Making the link…': 'Creando el enlace…',
+  'Put dinners in my calendar': 'Poner las cenas en mi calendario',
+  'Add to your calendar': 'Añadir a tu calendario',
+  'Pick your calendar. It updates by itself when the plan changes. Anyone you give the link to can see the plan, but not change it.':
+    'Elige tu calendario. Se actualiza solo cuando cambia el plan. Quien tenga el enlace puede ver el plan, pero no cambiarlo.',
+  'Apple Calendar or Outlook': 'Calendario de Apple u Outlook',
+  'Google Calendar': 'Google Calendar',
+  'Copy the link': 'Copiar el enlace',
+  'Calendar link copied': 'Enlace del calendario copiado',
+  'Could not make a calendar link just now. Try again.':
+    'No se pudo crear el enlace del calendario. Inténtalo otra vez.',
   // Saying or pasting a few things into the list, and the usuals row.
   'All of that is already on your list': 'Todo eso ya está en tu lista',
   'Added {names}': 'Añadido: {names}',

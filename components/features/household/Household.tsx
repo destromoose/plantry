@@ -8,6 +8,7 @@ import { Check, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { useSync } from '@/lib/sync'
 import { SyncCard } from '@/components/features/sync/SyncCard'
+import { CalendarCard } from '@/components/features/sync/CalendarCard'
 import { MAX_PEOPLE } from '@/components/features/onboarding/Onboarding'
 import { withUndo } from '@/lib/undo'
 import { avoidLabel } from '@/lib/diet'
@@ -326,6 +327,9 @@ export function Household() {
 
       <section id="sharing" aria-label={t('Share with your household')} className="scroll-mt-24">
         <SyncCard />
+        <div className="mt-5">
+          <CalendarCard />
+        </div>
       </section>
 
       <Sheet
