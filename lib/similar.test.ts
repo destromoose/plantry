@@ -65,6 +65,11 @@ describe('similarRecipes', () => {
     expect(similarRecipes(tortitas, [tortitas, cena, gofres])[0].id).toBe('es2')
   })
 
+  it('does not treat chili garlic spaghetti as a soup', () => {
+    const out = similarRecipes(byId('r-chili-garlic-spaghetti'), seedRecipes).slice(0, 3)
+    expect(out.every((r) => !/soup|chili$|stew/i.test(r.title))).toBe(true)
+  })
+
   it('leaves out recipes the household avoids', () => {
     const carb = byId('r-weeknight-carbonara')
     const out = similarRecipes(carb, seedRecipes, ['vegetarian'])

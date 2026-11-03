@@ -52,7 +52,11 @@ const families: [string, RegExp, 'all' | 'title'][] = [
     /\b(pancakes?|oats?|oatmeal|porridge|granola|waffles?|french toast|tortitas?|panqueques?|avena|gachas|gofres?|torrijas?)\b/i,
     'title',
   ],
-  ['soup', /\b(soup|stew|chili|dal|sopa|guiso|estofado|caldo)\b/i, 'title'],
+  [
+    'soup',
+    /\b(soup|stew|chili|dal|sopa|guiso|estofado|caldo)\b(?!\s+(garlic|flakes?|oil|crisp))/i,
+    'title',
+  ],
 ]
 
 function familiesOf(r: Recipe): Set<string> {
@@ -68,7 +72,7 @@ const forms: [string, RegExp][] = [
   ['curry', /\b(curry|curri|dal)\b/i],
   ['noodles', /\b(noodles?|fideos?|ramen|udon)\b/i],
   ['pasta', /\b(pasta|spaghetti|espaguetis?|penne|ragu|ragú|carbonara|macaroni|mac)\b/i],
-  ['soup', /\b(soup|sopa|stew|guiso|chili)\b/i],
+  ['soup', /\b(soup|sopa|stew|guiso|chili)\b(?!\s+(garlic|flakes?|oil|crisp))/i],
   ['bowl', /\b(bowls?|bol|boles|cuencos?)\b/i],
   ['tray', /\b(tray ?bake|sheet-pan|traybake|bandeja)\b/i],
 ]
