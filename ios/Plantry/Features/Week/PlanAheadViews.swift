@@ -45,7 +45,7 @@ struct IdeasCard: View {
                         HStack(spacing: 6) {
                             Text(title).font(Type.label).lineLimit(1)
                             if together && !(idea.votes ?? []).isEmpty {
-                                Text("Match").font(.system(size: 11, weight: .bold)).foregroundStyle(t.accentInk)
+                                Text("Match").font(Type.sans(11, weight: .bold)).foregroundStyle(t.accentInk)
                                     .padding(.horizontal, 7).padding(.vertical, 2).background(t.accent, in: Capsule())
                             }
                         }
@@ -191,7 +191,7 @@ struct MonthView: View {
             Text("\(planned) dinners planned this month").font(Type.small).foregroundStyle(t.ink2)
             LazyVGrid(columns: cols, spacing: 4) {
                 ForEach(Array(weeks[0].enumerated()), id: \.offset) { _, d in
-                    Text(DateKey.date(d).formatted(.dateTime.weekday(.narrow))).font(.system(size: 11, weight: .semibold)).foregroundStyle(t.ink3)
+                    Text(DateKey.date(d).formatted(.dateTime.weekday(.narrow))).font(Type.sans(11, weight: .semibold)).foregroundStyle(t.ink3)
                 }
                 ForEach(Array(weeks.joined()), id: \.self) { d in
                     let e = dinner(d)
@@ -204,13 +204,13 @@ struct MonthView: View {
                     Button { onPickWeek(d) } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 0) {
-                                Text("\(DateKey.dayNumber(d))").font(.system(size: 12, weight: .semibold))
+                                Text("\(DateKey.dayNumber(d))").font(Type.sans(12, weight: .semibold))
                                     .foregroundStyle(isToday ? t.accent : t.ink2)
                                 Spacer(minLength: 0)
                                 if let cook { Circle().fill(Theme.color(for: cook.color)).frame(width: 7, height: 7) }
                             }
                             if let label {
-                                Text(label).font(.system(size: 10)).lineLimit(3).foregroundStyle(e?.done == true ? t.ink3 : t.ink)
+                                Text(label).font(Type.sans(10)).lineLimit(3).foregroundStyle(e?.done == true ? t.ink3 : t.ink)
                             } else if let weeklyLabel {
                                 (Text(Image(systemName: "repeat")) + Text(" \(weeklyLabel)")).font(.system(size: 10)).lineLimit(2).foregroundStyle(t.ink3)
                             }

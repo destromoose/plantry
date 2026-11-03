@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Immersive, one step at a time. Swipe or tap to move, timers run per step and
+/// Immersive, one step at a time. Swipe or tap to move (from the left edge, swipe to leave), timers run per step and
 /// keep ringing until tapped, the screen stays awake, progress survives leaving,
 /// and finishing updates the pantry, the list and the plan.
 struct CookModeView: View {
@@ -137,7 +137,7 @@ struct CookModeView: View {
                     Spacer()
                     VStack(spacing: 1) {
                         Text(recipe.title).font(Type.display(16)).lineLimit(1)
-                        Text("For \(count) · screen stays on").font(.system(size: 11)).foregroundStyle(t.ink3)
+                        Text("For \(count) · screen stays on").font(Type.sans(11)).foregroundStyle(t.ink3)
                     }
                     Spacer()
                     Color.clear.frame(width: 44, height: 44)
@@ -184,7 +184,7 @@ struct CookModeView: View {
                                 Label(c.note, systemImage: icon(for: c.kind)).font(Type.small).foregroundStyle(t.ink2)
                             }
                             if kids && Safety.needsGrownUp(cautions) {
-                                Label("New to this? Ask a grown-up to help with this step.", systemImage: "person.2").font(.system(size: 13, weight: .medium)).foregroundStyle(t.accent)
+                                Label("New to this? Ask a grown-up to help with this step.", systemImage: "person.2").font(Type.sans(13, weight: .medium)).foregroundStyle(t.accent)
                             }
                         }
                         .padding(14)
@@ -209,12 +209,15 @@ struct CookModeView: View {
             }
             .motion(Motion.settle, value: index)
             .simultaneousGesture(
-                DragGesture(minimumDistance: 24)
+                DragGesture(minimumDistance: 24, coordinateSpace: .global)
                     .onChanged { v in if abs(v.translation.width) > abs(v.translation.height) { drag = v.translation.width * 0.25 } }
                     .onEnded { v in
                         withAnimation(Motion.settle) { drag = 0 }
                         guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
-                        if v.translation.width < -100 { next(last) } else if v.translation.width > 100 { prev() }
+                        // From the left edge, or with no step before this one, a swipe right is "back": leave cook mode.
+                        let fromEdge = v.startLocation.x < 28
+                        if v.translation.width < -100 { next(last) }
+                        else if v.translation.width > 100 { if fromEdge || index == 0 { leaveOrClose() } else { prev() } }
                     }
             )
 

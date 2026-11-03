@@ -110,6 +110,7 @@ struct TonightView: View {
             ToolbarItem(placement: .topBarLeading) { Logo(withWord: false, size: 24) }
             ToolbarItem(placement: .topBarTrailing) { SecondaryMenu() }
         }
+        .modifier(PullToRefresh())
         .onChange(of: plan.map(\.id)) { ctxProvider.refresh() }
         .onChange(of: plan.map(\.done)) { ctxProvider.refresh() }
     }
@@ -132,8 +133,8 @@ struct EnergyPicker: View {
                     let selected = option == energy
                     Button { onSet(option) } label: {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(option.label).font(.system(size: 14, weight: .semibold)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                            Text(option.hint).font(.system(size: 11)).foregroundStyle(selected ? t.accentInk.opacity(0.8) : t.ink3).lineLimit(1).minimumScaleFactor(0.7)
+                            Text(option.label).font(Type.sans(14, weight: .semibold)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                            Text(option.hint).font(Type.sans(11)).foregroundStyle(selected ? t.accentInk.opacity(0.8) : t.ink3).lineLimit(1).minimumScaleFactor(0.7)
                         }
                         .foregroundStyle(selected ? t.accentInk : t.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)

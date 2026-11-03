@@ -35,9 +35,9 @@ struct MealLines: View {
             ForEach(filled, id: \.0) { slot, what in
                 Button { onTap(slot) } label: {
                     HStack(spacing: 10) {
-                        Text(slot.label.uppercased()).font(.system(size: 11, weight: .semibold)).kerning(0.8).foregroundStyle(t.ink3)
+                        Text(slot.label.uppercased()).font(Type.sans(11, weight: .semibold)).kerning(0.8).foregroundStyle(t.ink3)
                             .frame(width: 78, alignment: .leading)
-                        Text(what).font(.system(size: 15, weight: .medium)).foregroundStyle(t.ink).lineLimit(1)
+                        Text(what).font(Type.sans(15, weight: .medium)).foregroundStyle(t.ink).lineLimit(1)
                         Spacer(minLength: 0)
                     }
                     .frame(minHeight: 40)
@@ -50,7 +50,7 @@ struct MealLines: View {
                 HStack(spacing: 16) {
                     ForEach(empty, id: \.self) { slot in
                         Button { onTap(slot) } label: {
-                            Label(slot.label, systemImage: "plus").font(.system(size: 14)).foregroundStyle(t.ink3)
+                            Label(slot.label, systemImage: "plus").font(Type.sans(14)).foregroundStyle(t.ink3)
                                 .frame(minHeight: 40).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

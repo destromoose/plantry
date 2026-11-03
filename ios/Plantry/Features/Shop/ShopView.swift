@@ -56,7 +56,7 @@ struct ShopView: View {
             VStack(alignment: .leading, spacing: 8) {
                 PField(placeholder: "Milk, two onions, we're out of eggs…", text: $name) { add() }
                     .textInputAutocapitalization(.sentences)
-                Text("Type or dictate a few things at once. \"Out of\" also takes it off the pantry.").font(.system(size: 12)).foregroundStyle(t.ink3)
+                Text("Type or dictate a few things at once. \"Out of\" also takes it off the pantry.").font(Type.sans(12)).foregroundStyle(t.ink3)
                 let usual = store.usuals(today: ctxProvider.today)
                 if !usual.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
@@ -103,6 +103,7 @@ struct ShopView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .modifier(PullToRefresh())
         .safeAreaInset(edge: .bottom) {
             if checked > 0 {
                 HStack(spacing: 8) {
@@ -208,6 +209,7 @@ struct ShopRow: View {
     var meId: String? = nil
     var onEdit: () -> Void
     @State private var drag: CGFloat = 0
+    @State private var armed = false
 
     var body: some View {
         let qty = Quantity.format(item.amounts, forShopping: true)
@@ -247,7 +249,7 @@ struct ShopRow: View {
                     Text(item.name).font(Type.label).foregroundStyle(item.checked ? t.ink3 : t.ink).strikethrough(item.checked, color: t.ink3)
                     HStack(spacing: 6) {
                         if late {
-                            Text("New").font(.system(size: 11, weight: .bold)).foregroundStyle(t.accentInk)
+                            Text("New").font(Type.sans(11, weight: .bold)).foregroundStyle(t.accentInk)
                                 .padding(.horizontal, 6).padding(.vertical, 1).background(t.accent, in: Capsule())
                         }
                         if !qty.isEmpty { Text(qty) }
@@ -255,7 +257,7 @@ struct ShopRow: View {
                     }
                     .font(.system(size: 12)).foregroundStyle(t.ink3).lineLimit(1)
                     if let note {
-                        Label(note, systemImage: "text.bubble").font(.system(size: 12, weight: .medium)).foregroundStyle(t.accent).lineLimit(1)
+                        Label(note, systemImage: "text.bubble").font(Type.sans(12, weight: .medium)).foregroundStyle(t.accent).lineLimit(1)
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
@@ -281,13 +283,24 @@ struct ShopRow: View {
         .offset(x: min(0, drag))
         .simultaneousGesture(
             DragGesture(minimumDistance: 24)
-                .onChanged { v in if abs(v.translation.width) > abs(v.translation.height) * 1.5 { drag = v.translation.width * 0.6 } }
+                .onChanged { v in
+                    guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
+                    drag = v.translation.width * 0.6
+                    let past = v.translation.width < -110
+                    if past != armed { armed = past; if past { Haptic.tap() } }
+                }
                 .onEnded { v in
                     withAnimation(Motion.drift) { drag = 0 }
+                    armed = false
                     guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
                     if v.translation.width < -110 { remove() }
                 }
         )
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .contextMenu {
+            Button(action: onEdit) { Label("Change or leave a note", systemImage: "pencil") }
+            Button(role: .destructive) { remove() } label: { Label("Remove", systemImage: "trash") }
+        }
     }
 
     private func remove() {
@@ -346,7 +359,7 @@ struct ShopItemSheet: View {
 
     private func field<C: View>(_ label: String, @ViewBuilder content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+            Text(label).font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2)
             content()
         }
     }

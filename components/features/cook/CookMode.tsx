@@ -41,6 +41,7 @@ import { RatingPicker } from '@/components/features/history/RatingPicker'
 import { Input } from '@/components/ui/Field'
 import type { Rating } from '@/lib/types'
 import { remainingOf, useTimers } from './useTimers'
+import { setBackHandler } from '@/lib/backGesture'
 
 /** A short name for a step's timer: "Simmer the sauce" rather than "Step 3". */
 function stepName(text: string) {
@@ -186,6 +187,11 @@ export function CookMode({
 
   // Keyboard. Escape leaves, asking first if a timer is running.
   const escRef = useRef<() => void>(() => {})
+  // The edge swipe back asks first when a timer is running, like the close button and Escape.
+  useEffect(() => {
+    setBackHandler(() => escRef.current())
+    return () => setBackHandler(null)
+  }, [])
   useEffect(() => {
     if (sheetOpen) return
     const onKey = (e: KeyboardEvent) => {

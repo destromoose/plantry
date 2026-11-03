@@ -104,7 +104,7 @@ struct RecipeDetailView: View {
                                     VStack(alignment: .leading, spacing: 1) {
                                         (Text(ing.name) + Text(ing.isOptional ? " (optional)" : "").foregroundColor(t.ink3))
                                             .font(Type.body)
-                                        if have { Text("You have it").font(.system(size: 12)).foregroundStyle(t.secondary) }
+                                        if have { Text("You have it").font(Type.sans(12)).foregroundStyle(t.secondary) }
                                     }
                                     Spacer()
                                     Text(formatQuantity(ing.quantity * scale, ing.unit)).font(Type.small).foregroundStyle(t.ink2)
@@ -209,7 +209,7 @@ struct RecipeDetailView: View {
 
     private func stat(_ icon: String, _ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Label(label, systemImage: icon).font(.system(size: 12, weight: .medium)).foregroundStyle(t.ink3)
+            Label(label, systemImage: icon).font(Type.sans(12, weight: .medium)).foregroundStyle(t.ink3)
             Text(value).font(Type.display(18))
         }
         .accessibilityElement(children: .combine)

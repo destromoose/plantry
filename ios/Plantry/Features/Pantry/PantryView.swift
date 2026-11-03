@@ -143,6 +143,7 @@ struct PantryTile: View {
     var today: String
     var onOpen: () -> Void
     @State private var drag: CGFloat = 0
+    @State private var armed = false
 
     var body: some View {
         let f = item.freshness(today: today)
@@ -156,7 +157,7 @@ struct PantryTile: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(item.name).font(Type.label).foregroundStyle(t.ink).lineLimit(1)
                     HStack(spacing: 6) {
-                        if !amount.isEmpty { Text(amount).font(.system(size: 12)).foregroundStyle(t.ink2) }
+                        if !amount.isEmpty { Text(amount).font(Type.sans(12)).foregroundStyle(t.ink2) }
                         if item.isUseSoon(today: today) { Tag(text: "Use soon") }
                     }
                 }
@@ -177,9 +178,16 @@ struct PantryTile: View {
         }
         .simultaneousGesture(
             DragGesture(minimumDistance: 24)
-                .onChanged { v in if abs(v.translation.width) > abs(v.translation.height) * 1.5 { drag = v.translation.width * 0.6 } }
+                .onChanged { v in
+                    guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
+                    drag = v.translation.width * 0.6
+                    // A tick as the swipe passes the point where letting go acts, like Mail.
+                    let past = abs(v.translation.width) > 110
+                    if past != armed { armed = past; if past { Haptic.tap() } }
+                }
                 .onEnded { v in
                     withAnimation(Motion.drift) { drag = 0 }
+                    armed = false
                     guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
                     if v.translation.width < -110 { useUp() }
                     else if v.translation.width > 110 { store.restock(item); toaster.show("\(item.name) restocked"); Haptic.tap() }
@@ -188,6 +196,12 @@ struct PantryTile: View {
         .accessibilityLabel("\(item.name), \(Int(f * 100)) percent fresh\(amount.isEmpty ? "" : ", \(amount)")")
         .accessibilityAction(named: "Restock") { store.restock(item) }
         .accessibilityAction(named: "Used up") { useUp() }
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .contextMenu {
+            Button(action: onOpen) { Label("Edit", systemImage: "pencil") }
+            Button { store.restock(item); toaster.show("\(item.name) restocked"); Haptic.tap() } label: { Label("Restocked", systemImage: "arrow.counterclockwise") }
+            Button(role: .destructive) { useUp() } label: { Label("Used it up", systemImage: "trash") }
+        }
     }
 
     private func useUp() {
@@ -264,7 +278,7 @@ struct PantryItemSheet: View {
 
     private func field<C: View>(_ label: String, @ViewBuilder content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+            Text(label).font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2)
             content()
         }
     }
@@ -311,7 +325,7 @@ struct CookFromPantrySheet: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(s.recipe.title).font(Type.cardTitle).lineLimit(1)
                                     Text("You have \(s.have) of \(s.total)").font(Type.small).foregroundStyle(t.ink2)
-                                    if !s.missing.isEmpty { Text("Missing \(s.missing.joined(separator: ", "))").font(.system(size: 12)).foregroundStyle(t.ink3).lineLimit(1) }
+                                    if !s.missing.isEmpty { Text("Missing \(s.missing.joined(separator: ", "))").font(Type.sans(12)).foregroundStyle(t.ink3).lineLimit(1) }
                                 }
                                 Spacer()
                             }

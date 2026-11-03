@@ -71,7 +71,7 @@ struct HandoffSheet: View {
                 Button("Go to household") { dismiss(); nav.push(.household) }.pbutton().padding(.top, 20)
             } else {
                 Text(recipe.map { "Ask someone to cook \($0.title). The note shows on Tonight for that night." } ?? "Ask someone to cook tonight.").font(Type.body).foregroundStyle(t.ink2).padding(.bottom, 16)
-                Text("Add a note (optional)").font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2).padding(.bottom, 6)
+                Text("Add a note (optional)").font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2).padding(.bottom, 6)
                 PField(placeholder: "Rice is already washed", text: $message).padding(.bottom, 16)
                 VStack(spacing: 8) {
                     ForEach(others) { m in

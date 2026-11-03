@@ -223,7 +223,7 @@ struct NoteCard: View {
                     ForEach(replies) { r in
                         (Text(members.first { $0.id == r.by }?.name ?? "Someone").fontWeight(.semibold).foregroundStyle(t.ink)
                          + Text(" \(r.text)").foregroundStyle(t.ink2)
-                         + Text("  \(Together.ago(r.at))").font(.system(size: 11)).foregroundStyle(t.ink3))
+                         + Text("  \(Together.ago(r.at))").font(Type.sans(11)).foregroundStyle(t.ink3))
                             .font(Type.small)
                     }
                 }

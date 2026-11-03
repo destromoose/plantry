@@ -81,19 +81,45 @@ extension EnvironmentValues {
 
 // Display type is the system serif (New York) so the app ships no font files
 // and renders instantly; body is San Francisco. Sizes follow the web app.
+/// Type follows the iPhone's Text Size setting: each size that matches one of
+/// Apple's text styles at the default setting uses that style, so it grows and
+/// shrinks live with Dynamic Type. The two biggest headings stay fixed; they are
+/// already large and would push the dinner off the screen.
 enum Type {
     static func display(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
-        .system(size: size, weight: weight, design: .serif)
+        if let style = style(for: size) { return .system(style, design: .serif, weight: weight) }
+        return .system(size: size, weight: weight, design: .serif)
+    }
+    static func sans(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        if let style = style(for: size) { return .system(style, weight: weight) }
+        return .system(size: size, weight: weight)
     }
     static let hero = display(40)          // text-fluid-2xl on a phone
     static let title = display(30)         // text-fluid-xl
     static let heading = display(22)       // text-xl
-    static let cardTitle = display(19)     // text-lg
-    static let body = Font.system(size: 15)
-    static let bodyLarge = Font.system(size: 16)
-    static let small = Font.system(size: 13)
-    static let eyebrow = Font.system(size: 12, weight: .semibold)
-    static let label = Font.system(size: 15, weight: .medium)
+    static let cardTitle = display(20)     // text-lg
+    static let body = sans(15)
+    static let bodyLarge = sans(16)
+    static let small = sans(13)
+    static let eyebrow = sans(12, weight: .semibold)
+    static let label = sans(15, weight: .medium)
+
+    /// Apple's text styles by their size at the default Text Size.
+    private static func style(for size: CGFloat) -> Font.TextStyle? {
+        switch size {
+        case 34: .largeTitle
+        case 28: .title
+        case 22: .title2
+        case 20: .title3
+        case 17: .body
+        case 16: .callout
+        case 15: .subheadline
+        case 13: .footnote
+        case 12: .caption
+        case 11: .caption2
+        default: nil
+        }
+    }
 }
 
 enum Radius {

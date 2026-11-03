@@ -24,7 +24,7 @@ struct SinceLookedCard: View {
                             Text(a.text).font(.system(size: 15, weight: a.forMe == true ? .semibold : .regular)).foregroundStyle(t.ink)
                                 .multilineTextAlignment(.leading)
                             Spacer(minLength: 4)
-                            Text(Together.ago(a.at)).font(.system(size: 12)).foregroundStyle(t.ink3)
+                            Text(Together.ago(a.at)).font(Type.sans(12)).foregroundStyle(t.ink3)
                         }
                         .frame(minHeight: 40)
                         .contentShape(Rectangle())
@@ -107,7 +107,7 @@ struct PickTogetherSheet: View {
                         Button { answer(false) } label: { Label("Not this", systemImage: "xmark") }.pbutton(.outline, .lg, fill: true)
                         Button { answer(true) } label: { Label("Yes please", systemImage: "heart") }.pbutton(.primary, .lg, fill: true)
                     }
-                    Text("\(deck.count - index) left. Swipe right for yes, left for no.").font(.system(size: 12)).foregroundStyle(t.ink3)
+                    Text("\(deck.count - index) left. Swipe right for yes, left for no.").font(Type.sans(12)).foregroundStyle(t.ink3)
                         .frame(maxWidth: .infinity)
                 } else {
                     VStack(spacing: 8) {

@@ -88,11 +88,11 @@ struct HouseholdView: View {
                         let cook = member(dinner(date)?.cookId)
                         Button { claimDate = date } label: {
                             HStack(spacing: 12) {
-                                Text(DateKey.shortDay(date)).font(.system(size: 14, weight: .semibold)).foregroundStyle(date == today ? t.accent : t.ink3).frame(width: 40, alignment: .leading)
+                                Text(DateKey.shortDay(date)).font(Type.sans(14, weight: .semibold)).foregroundStyle(date == today ? t.accent : t.ink3).frame(width: 40, alignment: .leading)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(describe(date)).font(Type.body).foregroundStyle(t.ink).lineLimit(1)
                                     if let cook, let washer = store.washer(on: date, cookId: cook.id) {
-                                        Text("\(cook.name) cooks, \(washer.name) washes up").font(.system(size: 12)).foregroundStyle(t.ink3).lineLimit(1)
+                                        Text("\(cook.name) cooks, \(washer.name) washes up").font(Type.sans(12)).foregroundStyle(t.ink3).lineLimit(1)
                                     }
                                 }
                                 Spacer()
@@ -250,7 +250,7 @@ struct MemberSheet: View {
         SheetChrome(title: member.name) {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Name").font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+                    Text("Name").font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2)
                     PField(placeholder: "Name", text: $name)
                 }
                 Toggle(isOn: $cooks) {

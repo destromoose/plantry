@@ -170,7 +170,7 @@ struct Chip: View {
                 if let systemImage { Image(systemName: systemImage).font(.system(size: 12, weight: .semibold)) }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(label).font(.system(size: small ? 13 : 15, weight: .medium))
-                    if let hint { Text(hint).font(.system(size: 12)).opacity(0.8) }
+                    if let hint { Text(hint).font(Type.sans(12)).opacity(0.8) }
                 }
             }
             .foregroundStyle(selected ? (tone == .secondary ? t.secondaryInk : t.accentInk) : t.ink)
@@ -438,7 +438,7 @@ struct ToastHost: ViewModifier {
         content.overlay(alignment: .bottom) {
             if let toast = toaster.toast {
                 HStack(spacing: 12) {
-                    Text(toast.text).font(.system(size: 14, weight: .medium)).foregroundStyle(t.ink).lineLimit(2)
+                    Text(toast.text).font(Type.sans(14, weight: .medium)).foregroundStyle(t.ink).lineLimit(2)
                     if let undo = toast.undo {
                         Button("Undo") { undo(); toaster.dismiss(); Haptic.tap() }
                             .font(.system(size: 14, weight: .semibold)).foregroundStyle(t.accent)
@@ -499,6 +499,7 @@ struct SheetChrome<Content: View>: View {
             .padding(.bottom, 28)
         }
         .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.interactively)
         .background(t.surface)
         .foregroundStyle(t.ink)
         .presentationDragIndicator(.visible)

@@ -317,6 +317,13 @@ final class HouseholdSync {
         }
     }
 
+    /// Pull to refresh: sync and wait for it (up to ten seconds), so the spinner means something.
+    func refresh() async {
+        guard isSharing else { return }
+        syncNow()
+        for _ in 0..<100 where running { try? await Task.sleep(for: .milliseconds(100)) }
+    }
+
     private func run() async {
         guard var meta = readMeta() else { return }
         status = .syncing

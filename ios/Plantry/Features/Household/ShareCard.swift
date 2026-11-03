@@ -55,7 +55,7 @@ struct ShareCard: View {
 
     @ViewBuilder private func sharing(_ code: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Household code").font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+            Text("Household code").font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2)
             Text(HouseholdCode.format(code))
                 .font(.system(size: 26, weight: .semibold, design: .monospaced))
                 .foregroundStyle(t.ink)
@@ -78,7 +78,7 @@ struct ShareCard: View {
         }
         if members.count > 1 {
             VStack(alignment: .leading, spacing: 8) {
-                Text("This phone is").font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+                Text("This phone is").font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2)
                 FlowChips(members: members, selected: sync.meId ?? members.first { $0.isMe }?.id) { sync.setMe($0) }
             }
         }
@@ -165,7 +165,7 @@ struct JoinSheet: View {
                         }
                     }
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Someone new").font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+                        Text("Someone new").font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2)
                         PField(placeholder: "Your name", text: $newName)
                             .onChange(of: newName) { _, v in if !v.isBlank { who = nil } }
                     }
