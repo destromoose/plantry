@@ -12,14 +12,20 @@ struct RecipeLibraryView: View {
     @State private var tastes: [Taste] = []
     @State private var favOnly = false
     @State private var canMake = false
+    /// True once the first screen of cards has faded in. Cards that mount after
+    /// that, while scrolling, appear at once instead of fading in late.
+    @State private var introDone = false
+    var avoidReader = AvoidReader()
 
     private var pantryKeys: Set<String> { Set(pantry.map(\.key)) }
 
-    private var filtered: [(RecipeModel, Coverage)] {
+    private var filtered: [(RecipeModel, Coverage, Diet.Conflict)] {
         let needle = query.trimmed.lowercased()
         let keys = pantryKeys
+        let avoid = avoidReader.avoid
         return recipes.compactMap { r in
-            let cov = coverage(r.value, pantryKeys: keys)
+            let value = r.value
+            let cov = coverage(value, pantryKeys: keys)
             if favOnly && !r.isFavorite { return nil }
             if canMake && !cov.complete { return nil }
             if !tastes.isEmpty && !tastes.allSatisfy({ r.tastes.contains($0) }) { return nil }
@@ -27,7 +33,7 @@ struct RecipeLibraryView: View {
                 let hay = ([r.title, r.summary] + r.ingredients.map(\.name)).joined(separator: " ").lowercased()
                 if !hay.contains(needle) { return nil }
             }
-            return (r, cov)
+            return (r, cov, Diet.conflicts(value, avoid: avoid))
         }
     }
 
@@ -83,14 +89,37 @@ struct RecipeLibraryView: View {
                 }
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                    ForEach(Array(list.enumerated()), id: \.element.0.id) { i, pair in
-                        RecipeTile(recipe: pair.0, cov: pair.1).reveal(i)
+                    ForEach(Array(list.enumerated()), id: \.element.0.id) { i, row in
+                        RecipeTile(recipe: row.0, cov: row.1, conflict: row.2)
+                            .reveal(i, enabled: !introDone && i < Self.introCount)
+                            .onAppear { prefetch(after: i, in: list) }
                     }
                 }
                 .motion(Motion.settle, value: list.map(\.0.id))
+                .task(id: list.map(\.0.id)) {
+                    // Warm the first screens of photos before the person scrolls to them.
+                    ImagePipeline.shared.prefetch(list.prefix(Self.prefetchAhead * 2).map(\.0.imageUrl), .tile)
+                }
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .task {
+            // The staggered fade is only for the first screen of cards.
+            try? await Task.sleep(for: .milliseconds(700))
+            introDone = true
+        }
+    }
+
+    /// Cards that fade in on first open: about one phone screen.
+    private static let introCount = 6
+    /// How many cards past the one appearing to load photos for.
+    private static let prefetchAhead = 12
+
+    private func prefetch(after index: Int, in list: [(RecipeModel, Coverage, Diet.Conflict)]) {
+        let start = index + 1
+        guard start < list.count else { return }
+        let end = min(list.count, start + Self.prefetchAhead)
+        ImagePipeline.shared.prefetch(list[start..<end].map(\.0.imageUrl), .tile)
     }
 }
 
@@ -98,14 +127,15 @@ struct RecipeTile: View {
     @Environment(Store.self) private var store
     @Environment(Navigator.self) private var nav
     @Environment(\.theme) private var t
-    var reader = AvoidReader()
     var recipe: RecipeModel
     var cov: Coverage
+    /// Worked out once by the list, so a card mounting mid-scroll runs no queries of its own.
+    var conflict: Diet.Conflict
 
     var body: some View {
         Button { nav.push(.recipe(recipe.id)) } label: {
             VStack(alignment: .leading, spacing: 0) {
-                RemoteImage(url: recipe.imageUrl).aspectRatio(4 / 3, contentMode: .fit)
+                RemoteImage(url: recipe.imageUrl, size: .tile).aspectRatio(4 / 3, contentMode: .fit)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(recipe.title).font(Type.display(16)).lineLimit(2).lineSpacing(-1).multilineTextAlignment(.leading).frame(minHeight: 38, alignment: .top)
                     HStack(spacing: 6) {
@@ -115,10 +145,10 @@ struct RecipeTile: View {
                         Text("\(cov.have) of \(cov.total)")
                     }
                     .font(.system(size: 12)).foregroundStyle(t.ink2)
-                    if Diet.conflicts(recipe.value, avoid: reader.avoid).blocking.isEmpty {
+                    if conflict.blocking.isEmpty {
                         HStack(spacing: 6) { ForEach(recipe.tastes.prefix(2)) { Tag(text: $0.label) } }
                     } else {
-                        AvoidBadge(recipe: recipe.value)
+                        AvoidTag(conflict: conflict)
                     }
                 }
                 .padding(12)

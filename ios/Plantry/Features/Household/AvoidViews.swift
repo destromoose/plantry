@@ -73,12 +73,20 @@ struct AvoidWarning: View {
 
 /// A small tag for recipe cards.
 struct AvoidBadge: View {
-    @Environment(\.theme) private var t
     var reader = AvoidReader()
     var recipe: Recipe
 
     var body: some View {
-        let c = Diet.conflicts(recipe, avoid: reader.avoid)
+        AvoidTag(conflict: Diet.conflicts(recipe, avoid: reader.avoid))
+    }
+}
+
+/// The badge itself, for lists that already worked out the conflict.
+struct AvoidTag: View {
+    var conflict: Diet.Conflict
+
+    var body: some View {
+        let c = conflict
         if !c.blocking.isEmpty {
             HStack(spacing: 4) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 10, weight: .semibold))
