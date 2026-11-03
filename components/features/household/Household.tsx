@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Plus, X } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { washerFor } from '@/lib/chores'
 import { useSync } from '@/lib/sync'
 import { SyncCard } from '@/components/features/sync/SyncCard'
 import { CalendarCard } from '@/components/features/sync/CalendarCard'
@@ -202,6 +203,7 @@ export function Household() {
         >
           {week.map((date, i) => {
             const cook = member(dinner(date)?.cookId)
+            const washer = washerFor(date, cook?.id, members)
             const isToday = date === today
             return (
               <motion.li key={date} variants={reveal} custom={i}>
@@ -211,7 +213,14 @@ export function Household() {
                   aria-label={t('{v0}: {v1}. {v2}. Change who cooks.', {
                     v0: shortDay(date),
                     v1: describeDinner(date),
-                    v2: cook ? t('Cooking: {name}', { name: cook.name }) : t('Nobody yet'),
+                    v2: cook
+                      ? washer
+                        ? t('Cooking: {name}. Washing up: {washer}', {
+                            name: cook.name,
+                            washer: washer.name,
+                          })
+                        : t('Cooking: {name}', { name: cook.name })
+                      : t('Nobody yet'),
                   })}
                   className="flex min-h-[3.5rem] w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-surface-2"
                 >
@@ -220,10 +229,17 @@ export function Household() {
                   >
                     {shortDay(date)}
                   </span>
-                  <span
-                    className={`min-w-0 flex-1 truncate ${describeDinner(date) === t('Open') ? 'text-ink-3' : 'font-display text-lg'}`}
-                  >
-                    {describeDinner(date)}
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block truncate ${describeDinner(date) === t('Open') ? 'text-ink-3' : 'font-display text-lg'}`}
+                    >
+                      {describeDinner(date)}
+                    </span>
+                    {washer && (
+                      <span className="block truncate text-xs text-ink-3" aria-hidden>
+                        {t('{washer} washes up', { washer: washer.name })}
+                      </span>
+                    )}
                   </span>
                   {cook ? (
                     <Avatar member={cook} />

@@ -194,6 +194,15 @@ export const es: Record<string, string> = {
   'Cooking for': 'Cocinas para',
   'Cooking {title} · Plantry': 'Cocinando {title} · Plantry',
   'Cooking: {name}': 'Cocina: {name}',
+  // Sending the list to Instacart.
+  "Instacart didn't answer. Try again in a minute.":
+    'Instacart no respondió. Inténtalo de nuevo en un minuto.',
+  'Opening Instacart…': 'Abriendo Instacart…',
+  'Order on Instacart': 'Pedir en Instacart',
+  // Whoever cooks doesn't wash up.
+  'Cooking: {name}. Washing up: {washer}': 'Cocina: {name}. Friega: {washer}',
+  '{name} is cooking, {washer} washes up.': '{name} cocina y {washer} friega.',
+  '{washer} washes up': 'Friega {washer}',
   'Copied. Paste it into a message or a note.': 'Copiado. Pégalo en un mensaje o una nota.',
   'Copy list': 'Copiar lista',
   'Copy made. Change what you like.': 'Copia hecha. Cambia lo que quieras.',
