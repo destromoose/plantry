@@ -14,10 +14,14 @@ import {
   MessageSquare,
   MoreHorizontal,
   Plus,
+  Repeat,
   Sparkles,
   Users,
 } from 'lucide-react'
 import { presenceLine } from '@/lib/together'
+import { copyWeek, repeatFor, repeatsInto } from '@/lib/planTogether'
+import { IdeasPool } from './Ideas'
+import { Month } from './Month'
 import { useStore } from '@/lib/store'
 import { announce } from '@/lib/announce'
 import { householdAvoid } from '@/lib/diet'
@@ -27,6 +31,7 @@ import {
   addDays,
   cn,
   dayLabel,
+  daysBetween,
   formatMinutes,
   fromDateKey,
   shortDay,
@@ -59,6 +64,10 @@ export function Week() {
   const presence = useStore((s) => s.presence)
   const weekly = useStore((s) => s.presenceWeekly)
   const notes = useStore((s) => s.notes)
+  const repeats = useStore((s) => s.repeats)
+  const setPlanEntry = useStore((s) => s.setPlanEntry)
+  const copyLastWeek = useStore((s) => s.copyLastWeek)
+  const [view, setView] = useState<'week' | 'month'>('week')
   const meId = members.find((m) => m.isMe)?.id
 
   const today = toDateKey(new Date(ctx.now))
@@ -87,6 +96,34 @@ export function Week() {
     return !!e && !!(e.recipeId || e.leftoversOf || e.note)
   }
   const decided = weekDates.filter(isDecided).length
+  const canRepeat =
+    repeatsInto(plan, repeats, weekDates, today).length + copyWeek(plan, weekDates, today).length >
+    0
+  const repeatLabel = (r: { recipeId?: string; note?: string }) =>
+    recipes.find((x) => x.id === r.recipeId)?.title ?? r.note ?? ''
+
+  function repeatWeek() {
+    const before = useStore.getState().plan
+    const n = copyLastWeek(weekDates, today)
+    if (!n) {
+      toast(t('Nothing from last week to copy'))
+      return
+    }
+    toast(
+      t('Copied {v0} from last week. Planned meals stayed as they were.', {
+        v0: pluralize(n, 'meal'),
+      }),
+      {
+        action: { label: t('Undo'), onClick: () => useStore.setState({ plan: before }) },
+      }
+    )
+  }
+
+  function showWeekOf(date: string) {
+    const from = weekOf(ctx.targetDate)[0]
+    setOffset(Math.round(daysBetween(from, weekOf(date)[0]) / 7))
+    setView('week')
+  }
   const start = fromDateKey(weekDates[0])
   const end = fromDateKey(weekDates[6])
   const range = `${start.toLocaleDateString(locale(), { month: 'short', day: 'numeric' })} to ${end.toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}`
@@ -119,6 +156,20 @@ export function Week() {
       if (date < today) continue
       const current = useStore.getState().plan.find((p) => p.date === date && p.slot === 'dinner')
       if (current && (current.recipeId || current.leftoversOf || current.note)) continue
+      // The household's weekly meal comes first: Friday is pizza night.
+      const weekly = repeatFor(s.repeats, date, 'dinner')
+      if (weekly) {
+        s.setPlanEntry({
+          date,
+          slot: 'dinner',
+          recipeId: weekly.recipeId,
+          note: weekly.note,
+          cookId: current?.cookId,
+        })
+        if (weekly.recipeId) used.add(weekly.recipeId)
+        filled++
+        continue
+      }
 
       const prevEntry = useStore
         .getState()
@@ -185,296 +236,368 @@ export function Week() {
   return (
     <div className="pb-10 pt-4">
       <header className="mb-5">
-        <Eyebrow>{range}</Eyebrow>
-        <h1 className="mt-1 font-display text-fluid-2xl font-semibold leading-none tracking-tight">
-          {t('Your week')}
-        </h1>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t('Previous week')}
-            onClick={() => setOffset((o) => o - 1)}
+        <Eyebrow className={cn(view === 'month' && 'invisible')}>{range}</Eyebrow>
+        <div className="mt-1 flex items-end justify-between gap-3">
+          <h1 className="font-display text-fluid-2xl font-semibold leading-none tracking-tight">
+            {view === 'week' ? t('Your week') : t('Your month')}
+          </h1>
+          <div
+            className="flex rounded-pill border border-line-strong p-0.5"
+            role="group"
+            aria-label={t('Show')}
           >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t('Next week')}
-            onClick={() => setOffset((o) => o + 1)}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-          {offset !== 0 && (
-            <Button variant="outline" size="sm" onClick={() => setOffset(0)}>
-              {t('This week')}
-            </Button>
-          )}
-          <div className="flex-1" />
-          <Button
-            onClick={fillWeek}
-            variant={weekDates.some((d) => d >= today && !isDecided(d)) ? 'primary' : 'secondary'}
-          >
-            <Sparkles className="h-4 w-4" aria-hidden /> {t('Fill my week')}
-          </Button>
+            {(['week', 'month'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+                className={cn(
+                  'h-9 min-w-[4.5rem] rounded-pill px-3 text-sm font-medium',
+                  view === v ? 'bg-ink text-surface' : 'text-ink-2 hover:text-ink'
+                )}
+              >
+                {v === 'week' ? t('Week') : t('Month')}
+              </button>
+            ))}
+          </div>
         </div>
-        <WeekBudget dates={weekDates} className="mt-4" />
+        {view === 'week' && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('Previous week')}
+              onClick={() => setOffset((o) => o - 1)}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('Next week')}
+              onClick={() => setOffset((o) => o + 1)}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+            {offset !== 0 && (
+              <Button variant="outline" size="sm" onClick={() => setOffset(0)}>
+                {t('This week')}
+              </Button>
+            )}
+            <div className="flex-1" />
+            <Button
+              onClick={fillWeek}
+              variant={weekDates.some((d) => d >= today && !isDecided(d)) ? 'primary' : 'secondary'}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden /> {t('Fill my week')}
+            </Button>
+            {canRepeat && (
+              <Button variant="outline" onClick={repeatWeek} className="max-sm:w-full">
+                <Repeat className="h-4 w-4" aria-hidden /> {t('Repeat last week')}
+              </Button>
+            )}
+          </div>
+        )}
+        {view === 'week' && <WeekBudget dates={weekDates} className="mt-4" />}
       </header>
 
-      <motion.ul
-        key={weekDates[0]}
-        variants={staggerContainer}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 gap-3 lg:grid-cols-2"
-      >
-        {weekDates.map((date, i) => {
-          const entry = entryFor(date)
-          const recipe = recipes.find((r) => r.id === entry?.recipeId)
-          const lo = recipes.find((r) => r.id === entry?.leftoversOf)
-          const cook = members.find((m) => m.id === entry?.cookId)
-          const isToday = date === today
-          const past = date < today
-          const decidedRow = isDecided(date)
-          const done = !!entry?.done
-          const homeLine = presenceLine(members, presence, weekly, date, 'dinner', meId, t)
-          const noteCount = notes.filter((n) => n.on === 'day' && n.date === date).length
+      {view === 'month' ? (
+        <Month today={today} onPickWeek={showWeekOf} />
+      ) : (
+        <>
+          <motion.ul
+            key={weekDates[0]}
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 gap-3 lg:grid-cols-2"
+          >
+            {weekDates.map((date, i) => {
+              const entry = entryFor(date)
+              const recipe = recipes.find((r) => r.id === entry?.recipeId)
+              const lo = recipes.find((r) => r.id === entry?.leftoversOf)
+              const cook = members.find((m) => m.id === entry?.cookId)
+              const isToday = date === today
+              const past = date < today
+              const decidedRow = isDecided(date)
+              const done = !!entry?.done
+              const homeLine = presenceLine(members, presence, weekly, date, 'dinner', meId, t)
+              const noteCount = notes.filter((n) => n.on === 'day' && n.date === date).length
+              const weeklyMeal = repeatFor(repeats, date, 'dinner')
 
-          const body = recipe ? (
-            <>
-              <Thumb
-                src={recipe.imageUrl}
-                className="h-14 w-14 rounded-xl max-[400px]:hidden"
-                sizes="56px"
-              />
-              <span className="min-w-0 flex-1">
-                <span
+              const body = recipe ? (
+                <>
+                  <Thumb
+                    src={recipe.imageUrl}
+                    className="h-14 w-14 rounded-xl max-[400px]:hidden"
+                    sizes="56px"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        'line-clamp-2 font-display text-lg font-semibold leading-tight',
+                        done && 'text-ink-3'
+                      )}
+                    >
+                      {recipe.title}
+                    </span>
+                    <span className="block text-sm text-ink-3">
+                      {t('{v0} hands-on', { v0: formatMinutes(recipe.activeMinutes) })}
+                    </span>
+                  </span>
+                </>
+              ) : lo ? (
+                <>
+                  <Thumb
+                    src={lo.imageUrl}
+                    className="h-14 w-14 rounded-xl opacity-80 max-[400px]:hidden"
+                    sizes="56px"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">
+                      {t('Leftovers: {title}', { title: lo.title })}
+                    </span>
+                    <span className="block text-sm text-ink-3">{t('Easy night')}</span>
+                  </span>
+                </>
+              ) : entry?.note ? (
+                <span className="min-w-0 flex-1 font-display text-lg font-semibold">
+                  {entry.note}
+                </span>
+              ) : null
+
+              return (
+                <motion.li
+                  key={date}
+                  variants={reveal}
+                  custom={i}
                   className={cn(
-                    'line-clamp-2 font-display text-lg font-semibold leading-tight',
-                    done && 'text-ink-3'
+                    'card p-3 pr-2',
+                    isToday && 'ring-2 ring-accent',
+                    (past || done) && 'opacity-90'
                   )}
                 >
-                  {recipe.title}
-                </span>
-                <span className="block text-sm text-ink-3">
-                  {t('{v0} hands-on', { v0: formatMinutes(recipe.activeMinutes) })}
-                </span>
-              </span>
-            </>
-          ) : lo ? (
-            <>
-              <Thumb
-                src={lo.imageUrl}
-                className="h-14 w-14 rounded-xl opacity-80 max-[400px]:hidden"
-                sizes="56px"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 font-display text-lg font-semibold leading-tight">
-                  {t('Leftovers: {title}', { title: lo.title })}
-                </span>
-                <span className="block text-sm text-ink-3">{t('Easy night')}</span>
-              </span>
-            </>
-          ) : entry?.note ? (
-            <span className="min-w-0 flex-1 font-display text-lg font-semibold">{entry.note}</span>
-          ) : null
+                  <div className={cn('flex items-center gap-3', (past || done) && 'opacity-80')}>
+                    <div
+                      className={cn(
+                        'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl',
+                        isToday ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'
+                      )}
+                    >
+                      <span className="text-[0.6875rem] font-semibold uppercase tracking-wider">
+                        {shortDay(date)}
+                      </span>
+                      <span className="font-display text-xl font-semibold leading-none">
+                        {fromDateKey(date).getDate()}
+                      </span>
+                    </div>
 
-          return (
-            <motion.li
-              key={date}
-              variants={reveal}
-              custom={i}
-              className={cn(
-                'card p-3 pr-2',
-                isToday && 'ring-2 ring-accent',
-                (past || done) && 'opacity-90'
-              )}
-            >
-              <div className={cn('flex items-center gap-3', (past || done) && 'opacity-80')}>
-                <div
-                  className={cn(
-                    'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl',
-                    isToday ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'
-                  )}
-                >
-                  <span className="text-[0.6875rem] font-semibold uppercase tracking-wider">
-                    {shortDay(date)}
-                  </span>
-                  <span className="font-display text-xl font-semibold leading-none">
-                    {fromDateKey(date).getDate()}
-                  </span>
-                </div>
-
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.div
-                    key={entry ? `${entry.id}` : `empty-${date}`}
-                    variants={reveal}
-                    initial="hidden"
-                    animate="show"
-                    exit="exit"
-                    className="flex min-w-0 flex-1"
-                  >
-                    {decidedRow && body ? (
-                      recipe ? (
-                        <Link
-                          href={`/recipes/${recipe.id}`}
-                          className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl"
-                        >
-                          {body}
-                        </Link>
-                      ) : (
-                        <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">
-                          {body}
-                        </div>
-                      )
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setActive({ date, kind: 'pick' })}
-                        aria-label={t('Pick something for {v0}', { v0: dayLabel(date, today) })}
-                        className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-ink-3/60 text-sm font-medium text-ink-2 hover:bg-surface-2"
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.div
+                        key={entry ? `${entry.id}` : `empty-${date}`}
+                        variants={reveal}
+                        initial="hidden"
+                        animate="show"
+                        exit="exit"
+                        className="flex min-w-0 flex-1"
                       >
-                        <Plus className="h-4 w-4" aria-hidden /> {t('Pick something')}
-                      </button>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
+                        {decidedRow && body ? (
+                          recipe ? (
+                            <Link
+                              href={`/recipes/${recipe.id}`}
+                              className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl"
+                            >
+                              {body}
+                            </Link>
+                          ) : (
+                            <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">
+                              {body}
+                            </div>
+                          )
+                        ) : weeklyMeal && !past ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPlanEntry({
+                                date,
+                                slot: 'dinner',
+                                recipeId: weeklyMeal.recipeId,
+                                note: weeklyMeal.note,
+                                cookId: entry?.cookId,
+                              })
+                            }
+                            aria-label={t('Add {what} for {day}, as every week', {
+                              what: repeatLabel(weeklyMeal),
+                              day: dayLabel(date, today),
+                            })}
+                            className="flex min-h-[56px] min-w-0 flex-1 items-center gap-2 rounded-xl border border-dashed border-accent/60 px-3 text-left text-sm hover:bg-surface-2"
+                          >
+                            <Repeat className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-medium text-ink">
+                                {repeatLabel(weeklyMeal)}
+                              </span>
+                              <span className="block text-xs text-ink-3">
+                                {t('Every {weekday}. Tap to add', { weekday: longWeekday(date) })}
+                              </span>
+                            </span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setActive({ date, kind: 'pick' })}
+                            aria-label={t('Pick something for {v0}', { v0: dayLabel(date, today) })}
+                            className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-ink-3/60 text-sm font-medium text-ink-2 hover:bg-surface-2"
+                          >
+                            <Plus className="h-4 w-4" aria-hidden /> {t('Pick something')}
+                          </button>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
 
-                {done && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={checkPop}
-                    className="text-secondary"
-                    role="img"
-                    aria-label={t('Cooked')}
-                  >
-                    <Check className="h-5 w-5" />
-                  </motion.span>
-                )}
-                {cook && <Avatar member={cook} size="sm" />}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t('Options for {v0} {v1}', {
-                    v0: shortDay(date),
-                    v1: fromDateKey(date).getDate(),
-                  })}
-                  onClick={() => setActive({ date, kind: 'menu' })}
-                >
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
-              </div>
-              {small.length > 0 && (
-                <ul className="mt-1.5 flex flex-wrap gap-x-1 border-t border-line pt-1.5">
-                  {small.map((slot) => {
-                    const e = mealEntry(plan, date, slot)
-                    const label = mealLabel(e, recipes)
-                    const lo = !!e?.leftoversOf
-                    const what = label && (lo ? t('Leftovers: {title}', { title: label }) : label)
-                    return (
-                      <li key={slot} className={cn('min-w-0', what ? 'basis-full' : 'basis-auto')}>
+                    {done && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={checkPop}
+                        className="text-secondary"
+                        role="img"
+                        aria-label={t('Cooked')}
+                      >
+                        <Check className="h-5 w-5" />
+                      </motion.span>
+                    )}
+                    {cook && <Avatar member={cook} size="sm" />}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t('Options for {v0} {v1}', {
+                        v0: shortDay(date),
+                        v1: fromDateKey(date).getDate(),
+                      })}
+                      onClick={() => setActive({ date, kind: 'menu' })}
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  {small.length > 0 && (
+                    <ul className="mt-1.5 flex flex-wrap gap-x-1 border-t border-line pt-1.5">
+                      {small.map((slot) => {
+                        const e = mealEntry(plan, date, slot)
+                        const label = mealLabel(e, recipes)
+                        const lo = !!e?.leftoversOf
+                        const what =
+                          label && (lo ? t('Leftovers: {title}', { title: label }) : label)
+                        return (
+                          <li
+                            key={slot}
+                            className={cn('min-w-0', what ? 'basis-full' : 'basis-auto')}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setMeal({ date, slot })}
+                              aria-label={
+                                what
+                                  ? t('{meal} on {day}: {what}. Change it', {
+                                      meal: slotName(slot),
+                                      day: dayLabel(date, today),
+                                      what,
+                                    })
+                                  : t('Add {meal} for {day}', {
+                                      meal: slotName(slot).toLowerCase(),
+                                      day: dayLabel(date, today),
+                                    })
+                              }
+                              className="flex min-h-[40px] w-full items-center gap-2 rounded-lg px-2 text-left text-[0.9375rem] hover:bg-surface-2"
+                            >
+                              {what ? (
+                                <>
+                                  <span className="w-[4.75rem] shrink-0 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-3">
+                                    {slotName(slot)}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate font-medium text-ink">
+                                    {what}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="flex items-center gap-1 text-sm text-ink-3">
+                                  <Plus className="h-3.5 w-3.5" aria-hidden /> {slotName(slot)}
+                                </span>
+                              )}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                  {(homeLine || noteCount > 0) && (
+                    <div className="mt-1 flex flex-wrap gap-x-1 border-t border-line pt-1">
+                      {homeLine && (
                         <button
                           type="button"
-                          onClick={() => setMeal({ date, slot })}
-                          aria-label={
-                            what
-                              ? t('{meal} on {day}: {what}. Change it', {
-                                  meal: slotName(slot),
-                                  day: dayLabel(date, today),
-                                  what,
-                                })
-                              : t('Add {meal} for {day}', {
-                                  meal: slotName(slot).toLowerCase(),
-                                  day: dayLabel(date, today),
-                                })
-                          }
-                          className="flex min-h-[40px] w-full items-center gap-2 rounded-lg px-2 text-left text-[0.9375rem] hover:bg-surface-2"
+                          onClick={() => setActive({ date, kind: 'home' })}
+                          className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 text-sm text-ink-2 hover:bg-surface-2"
                         >
-                          {what ? (
-                            <>
-                              <span className="w-[4.75rem] shrink-0 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-3">
-                                {slotName(slot)}
-                              </span>
-                              <span className="min-w-0 flex-1 truncate font-medium text-ink">
-                                {what}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="flex items-center gap-1 text-sm text-ink-3">
-                              <Plus className="h-3.5 w-3.5" aria-hidden /> {slotName(slot)}
-                            </span>
-                          )}
+                          <Users className="h-4 w-4 text-ink-3" aria-hidden />
+                          {homeLine}
                         </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-              {(homeLine || noteCount > 0) && (
-                <div className="mt-1 flex flex-wrap gap-x-1 border-t border-line pt-1">
-                  {homeLine && (
-                    <button
-                      type="button"
-                      onClick={() => setActive({ date, kind: 'home' })}
-                      className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 text-sm text-ink-2 hover:bg-surface-2"
-                    >
-                      <Users className="h-4 w-4 text-ink-3" aria-hidden />
-                      {homeLine}
-                    </button>
+                      )}
+                      {noteCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setActive({ date, kind: 'notes' })}
+                          className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 text-sm text-ink-2 hover:bg-surface-2"
+                        >
+                          <MessageSquare className="h-4 w-4 text-ink-3" aria-hidden />
+                          {noteCount === 1 ? t('1 note') : t('{n} notes', { n: noteCount })}
+                        </button>
+                      )}
+                    </div>
                   )}
-                  {noteCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setActive({ date, kind: 'notes' })}
-                      className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 text-sm text-ink-2 hover:bg-surface-2"
-                    >
-                      <MessageSquare className="h-4 w-4 text-ink-3" aria-hidden />
-                      {noteCount === 1 ? t('1 note') : t('{n} notes', { n: noteCount })}
-                    </button>
-                  )}
-                </div>
-              )}
-            </motion.li>
-          )
-        })}
-      </motion.ul>
+                </motion.li>
+              )
+            })}
+          </motion.ul>
 
-      <section
-        className="card mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
-        aria-label={t('Week summary')}
-      >
-        <ProgressRing
-          value={decided / 7}
-          size={56}
-          stroke={6}
-          tone={decided === 7 ? 'secondary' : 'accent'}
-        >
-          <span className="font-display text-base font-semibold">{decided}</span>
-        </ProgressRing>
-        <div className="flex-1">
-          <p className="font-display text-lg font-semibold">
-            {t('{decided} of 7 decided', { decided })}
-          </p>
-          <p className="text-sm text-ink-2">
-            {decided === 7
-              ? t('Every night is handled.')
-              : t('Undecided nights stay quiet until you want them.')}
-          </p>
-        </div>
-        <Button
-          variant={decided === 0 ? 'secondary' : 'primary'}
-          disabled={decided === 0}
-          onClick={() => {
-            const res = generateShop(weekDates)
-            if (res.kept) toast(t('Nothing left to buy for, so your list stayed as it is.'))
-            router.push('/shop')
-          }}
-        >
-          {t('Make the shopping list')}
-        </Button>
-      </section>
+          <section
+            className="card mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
+            aria-label={t('Week summary')}
+          >
+            <ProgressRing
+              value={decided / 7}
+              size={56}
+              stroke={6}
+              tone={decided === 7 ? 'secondary' : 'accent'}
+            >
+              <span className="font-display text-base font-semibold">{decided}</span>
+            </ProgressRing>
+            <div className="flex-1">
+              <p className="font-display text-lg font-semibold">
+                {t('{decided} of 7 decided', { decided })}
+              </p>
+              <p className="text-sm text-ink-2">
+                {decided === 7
+                  ? t('Every night is handled.')
+                  : t('Undecided nights stay quiet until you want them.')}
+              </p>
+            </div>
+            <Button
+              variant={decided === 0 ? 'secondary' : 'primary'}
+              disabled={decided === 0}
+              onClick={() => {
+                const res = generateShop(weekDates)
+                if (res.kept) toast(t('Nothing left to buy for, so your list stayed as it is.'))
+                router.push('/shop')
+              }}
+            >
+              {t('Make the shopping list')}
+            </Button>
+          </section>
+
+          <IdeasPool weekDates={weekDates} today={today} />
+        </>
+      )}
 
       <MealSheet
         date={meal?.date ?? null}
@@ -496,4 +619,8 @@ export function Week() {
       />
     </div>
   )
+}
+
+function longWeekday(date: string) {
+  return fromDateKey(date).toLocaleDateString(locale(), { weekday: 'long' })
 }

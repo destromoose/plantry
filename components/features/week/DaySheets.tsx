@@ -7,6 +7,8 @@ import { useMemo, useState } from 'react'
 import {
   Check,
   CalendarDays,
+  CalendarSync,
+  Lightbulb,
   MessageSquare,
   Moon,
   Pencil,
@@ -19,6 +21,8 @@ import {
 import { WhoHomeBody } from '@/components/features/together/WhoHome'
 import { NotesThread } from '@/components/features/together/Notes'
 import { plannedMeals } from '@/lib/meals'
+import { rankIdeas, repeatFor } from '@/lib/planTogether'
+import { ideaTitle } from './Ideas'
 import { useStore } from '@/lib/store'
 import { Stepper } from '@/components/ui/Stepper'
 import { useAvoid } from '@/lib/useAvoid'
@@ -155,6 +159,9 @@ function PickBody({
   const [q, setQ] = useState('')
   const [filters, setFilters] = useState<Taste[]>([])
   const [note, setNote] = useState('')
+  const ideas = rankIdeas(useStore((s) => s.ideas))
+  const members = useStore((s) => s.members)
+  const planIdea = useStore((s) => s.planIdea)
 
   const avoid = useAvoid()
   const dow = fromDateKey(date).getDay()
@@ -226,6 +233,47 @@ function PickBody({
           </Chip>
         ))}
       </div>
+
+      {ideas.length > 0 && !needle && (
+        <section>
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.14em] text-ink-3">
+            <Lightbulb className="h-4 w-4" aria-hidden /> {t('From your ideas')}
+          </h3>
+          <ul className="space-y-2">
+            {ideas.slice(0, 5).map((idea) => {
+              const r = recipes.find((x) => x.id === idea.recipeId)
+              const by = members.length > 1 ? members.find((m) => m.id === idea.by) : undefined
+              return (
+                <li key={idea.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      planIdea(idea.id, date)
+                      onClose()
+                    }}
+                    className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-accent/40 bg-accent/5 p-2.5 text-left hover:border-accent"
+                  >
+                    {r && <Thumb src={r.imageUrl} className="h-11 w-11 rounded-xl" sizes="44px" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{ideaTitle(idea, recipes)}</span>
+                      {(by || idea.votes?.length) && (
+                        <span className="block text-sm text-ink-2">
+                          {[
+                            by && t('{name}’s idea', { name: by.name }),
+                            idea.votes?.length && t('{n} said me too', { n: idea.votes.length }),
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
 
       {leftovers.length > 0 && !needle && (
         <section>
@@ -364,6 +412,15 @@ function MenuBody({
   const cookingFor = useStore((s) => s.settings.cookingFor)
   const members = useStore((s) => s.members.length)
   const notes = useStore((s) => s.notes.filter((n) => n.on === 'day' && n.date === date).length)
+  const repeats = useStore((s) => s.repeats)
+  const repeatEveryWeek = useStore((s) => s.repeatEveryWeek)
+  const stopRepeat = useStore((s) => s.stopRepeat)
+  const weekly = repeatFor(repeats, date, 'dinner')
+  const weekday = fromDateKey(date).toLocaleDateString(locale(), { weekday: 'long' })
+  const sameAsWeekly =
+    !!weekly &&
+    !!entry &&
+    (weekly.recipeId ? weekly.recipeId === entry.recipeId : weekly.note === entry.note)
   const avoid = useAvoid()
   const ctx = useAppContext()
 
@@ -441,6 +498,30 @@ function MenuBody({
       )}
       {hasContent && (
         <Row icon={Repeat} label={t('Move or swap...')} onClick={() => setKind('move')} />
+      )}
+      {weekly ? (
+        <Row
+          icon={CalendarSync}
+          label={t('Stop having this every {weekday}', { weekday })}
+          onClick={() => {
+            withUndo(t('No longer every {weekday}', { weekday }), () => stopRepeat(weekly.id))
+            onClose()
+          }}
+        />
+      ) : (
+        (entry?.recipeId || (entry?.note && entry.note !== t('Not cooking'))) &&
+        !sameAsWeekly && (
+          <Row
+            icon={CalendarSync}
+            label={t('Have this every {weekday}', { weekday })}
+            onClick={() => {
+              withUndo(t('Every {weekday} from now on', { weekday }), () =>
+                repeatEveryWeek(date, 'dinner')
+              )
+              onClose()
+            }}
+          />
+        )
       )}
       {entry?.note !== t('Not cooking') && entry?.note !== 'Not cooking' && (
         <Row

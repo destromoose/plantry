@@ -102,6 +102,8 @@ function apply(doc: SyncDoc, meId?: string) {
       presence: doc.presence,
       presenceWeekly: doc.presenceWeekly,
       shopTrip: doc.shopTrip ?? {},
+      ideas: doc.ideas ?? [],
+      repeats: doc.repeats ?? [],
     } as Partial<PlantryState>)
   } finally {
     applying = false

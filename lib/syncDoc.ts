@@ -16,7 +16,9 @@ import type {
   Energy,
   Handoff,
   HouseNote,
+  MealIdea,
   NoteReply,
+  RepeatMeal,
   Presence,
   Member,
   PantryItem,
@@ -63,6 +65,8 @@ export interface SyncDoc {
   presence: Record<string, Presence>
   presenceWeekly: Record<string, Presence>
   shopTrip: ShopTrip
+  ideas: MealIdea[]
+  repeats: RepeatMeal[]
 }
 
 export interface SyncSource {
@@ -81,6 +85,8 @@ export interface SyncSource {
   presence?: Record<string, Presence>
   presenceWeekly?: Record<string, Presence>
   shopTrip?: ShopTrip
+  ideas?: MealIdea[]
+  repeats?: RepeatMeal[]
 }
 
 /** The shared part of this phone's data. */
@@ -108,6 +114,8 @@ export function toDoc(s: SyncSource): SyncDoc {
     presence: s.presence ?? {},
     presenceWeekly: s.presenceWeekly ?? {},
     shopTrip: s.shopTrip ?? {},
+    ideas: s.ideas ?? [],
+    repeats: s.repeats ?? [],
   }
 }
 
@@ -182,6 +190,8 @@ export function mergeDocs(base: SyncDoc | undefined, local: SyncDoc, remote: Syn
     shopTrip: same(b.shopTrip ?? {}, local.shopTrip ?? {})
       ? (remote.shopTrip ?? {})
       : (local.shopTrip ?? {}),
+    ideas: mergeList(b.ideas, local.ideas, remote.ideas, byId, true),
+    repeats: mergeList(b.repeats, local.repeats, remote.repeats, byId),
   }
 }
 
@@ -203,6 +213,8 @@ export function emptyDoc(): SyncDoc {
     presence: {},
     presenceWeekly: {},
     shopTrip: {},
+    ideas: [],
+    repeats: [],
   }
 }
 
