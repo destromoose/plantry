@@ -44,9 +44,33 @@ struct ShopView: View {
                 }
             }
 
-            PField(placeholder: "Add something", text: $name) { add() }
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled()
+            VStack(alignment: .leading, spacing: 8) {
+                PField(placeholder: "Milk, two onions, we're out of eggs…", text: $name) { add() }
+                    .textInputAutocapitalization(.sentences)
+                Text("Type or dictate a few things at once. \"Out of\" also takes it off the pantry.").font(.system(size: 12)).foregroundStyle(t.ink3)
+                let usual = store.usuals(today: ctxProvider.today)
+                if !usual.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Eyebrow(text: "Your usuals")
+                            Spacer()
+                            Button("Add all") {
+                                for u in usual { store.addShopItem(u.entry.name, aisle: u.entry.aisle) }
+                                toaster.show("\(pluralize(usual.count, "usual")) added")
+                            }
+                            .font(.system(size: 13, weight: .semibold)).foregroundStyle(t.accent).frame(minHeight: 32)
+                        }
+                        FlowLayout(spacing: 6) {
+                            ForEach(usual, id: \.key) { u in
+                                Chip(label: u.entry.name, small: true, systemImage: "plus") {
+                                    store.addShopItem(u.entry.name, aisle: u.entry.aisle); Haptic.tap()
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+            }
 
             if shop.isEmpty {
                 EmptyState(systemImage: "basket", title: "Nothing to buy", body: "Plan a few dinners, then add them here and the list fills in.") {
@@ -120,8 +144,13 @@ struct ShopView: View {
 
     private func add() {
         guard !name.isBlank else { return }
-        let result = store.addShopItem(name)
-        toaster.show(result == .added ? "Added" : "Already on your list")
+        let r = store.capture(name)
+        if r.added + r.already == 0 { toaster.show("Couldn't make out anything to add") ; return }
+        var parts: [String] = []
+        if r.added > 0 { parts.append("\(pluralize(r.added, "thing")) added") }
+        if r.already > 0 { parts.append("\(r.already) already on the list") }
+        if r.outOf > 0 { parts.append("\(r.outOf) taken off the pantry") }
+        toaster.show(parts.joined(separator: ", "))
         Haptic.tap()
         name = ""
     }

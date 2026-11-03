@@ -228,7 +228,10 @@ struct HeroCard: View {
                             Text("\(from.name) says: “\(m)”").font(Type.small).italic().foregroundStyle(t.ink2)
                         }
                     }
-                } else if planned, let cook { Text("\(cook.name) is cooking.").font(Type.small).foregroundStyle(t.ink3) }
+                } else if planned, let cook {
+                    let washer = store.washer(on: targetDate, cookId: cook.id)
+                    Text(washer.map { "\(cook.name) is cooking, \($0.name) washes up." } ?? "\(cook.name) is cooking.").font(Type.small).foregroundStyle(t.ink3)
+                }
 
                 HStack(spacing: 8) {
                     if planned {

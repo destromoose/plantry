@@ -91,6 +91,8 @@ struct CookModeView: View {
             if resumed { toaster.show("Picked up where you left off.") }
         }
         timers.onChange = { persist() }
+        // Save straight away so the widget shows the step as soon as cooking starts.
+        persist()
     }
 
     private func persist() {

@@ -86,7 +86,12 @@ struct HouseholdView: View {
                         Button { claimDate = date } label: {
                             HStack(spacing: 12) {
                                 Text(DateKey.shortDay(date)).font(.system(size: 14, weight: .semibold)).foregroundStyle(date == today ? t.accent : t.ink3).frame(width: 40, alignment: .leading)
-                                Text(describe(date)).font(Type.body).foregroundStyle(t.ink).lineLimit(1)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(describe(date)).font(Type.body).foregroundStyle(t.ink).lineLimit(1)
+                                    if let cook, let washer = store.washer(on: date, cookId: cook.id) {
+                                        Text("\(cook.name) cooks, \(washer.name) washes up").font(.system(size: 12)).foregroundStyle(t.ink3).lineLimit(1)
+                                    }
+                                }
                                 Spacer()
                                 if let cook { Avatar(member: cook, size: 28) } else { Text("Nobody yet").font(Type.small).foregroundStyle(t.ink3) }
                             }
@@ -102,6 +107,13 @@ struct HouseholdView: View {
                 }
                 .card()
             }
+
+            if members.filter(\.cooks).count > 1 {
+                Text("Whoever cooks doesn't wash up. The washing up rotates through everyone else, worked out from the date, so every phone agrees.")
+                    .font(Type.small).foregroundStyle(t.ink3)
+            }
+
+            CalendarCard()
 
             VStack(alignment: .leading, spacing: 0) {
                 SectionTitle("Hand-offs")

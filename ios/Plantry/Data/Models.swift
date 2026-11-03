@@ -234,6 +234,8 @@ final class SettingsModel {
     var stillTonightDate: String?
     /// Set once the first timer asked about notifications.
     var askedNotifications: Bool = false
+    /// What this phone has bought, trip by trip, for "Your usuals". Kept on this phone, not exported.
+    var bought: [String: BoughtEntry] = [:]
 
     init(_ s: Settings = Settings()) {
         onboarded = s.onboarded; mood = s.mood; reducedMotion = s.reducedMotion; units = s.units

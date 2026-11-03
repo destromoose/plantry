@@ -79,6 +79,7 @@ final class Store {
     func save() {
         guard context.hasChanges else { return }
         do { try context.save() } catch { assertionFailure("save failed: \(error)") }
+        NotificationCenter.default.post(name: .plantryDataChanged, object: nil)
     }
 
     // MARK: - Undo
@@ -490,14 +491,42 @@ final class Store {
     }
 
     func clearChecked() {
-        for item in fetch(ShopItemModel.self, #Predicate { $0.checked }) { context.delete(item) }
+        let checked = fetch(ShopItemModel.self, #Predicate { $0.checked })
+        settings.bought = Usuals.recordTrip(settings.bought, items: checked.map(\.value), day: DateKey.key(Date()))
+        for item in checked { context.delete(item) }
         save()
+    }
+
+    /// Bought on at least two trips, the last within six weeks, and not on the list now.
+    func usuals(today: String) -> [(key: String, entry: BoughtEntry)] {
+        Usuals.usuals(settings.bought, onList: Set(fetch(ShopItemModel.self).map(\.key)), today: today)
+    }
+
+    /// "milk, two onions and we're out of eggs": everything lands on the list, and what ran out leaves the pantry.
+    @discardableResult
+    func capture(_ text: String) -> (added: Int, already: Int, outOf: Int) {
+        var added = 0, already = 0, outOf = 0
+        for item in Capture.parse(text) {
+            if addShopItem(item.name, quantity: item.quantity, unit: item.unit) == .added { added += 1 } else { already += 1 }
+            if item.outOf {
+                let key = keyOf(item.name)
+                for p in fetch(PantryItemModel.self, #Predicate { $0.key == key }) { context.delete(p); outOf += 1 }
+            }
+        }
+        save()
+        return (added, already, outOf)
+    }
+
+    func washer(on date: String, cookId: String?) -> MemberModel? {
+        Chores.washer(on: date, cookId: cookId, members: members, id: \.id)
     }
 
     func finishShopping() {
         let now = ISO.now()
         let pantry = fetch(PantryItemModel.self)
-        for item in fetch(ShopItemModel.self, #Predicate { $0.checked }) {
+        let checked = fetch(ShopItemModel.self, #Predicate { $0.checked })
+        settings.bought = Usuals.recordTrip(settings.bought, items: checked.map(\.value), day: DateKey.key(Date()))
+        for item in checked {
             // Every amount on the row, in the first unit that adds up: 350 g + 2 tbsp becomes 350 g.
             let bought = item.amounts
             if let existing = pantry.first(where: { $0.key == item.key }) {

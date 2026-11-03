@@ -20,11 +20,26 @@ final class ContextProvider {
         context = ContextEngine.build(.init(now: Date(), settings: Settings(), weather: nil, plan: [], recipes: []))
     }
 
+    private var observer: NSObjectProtocol?
+    private var pendingRefresh: Task<Void, Never>?
+
     func attach(_ store: Store) {
         self.store = store
         refresh()
         scheduleNextChange()
         Task { await refreshWeather() }
+        // Any save re-runs the engine (coalesced), which also keeps the widget current.
+        observer = NotificationCenter.default.addObserver(forName: .plantryDataChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.scheduleRefresh() }
+        }
+    }
+
+    private func scheduleRefresh() {
+        pendingRefresh?.cancel()
+        pendingRefresh = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            if !Task.isCancelled { self?.refresh() }
+        }
     }
 
     func refresh() {
@@ -35,6 +50,7 @@ final class ContextProvider {
         let today = DateKey.key(Date())
         context = ContextEngine.build(.init(now: Date(), settings: s.value, weather: s.weatherEnabled ? s.weather : nil, plan: plan, recipes: recipes,
                                             stillTonight: s.stillTonightDate == today, prefersDark: prefersDark))
+        WidgetBridge.update(store: store, context: context)
     }
 
     func becameActive() {
