@@ -20,7 +20,7 @@ Every install:
 2. Press **Run** (⌘R). The first time, the phone shows "Untrusted Developer": go to Settings → General → VPN & Device Management → your Apple ID → **Trust**.
 3. Done. Plantry is on the home screen and works offline.
 
-Limits of a free team: up to 3 apps installed at once, 10 device registrations per week, and the 7-day expiry. Plantry uses nothing a free team cannot sign: timers use local notifications, the calendar export uses the phone's Calendar, and the widget shares data with the app through an App Group, which Personal Teams can sign. If Xcode complains about the App Group when you pick your team, open **Signing & Capabilities** for both the **Plantry** and **PlantryWidgetExtension** targets and let it register `group.com.destromoose.plantry` (or rename it the same way in both, matching `WidgetSnapshot.appGroup`).
+Limits of a free team: up to 3 app IDs installed at once (Plantry uses 2: the app and its widget), 10 device registrations per week, and the 7-day expiry. If the phone says it has reached the maximum number of apps using a free developer profile, delete one of your other self-installed apps. Plantry uses nothing a free team cannot sign: timers use local notifications, the calendar export uses the phone's Calendar, and the widget reads tonight's dinner from a shared keychain item (keychain sharing works on a free team; App Groups do not).
 
 ## The home-screen widget
 

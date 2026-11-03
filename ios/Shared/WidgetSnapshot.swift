@@ -1,8 +1,14 @@
 import Foundation
+import Security
 
-// What the home-screen widget shows. The app writes this small file into the
-// shared App Group container whenever something relevant changes; the widget
-// only ever reads it. Shared by both targets, so keep it free of app imports.
+// What the home-screen widget shows. The app writes this small snapshot whenever
+// something relevant changes; the widget only ever reads it. Shared by both
+// targets, so keep it free of app imports.
+//
+// It travels through a shared keychain item, not an App Group: a free Apple ID
+// (Personal Team) cannot sign App Groups, but it can sign keychain sharing. Both
+// targets list the same group first in keychain-access-groups, so the default
+// access group is the shared one and no team prefix is needed in code.
 
 struct WidgetSnapshot: Codable, Equatable {
     /// "Tonight" or "Tomorrow".
@@ -33,25 +39,39 @@ struct WidgetSnapshot: Codable, Equatable {
     var nudge: String?
     var writtenAt: Date
 
-    static let appGroup = "group.com.destromoose.plantry"
-    static let fileName = "widget-snapshot.json"
+    static let keychainService = "com.destromoose.plantry.widget-snapshot"
+    static let keychainAccount = "tonight"
 
-    static var fileURL: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)?.appendingPathComponent(fileName)
+    private static var baseQuery: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: keychainService,
+         kSecAttrAccount as String: keychainAccount]
     }
 
     static func load() -> WidgetSnapshot? {
-        guard let url = fileURL, let data = try? Data(contentsOf: url) else { return nil }
+        var query = baseQuery
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         return try? dec.decode(WidgetSnapshot.self, from: data)
     }
 
     func save() {
-        guard let url = Self.fileURL else { return }
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
-        if let data = try? enc.encode(self) { try? data.write(to: url, options: .atomic) }
+        guard let data = try? enc.encode(self) else { return }
+        // Readable after first unlock so the widget can refresh on a locked phone.
+        let attrs: [String: Any] = [kSecValueData as String: data,
+                                    kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock]
+        let status = SecItemUpdate(Self.baseQuery as CFDictionary, attrs as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = Self.baseQuery
+            add.merge(attrs) { $1 }
+            SecItemAdd(add as CFDictionary, nil)
+        }
     }
 
     /// Deep links the widget opens.
