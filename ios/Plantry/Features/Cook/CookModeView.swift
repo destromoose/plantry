@@ -92,6 +92,11 @@ struct CookModeView: View {
             if resumed { toaster.show("Picked up where you left off.") }
         }
         timers.onChange = { persist() }
+        // Timers can be started from the Lock Screen or the Dynamic Island, where
+        // Plantry can't ask for notifications, so ask here for recipes that have one.
+        if recipe?.steps.contains(where: { $0.timerMinutes != nil }) == true {
+            Notifications.requestOnce(asked: settings?.askedNotifications ?? false) { store.update { $0.askedNotifications = true } }
+        }
         // Save straight away so the widget and the Live Activity show the step as soon as cooking starts.
         persist()
     }
