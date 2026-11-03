@@ -53,6 +53,12 @@ to `late` or `out`, or `home` to override a usual week) and `presenceWeekly`
 Notes go 60 days after their day unless pinned. An iPhone build that doesn't know these yet
 passes them through untouched.
 
+Shopping together adds `shopTrip` (`{ by, since }`: who is at the shop and since when, `{}`
+when nobody is; it counts as over after 3 hours) and five optional fields on each shop item:
+`addedBy` and `addedAt`, `checkedBy`, `usedUp` (added because the pantry ran out) and
+`splitTo` (whose part of a split list it is). The trip merges as one value, so the last phone
+to change it wins. While a trip is on, phones pull every 4 s instead of every 20 s.
+
 ## Merging
 
 Each phone keeps the last document it agreed on with the server (the base). To sync it pulls

@@ -18,6 +18,7 @@ import type {
   Recipe,
   Settings,
   ShopItem,
+  ShopTrip,
   Taste,
   Weather,
 } from './types'
@@ -40,6 +41,7 @@ import { guessAisle } from './pantryGuess'
 import type { CapturedItem } from './capture'
 import { cleanBought, recordTrip, type Bought } from './usuals'
 import { eatersFor, presenceKey, pruneNotes, weeklyKey } from './together'
+import { splitByAisle } from './shopTogether'
 
 export interface PlantryState {
   settings: Settings
@@ -67,6 +69,8 @@ export interface PlantryState {
   /** Notes on days, list items and the fridge board. */
   notes: HouseNote[]
   replies: NoteReply[]
+  /** Who's out shopping right now, shared with the household. */
+  shopTrip: ShopTrip
   hydrated: boolean
   setHydrated: () => void
 
@@ -148,8 +152,14 @@ export interface PlantryState {
   addShopItem: (
     name: string,
     aisle?: Aisle,
-    opts?: { quantity?: number; unit?: string; recipeId?: string }
+    opts?: { quantity?: number; unit?: string; recipeId?: string; usedUp?: boolean }
   ) => 'added' | 'exists'
+  /** "I'm at the shop": the others see it and their adds show up live. */
+  startShopTrip: () => void
+  endShopTrip: () => void
+  /** Split the list by aisle between the people at home, or undo it. */
+  splitShop: () => number
+  clearSplit: () => void
   /** Let removed plan items come back on the next list. */
   restoreDismissed: () => void
   toggleShopItem: (id: string) => void
@@ -242,6 +252,7 @@ export const useStore = create<PlantryState>()(
       presenceWeekly: {},
       notes: [],
       replies: [],
+      shopTrip: {},
       hydrated: false,
       setHydrated: () => set({ hydrated: true }),
 
@@ -367,7 +378,7 @@ export const useStore = create<PlantryState>()(
         const item = get().pantry.find((p) => p.id === id)
         set((s) => ({ pantry: s.pantry.filter((p) => p.id !== id) }))
         if (!item?.staple) return false
-        get().addShopItem(item.name, item.aisle)
+        get().addShopItem(item.name, item.aisle, { usedUp: true })
         return true
       },
       updatePantryItem: (id, patch) =>
@@ -687,6 +698,9 @@ export const useStore = create<PlantryState>()(
               checked: false,
               fromRecipeIds: opts.recipeId ? [opts.recipeId] : [],
               ...(opts.quantity ? { quantity: opts.quantity, unit: opts.unit ?? '' } : {}),
+              addedBy: s.members.find((m) => m.isMe)?.id,
+              addedAt: new Date().toISOString(),
+              ...(opts.usedUp ? { usedUp: true } : {}),
             },
           ],
         }))
@@ -694,7 +708,34 @@ export const useStore = create<PlantryState>()(
       },
       toggleShopItem: (id) =>
         set((s) => ({
-          shop: s.shop.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)),
+          shop: s.shop.map((i) => {
+            if (i.id !== id) return i
+            const checked = !i.checked
+            const by = checked ? s.members.find((m) => m.isMe)?.id : undefined
+            const next = { ...i, checked, checkedBy: by }
+            if (!by) delete next.checkedBy
+            return next
+          }),
+        })),
+      startShopTrip: () =>
+        set((s) => ({
+          shopTrip: {
+            by: s.members.find((m) => m.isMe)?.id ?? s.members[0]?.id,
+            since: new Date().toISOString(),
+          },
+        })),
+      endShopTrip: () => set({ shopTrip: {} }),
+      splitShop: () => {
+        const s = get()
+        const people = s.members.filter((m) => m.cooks !== false).map((m) => m.id)
+        const who = splitByAisle(s.shop, people.length > 1 ? people : s.members.map((m) => m.id))
+        const n = Object.keys(who).length
+        if (n) set({ shop: s.shop.map((i) => (who[i.id] ? { ...i, splitTo: who[i.id] } : i)) })
+        return n
+      },
+      clearSplit: () =>
+        set((s) => ({
+          shop: s.shop.map(({ splitTo: _splitTo, ...i }) => i),
         })),
       removeShopItem: (id) =>
         set((s) => {
@@ -774,6 +815,8 @@ export const useStore = create<PlantryState>()(
           shop: s.shop.filter((i) => !i.checked),
           shopDismissed: [],
           bought: recordTrip(s.bought, checked, toDateKey(new Date())),
+          // Coming home with the bags ends the trip.
+          shopTrip: {},
         })
       },
 
@@ -868,6 +911,7 @@ export const useStore = create<PlantryState>()(
           presenceWeekly: {},
           notes: [],
           replies: [],
+          shopTrip: {},
           weather: undefined,
         }),
     }),
@@ -891,6 +935,7 @@ export const useStore = create<PlantryState>()(
           bought: s.bought,
           presence: s.presence,
           presenceWeekly: s.presenceWeekly,
+          shopTrip: s.shopTrip,
           notes: s.notes,
           replies: s.replies,
         }) as unknown as PlantryState,

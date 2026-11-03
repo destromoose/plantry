@@ -1076,4 +1076,29 @@ export const es: Record<string, string> = {
   'On it': 'Me encargo',
   'Notes ({n})': 'Notas ({n})',
   '1 note': '1 nota',
+  // Shopping together
+  new: 'nuevo',
+  'ticked by {name}': 'marcado por {name}',
+  'for {name}': 'para {name}',
+  '{name} used the last of it': '{name} gastó lo último',
+  'Added by {name}': 'Añadido por {name}',
+  New: 'Nuevo',
+  'Shopping together': 'Compra en compañía',
+  "You're at the shop": 'Estás en la tienda',
+  '{name} is at the shop': '{name} está en la tienda',
+  'since {time}': 'desde las {time}',
+  'Anything the others add shows up here, marked New.':
+    'Lo que añadan los demás aparece aquí, marcado como Nuevo.',
+  'Add anything now and it goes straight onto their list.':
+    'Añade lo que sea ahora y aparecerá en su lista al momento.',
+  "I'm done": 'Ya terminé',
+  "The others can see you're at the shop": 'Los demás ven que estás en la tienda',
+  "I'm at the shop": 'Estoy en la tienda',
+  'Split by aisle. Each of you has your own part of the shop.':
+    'Dividida por pasillos. Cada uno tiene su parte de la tienda.',
+  'Split the list': 'Dividir la lista',
+  'Just mine ({n})': 'Solo lo mío ({n})',
+  'Everything ({n})': 'Todo ({n})',
+  'Undo split': 'Deshacer división',
+  '{name} is at the shop. Need anything?': '{name} está en la tienda. ¿Necesitas algo?',
 }

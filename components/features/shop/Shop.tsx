@@ -33,6 +33,10 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 import { CaptureForm, Usuals } from './Capture'
 import { InstacartButton } from './InstacartButton'
+import { ShopTogether, useTrip } from './ShopTogether'
+import { isLateAdd } from '@/lib/shopTogether'
+import { Avatar } from '@/components/ui/Avatar'
+import type { Member } from '@/lib/types'
 
 const aisles: { id: Aisle; label: string }[] = [
   { id: 'produce', label: t('Produce') },
@@ -59,6 +63,11 @@ export function Shop() {
   const { targetDate } = useAppContext()
   const [copyFallback, setCopyFallback] = useState<string | null>(null)
   const [editing, setEditing] = useState<ShopItem | null>(null)
+  const [mineOnly, setMineOnly] = useState(false)
+  const members = useStore((s) => s.members)
+  const meId = members.find((m) => m.isMe)?.id
+  const trip = useTrip()
+  const together = members.length > 1
 
   const titles = useMemo(() => new Map(recipes.map((r) => [r.id, r.title])), [recipes])
   const notes = useStore((s) => s.notes)
@@ -79,14 +88,16 @@ export function Shop() {
     () =>
       aisles
         .map((a) => {
-          const items = shop.filter((i) => i.aisle === a.id)
+          const items = shop.filter(
+            (i) => i.aisle === a.id && (!mineOnly || !i.splitTo || i.splitTo === meId)
+          )
           return {
             ...a,
             items: [...items.filter((i) => !i.checked), ...items.filter((i) => i.checked)],
           }
         })
         .filter((g) => g.items.length > 0),
-    [shop]
+    [shop, mineOnly, meId]
   )
 
   function fromPlan() {
@@ -182,6 +193,8 @@ export function Shop() {
 
       {shop.length > 0 && <BasketProgress done={checked} total={shop.length} />}
 
+      <ShopTogether mineOnly={mineOnly} setMineOnly={setMineOnly} />
+
       <CaptureForm />
       <Usuals />
 
@@ -210,6 +223,16 @@ export function Shop() {
                       item={item}
                       onEdit={setEditing}
                       note={itemNotes.get(item.key)}
+                      late={isLateAdd(item, trip)}
+                      addedBy={
+                        together && item.addedBy !== meId ? byId(members, item.addedBy) : undefined
+                      }
+                      checkedBy={
+                        together && item.checked && item.checkedBy !== meId
+                          ? byId(members, item.checkedBy)
+                          : undefined
+                      }
+                      splitTo={together && !mineOnly ? byId(members, item.splitTo) : undefined}
                       fromTitle={
                         item.fromRecipeIds
                           .map((id) => titles.get(id))
@@ -391,15 +414,28 @@ function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => vo
   )
 }
 
+function byId(members: Member[], id: string | undefined) {
+  return id ? members.find((m) => m.id === id) : undefined
+}
+
 const Row = memo(function Row({
   item,
   fromTitle,
   note,
+  late,
+  addedBy,
+  checkedBy,
+  splitTo,
   onEdit,
 }: {
   item: ShopItem
   fromTitle?: string
   note?: string
+  /** Added by someone else while the shopper is out. */
+  late?: boolean
+  addedBy?: Member
+  checkedBy?: Member
+  splitTo?: Member
   onEdit: (item: ShopItem) => void
 }) {
   const toggle = useStore((s) => s.toggleShopItem)
@@ -431,7 +467,16 @@ const Row = memo(function Row({
         type="button"
         role="checkbox"
         aria-checked={item.checked}
-        aria-label={[item.name, qty, note].filter(Boolean).join(', ')}
+        aria-label={[
+          item.name,
+          qty,
+          note,
+          late && t('new'),
+          checkedBy && t('ticked by {name}', { name: checkedBy.name }),
+          splitTo && t('for {name}', { name: splitTo.name }),
+        ]
+          .filter(Boolean)
+          .join(', ')}
         onClick={() => {
           if (dragged.current) return
           // A tiny tap of feedback on phones that support it.
@@ -491,6 +536,12 @@ const Row = memo(function Row({
               <MessageSquare className="h-3 w-3 shrink-0" aria-hidden />
               <span className="truncate">{note}</span>
             </span>
+          ) : addedBy && (item.usedUp || !fromTitle) ? (
+            <span className="block truncate text-xs text-ink-3">
+              {item.usedUp
+                ? t('{name} used the last of it', { name: addedBy.name })
+                : t('Added by {name}', { name: addedBy.name })}
+            </span>
           ) : (
             fromTitle && (
               <span className="block truncate text-xs text-ink-3">
@@ -499,7 +550,19 @@ const Row = memo(function Row({
             )
           )}
         </span>
+        {late && !item.checked && (
+          <span className="shrink-0 rounded-pill bg-accent px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-accent-ink">
+            {t('New')}
+          </span>
+        )}
         {qty && <span className="shrink-0 text-sm text-ink-2">{qty}</span>}
+        {(checkedBy ?? splitTo) && (
+          <Avatar
+            member={(checkedBy ?? splitTo)!}
+            size="sm"
+            className={cn(!checkedBy && 'opacity-70')}
+          />
+        )}
       </button>
       <Button
         variant="ghost"

@@ -98,6 +98,21 @@ export interface ShopItem {
   fromRecipeIds: string[]
   /** Extra amounts in units that can't be added to the first (350 g + 2 tbsp). */
   more?: { quantity: number; unit: string }[]
+  /** Member id of who put it on the list, and when (ISO). */
+  addedBy?: string
+  addedAt?: string
+  /** Who ticked it off. */
+  checkedBy?: string
+  /** Added because someone used the last of it. */
+  usedUp?: boolean
+  /** Who's getting it, when the shop is split. */
+  splitTo?: string
+}
+
+/** Someone out shopping right now. Empty when nobody is. */
+export interface ShopTrip {
+  by?: string
+  since?: string
 }
 
 export interface Member {
