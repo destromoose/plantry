@@ -188,10 +188,13 @@ export function CookMode({
   // Keyboard. Escape leaves, asking first if a timer is running.
   const escRef = useRef<() => void>(() => {})
   // The edge swipe back asks first when a timer is running, like the close button and Escape.
+  // With no recipe or no steps there is nothing to ask about, so the plain swipe back applies.
+  const cooking = !!recipe && steps.length > 0
   useEffect(() => {
+    if (!cooking) return
     setBackHandler(() => escRef.current())
     return () => setBackHandler(null)
-  }, [])
+  }, [cooking])
   useEffect(() => {
     if (sheetOpen) return
     const onKey = (e: KeyboardEvent) => {

@@ -58,6 +58,8 @@ export function EdgeSwipeBack() {
     }
 
     const onStart = (e: TouchEvent) => {
+      // A second finger mid-swipe cancels it: put the page back first.
+      if (dragging) reset(true)
       start = null
       dragging = false
       if (e.touches.length !== 1 || !canSwipeBack(path.current)) return
@@ -93,16 +95,18 @@ export function EdgeSwipeBack() {
       el.style.boxShadow = '-12px 0 24px -12px rgb(0 0 0 / 0.25)'
     }
 
-    const onEnd = () => {
+    const onEnd = (e: TouchEvent) => {
       if (!start || !dragging) {
         start = null
         return
       }
       const dx = last.x - start.x
+      // Held still before letting go: that's a change of mind, not a flick.
+      const v = e.timeStamp - last.t > 100 ? 0 : last.v
       start = null
       dragging = false
       const el = main()
-      if (!swipeCommits(dx, window.innerWidth, last.v) || !el) return reset(true)
+      if (!swipeCommits(dx, window.innerWidth, v) || !el) return reset(true)
       if (backHandler()) {
         // The screen decides, maybe by asking first, so the page springs back while it does.
         reset(true)
