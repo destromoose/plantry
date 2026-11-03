@@ -21,6 +21,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
 import { CaptureForm, Usuals } from './Capture'
+import { InstacartButton } from './InstacartButton'
 
 const aisles: { id: Aisle; label: string }[] = [
   { id: 'produce', label: t('Produce') },
@@ -155,6 +156,7 @@ export function Shop() {
               </Button>
             )}
             {shop.length > 0 && planButton}
+            <InstacartButton />
           </>
         }
       />

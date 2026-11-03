@@ -27,6 +27,7 @@ import {
   UtensilsCrossed,
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { washerFor } from '@/lib/chores'
 import { AvoidWarning } from '@/components/features/household/AvoidWarning'
 import { withUndo } from '@/lib/undo'
 import { pickNext, coverage, type Scored } from '@/lib/suggest'
@@ -360,6 +361,7 @@ function PlannedOrSuggested({
     (r) => !r.startsWith('Only missing') && r !== 'You have everything'
   )
   const cook = members.find((m) => m.id === entry?.cookId)
+  const washer = washerFor(targetDate, cook?.id, members)
   const cookingFor = useStore((s) => s.settings.cookingFor)
   const handoffs = useStore((s) => s.handoffs)
   const note = handoffs.find((h) => h.date === targetDate)
@@ -503,7 +505,12 @@ function PlannedOrSuggested({
           planned &&
           cook && (
             <p className="mt-2 text-sm text-ink-3">
-              {t('{name} is cooking.', { name: cook.name })}
+              {washer
+                ? t('{name} is cooking, {washer} washes up.', {
+                    name: cook.name,
+                    washer: washer.name,
+                  })
+                : t('{name} is cooking.', { name: cook.name })}
             </p>
           )
         )}

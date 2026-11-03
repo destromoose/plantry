@@ -51,6 +51,14 @@ describe('buildFeed', () => {
     for (const line of long.split('\r\n')) expect(line.length).toBeLessThanOrEqual(75)
   })
 
+  it('names who washes up when someone else is home', () => {
+    const two = buildFeed(
+      { ...input, members: [...input.members, { id: 'm2', name: 'Maya' }] },
+      opts
+    )
+    expect(two).toContain('Sam cooks · Maya washes up')
+  })
+
   it('speaks Spanish', () => {
     expect(buildFeed(input, { ...opts, lang: 'es' })).toContain('cocina Sam')
   })

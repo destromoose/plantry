@@ -4,6 +4,7 @@
 
 import type { Member, PlanEntry, Recipe } from './types'
 import { addDays } from './utils'
+import { washerFor } from './chores'
 
 export interface FeedInput {
   members: Pick<Member, 'id' | 'name'>[]
@@ -17,6 +18,7 @@ const words = {
   en: {
     calendar: 'Plantry dinners',
     cooks: (name: string) => `${name} cooks`,
+    washes: (name: string) => `${name} washes up`,
     leftovers: (title: string) => `Leftovers: ${title}`,
     out: (thing: string) => `Take the ${thing} out of the freezer`,
     outFor: (title: string) => `For tonight's ${title}.`,
@@ -29,6 +31,7 @@ const words = {
   es: {
     calendar: 'Cenas de Plantry',
     cooks: (name: string) => `cocina ${name}`,
+    washes: (name: string) => `friega ${name}`,
     leftovers: (title: string) => `Sobras: ${title}`,
     out: (thing: string) => `Saca ${thing} del congelador`,
     outFor: (title: string) => `Para ${title} de esta noche.`,
@@ -108,8 +111,14 @@ export function buildFeed(
       : (recipe?.title ?? p.note?.trim() ?? '').slice(0, 120)
     if (!what) continue
     const cook = p.cookId ? people.get(p.cookId) : undefined
+    const washer =
+      cook && p.slot === 'dinner' ? washerFor(p.date, p.cookId, input.members) : undefined
     const slot = w.slot[p.slot] ?? ''
-    const summary = [slot ? `${slot}: ${what}` : what, cook ? w.cooks(cook) : '']
+    const summary = [
+      slot ? `${slot}: ${what}` : what,
+      cook ? w.cooks(cook) : '',
+      washer ? w.washes(washer.name) : '',
+    ]
       .filter(Boolean)
       .join(' · ')
     const link = recipe ? `${opts.origin}/recipes/${encodeURIComponent(recipe.id)}` : opts.origin
