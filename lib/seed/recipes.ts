@@ -336,7 +336,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Baked tomato and feta pasta',
       description:
         'Cherry tomatoes burst around a block of feta in the oven, then get tossed through pasta.',
-      photo: '1691948106030-d5e76d461b14',
+      photo: '1595086839290-0fccfb52e9b6',
       active: 15,
       total: 50,
       servings: 4,
@@ -459,7 +459,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Chili garlic spaghetti with spinach',
       description:
         'Pasta in a quick sauce of golden garlic, olive oil and chili, with lemon to brighten it.',
-      photo: '1622973536968-3ead9e780960',
+      photo: '1707448460889-e268eb742820',
       active: 12,
       total: 20,
       servings: 2,
@@ -609,7 +609,7 @@ export const seedRecipes: Recipe[] = [
       title: 'Lemon oregano chicken tray bake',
       description:
         'Crisp-skinned chicken thighs roasted on potatoes and onions, with tomatoes bursting at the end.',
-      photo: '1701294740099-f52cbfbe3adb',
+      photo: '1680098021573-b9402ee336ec',
       active: 15,
       total: 60,
       servings: 4,
