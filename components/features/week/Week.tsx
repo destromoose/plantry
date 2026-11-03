@@ -7,7 +7,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronLeft, ChevronRight, MoreHorizontal, Plus, Sparkles } from 'lucide-react'
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  MoreHorizontal,
+  Plus,
+  Sparkles,
+  Users,
+} from 'lucide-react'
+import { presenceLine } from '@/lib/together'
 import { useStore } from '@/lib/store'
 import { announce } from '@/lib/announce'
 import { householdAvoid } from '@/lib/diet'
@@ -46,6 +56,10 @@ export function Week() {
   const members = useStore((s) => s.members)
   const markCooked = useStore((s) => s.markCooked)
   const generateShop = useStore((s) => s.generateShop)
+  const presence = useStore((s) => s.presence)
+  const weekly = useStore((s) => s.presenceWeekly)
+  const notes = useStore((s) => s.notes)
+  const meId = members.find((m) => m.isMe)?.id
 
   const today = toDateKey(new Date(ctx.now))
   const [offset, setOffset] = useState(0)
@@ -224,6 +238,8 @@ export function Week() {
           const past = date < today
           const decidedRow = isDecided(date)
           const done = !!entry?.done
+          const homeLine = presenceLine(members, presence, weekly, date, 'dinner', meId, t)
+          const noteCount = notes.filter((n) => n.on === 'day' && n.date === date).length
 
           const body = recipe ? (
             <>
@@ -395,6 +411,30 @@ export function Week() {
                     )
                   })}
                 </ul>
+              )}
+              {(homeLine || noteCount > 0) && (
+                <div className="mt-1 flex flex-wrap gap-x-1 border-t border-line pt-1">
+                  {homeLine && (
+                    <button
+                      type="button"
+                      onClick={() => setActive({ date, kind: 'home' })}
+                      className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 text-sm text-ink-2 hover:bg-surface-2"
+                    >
+                      <Users className="h-4 w-4 text-ink-3" aria-hidden />
+                      {homeLine}
+                    </button>
+                  )}
+                  {noteCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActive({ date, kind: 'notes' })}
+                      className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-2 text-sm text-ink-2 hover:bg-surface-2"
+                    >
+                      <MessageSquare className="h-4 w-4 text-ink-3" aria-hidden />
+                      {noteCount === 1 ? t('1 note') : t('{n} notes', { n: noteCount })}
+                    </button>
+                  )}
+                </div>
               )}
             </motion.li>
           )

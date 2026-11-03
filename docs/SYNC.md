@@ -46,6 +46,13 @@ no `isMe`: each phone remembers which member it is. Per-phone settings (mood, te
 contrast, motion, weather, language, nutrition switch) never leave the phone. The export
 format itself is unchanged.
 
+Living together adds `notes` (on a day, a shop item by its `key`, or the fridge board; a photo
+is a small JPEG data URL), `replies` (to a note, by `noteId`), `presence` (`date|slot|memberId`
+to `late` or `out`, or `home` to override a usual week) and `presenceWeekly`
+(`weekday|slot|memberId`, 0 is Sunday). Notes and replies merge by `id`, presence key by key.
+Notes go 60 days after their day unless pinned. An iPhone build that doesn't know these yet
+passes them through untouched.
+
 ## Merging
 
 Each phone keeps the last document it agreed on with the server (the base). To sync it pulls

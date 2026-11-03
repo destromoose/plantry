@@ -4,7 +4,18 @@ import { t } from '@/lib/i18n'
 
 import { memo, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Copy, ListChecks, Pencil, Plus, Share2, ShoppingBasket, Trash2, X } from 'lucide-react'
+import {
+  Copy,
+  ListChecks,
+  MessageSquare,
+  Pencil,
+  Plus,
+  Share2,
+  ShoppingBasket,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { NotesThread } from '@/components/features/together/Notes'
 import { useStore } from '@/lib/store'
 import { formatMoney, shopCost } from '@/lib/cost'
 import { formatAmounts, niceNumber, parseAmount } from '@/lib/quantity'
@@ -50,6 +61,14 @@ export function Shop() {
   const [editing, setEditing] = useState<ShopItem | null>(null)
 
   const titles = useMemo(() => new Map(recipes.map((r) => [r.id, r.title])), [recipes])
+  const notes = useStore((s) => s.notes)
+  // The newest note on each item, shown under its name: "get the Barilla one".
+  const itemNotes = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const n of [...notes].sort((a, b) => (a.at < b.at ? 1 : -1)))
+      if (n.on === 'shop' && n.itemKey && !m.has(n.itemKey)) m.set(n.itemKey, n.text)
+    return m
+  }, [notes])
   const unchecked = shop.filter((i) => !i.checked).length
   const checked = shop.length - unchecked
   const currency = useStore((s) => s.settings.currency)
@@ -190,6 +209,7 @@ export function Shop() {
                       key={item.id}
                       item={item}
                       onEdit={setEditing}
+                      note={itemNotes.get(item.key)}
                       fromTitle={
                         item.fromRecipeIds
                           .map((id) => titles.get(id))
@@ -356,6 +376,17 @@ function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => vo
           </Button>
         </form>
       )}
+      {item && (
+        <section className="mt-6 border-t border-line pt-5" aria-labelledby="item-notes-h">
+          <h3 id="item-notes-h" className="mb-3 font-display text-lg font-semibold">
+            {t('Notes on this')}
+          </h3>
+          <NotesThread
+            where={{ on: 'shop', itemKey: item.key }}
+            placeholder={t('Get the Barilla one, not the cheap one…')}
+          />
+        </section>
+      )}
     </Sheet>
   )
 }
@@ -363,10 +394,12 @@ function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => vo
 const Row = memo(function Row({
   item,
   fromTitle,
+  note,
   onEdit,
 }: {
   item: ShopItem
   fromTitle?: string
+  note?: string
   onEdit: (item: ShopItem) => void
 }) {
   const toggle = useStore((s) => s.toggleShopItem)
@@ -398,7 +431,7 @@ const Row = memo(function Row({
         type="button"
         role="checkbox"
         aria-checked={item.checked}
-        aria-label={qty ? `${item.name}, ${qty}` : item.name}
+        aria-label={[item.name, qty, note].filter(Boolean).join(', ')}
         onClick={() => {
           if (dragged.current) return
           // A tiny tap of feedback on phones that support it.
@@ -453,10 +486,17 @@ const Row = memo(function Row({
               className="pointer-events-none absolute left-0 right-0 top-1/2 h-px bg-current"
             />
           </span>
-          {fromTitle && (
-            <span className="block truncate text-xs text-ink-3">
-              {t('from {fromTitle}', { fromTitle })}
+          {note ? (
+            <span className="flex items-center gap-1 truncate text-xs font-medium text-accent">
+              <MessageSquare className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="truncate">{note}</span>
             </span>
+          ) : (
+            fromTitle && (
+              <span className="block truncate text-xs text-ink-3">
+                {t('from {fromTitle}', { fromTitle })}
+              </span>
+            )
           )}
         </span>
         {qty && <span className="shrink-0 text-sm text-ink-2">{qty}</span>}
@@ -464,7 +504,7 @@ const Row = memo(function Row({
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label={t('Change {name}', { name: item.name })}
+        aria-label={t('Change {name} or leave a note', { name: item.name })}
         onClick={() => onEdit(item)}
         className={hoverReveal}
       >

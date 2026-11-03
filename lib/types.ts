@@ -196,3 +196,35 @@ export interface Handoff {
   createdAt: string
   accepted?: boolean
 }
+
+/** Whether someone is eating a meal at home. */
+export type Presence = 'home' | 'late' | 'out'
+
+/** A note left for the household on a day, a meal, a list item, or the fridge board. */
+export interface HouseNote {
+  id: string
+  text: string
+  /** Member id of who wrote it. */
+  by?: string
+  /** ISO time it was written. */
+  at: string
+  /** Where it sits. */
+  on: 'day' | 'shop' | 'board'
+  date?: string
+  slot?: MealSlot
+  /** The list item's key, for a note on the shop list ("get the Barilla one"). */
+  itemKey?: string
+  /** A small photo, as a data URL. */
+  photo?: string
+  /** Board notes stay past a week when pinned. */
+  pinned?: boolean
+}
+
+/** A quick reply to a note: "Sounds good", "I'll cook", or a few words. */
+export interface NoteReply {
+  id: string
+  noteId: string
+  by?: string
+  text: string
+  at: string
+}

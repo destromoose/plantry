@@ -8,7 +8,11 @@ import type {
   Rating,
   Energy,
   Handoff,
+  HouseNote,
+  MealSlot,
   Member,
+  NoteReply,
+  Presence,
   PantryItem,
   PlanEntry,
   Recipe,
@@ -35,6 +39,7 @@ import { t } from './i18n'
 import { guessAisle } from './pantryGuess'
 import type { CapturedItem } from './capture'
 import { cleanBought, recordTrip, type Bought } from './usuals'
+import { eatersFor, presenceKey, pruneNotes, weeklyKey } from './together'
 
 export interface PlantryState {
   settings: Settings
@@ -55,6 +60,13 @@ export interface PlantryState {
   shuffleSeen: string[]
   /** What this phone has bought, trip by trip, for "Your usuals". */
   bought: Bought
+  /** Who's home for which meal: `date|slot|memberId`. Shared with the household. */
+  presence: Record<string, Presence>
+  /** Someone's usual week: `weekday|slot|memberId`, Sunday is 0. */
+  presenceWeekly: Record<string, Presence>
+  /** Notes on days, list items and the fridge board. */
+  notes: HouseNote[]
+  replies: NoteReply[]
   hydrated: boolean
   setHydrated: () => void
 
@@ -116,6 +128,19 @@ export interface PlantryState {
   rateCooked: (date: string, recipeId: string, patch: { rating?: Rating; note?: string }) => void
   setEnergy: (date: string, energy: Energy) => void
   setShuffleSeen: (ids: string[]) => void
+
+  // together
+  setPresence: (date: string, slot: MealSlot, memberId: string, p: Presence | undefined) => void
+  setWeeklyPresence: (
+    dow: number,
+    slot: MealSlot,
+    memberId: string,
+    p: Presence | undefined
+  ) => void
+  addNote: (note: Omit<HouseNote, 'id' | 'at' | 'by'>) => HouseNote
+  removeNote: (id: string) => void
+  togglePinNote: (id: string) => void
+  addReply: (noteId: string, text: string) => void
 
   // shop
   /** Build the list from planned dinners on these dates. `kept` means nothing was planned, so the list was left alone. */
@@ -213,6 +238,10 @@ export const useStore = create<PlantryState>()(
       weather: undefined,
       shuffleSeen: [],
       bought: {},
+      presence: {},
+      presenceWeekly: {},
+      notes: [],
+      replies: [],
       hydrated: false,
       setHydrated: () => set({ hydrated: true }),
 
@@ -396,8 +425,16 @@ export const useStore = create<PlantryState>()(
         let pantry = s.pantry
         let shop = s.shop
         if (recipe && opts.usePantry !== false) {
+          const eaters = eatersFor(
+            s.members,
+            s.presence,
+            s.presenceWeekly,
+            date,
+            'dinner',
+            s.settings.cookingFor
+          )
           const scale =
-            (entry.servings ?? s.settings.cookingFor ?? recipe.servings) / recipe.servings
+            (entry.servings ?? eaters ?? s.settings.cookingFor ?? recipe.servings) / recipe.servings
           pantry = pantry.flatMap((p) => {
             const ing = recipe.ingredients.find((i) => !i.optional && i.key === p.key)
             if (!ing) return [p]
@@ -470,6 +507,59 @@ export const useStore = create<PlantryState>()(
         set((s) => ({ energyByDate: { ...s.energyByDate, [date]: energy } })),
       setShuffleSeen: (ids) => set({ shuffleSeen: ids }),
 
+      setPresence: (date, slot, memberId, p) =>
+        set((s) => {
+          const presence = { ...s.presence }
+          const k = presenceKey(date, slot, memberId)
+          if (p) presence[k] = p
+          else delete presence[k]
+          return { presence }
+        }),
+      setWeeklyPresence: (dow, slot, memberId, p) =>
+        set((s) => {
+          const presenceWeekly = { ...s.presenceWeekly }
+          const k = weeklyKey(dow, slot, memberId)
+          if (p && p !== 'home') presenceWeekly[k] = p
+          else delete presenceWeekly[k]
+          return { presenceWeekly }
+        }),
+      addNote: (input) => {
+        const note: HouseNote = {
+          ...input,
+          text: input.text.trim().slice(0, 500),
+          id: uid('nt'),
+          at: new Date().toISOString(),
+          by: get().members.find((m) => m.isMe)?.id,
+        }
+        set((s) => {
+          const pruned = pruneNotes([note, ...s.notes], s.replies, toDateKey(new Date()))
+          return pruned
+        })
+        return note
+      },
+      removeNote: (id) =>
+        set((s) => ({
+          notes: s.notes.filter((n) => n.id !== id),
+          replies: s.replies.filter((r) => r.noteId !== id),
+        })),
+      togglePinNote: (id) =>
+        set((s) => ({
+          notes: s.notes.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n)),
+        })),
+      addReply: (noteId, text) =>
+        set((s) => ({
+          replies: [
+            ...s.replies,
+            {
+              id: uid('rp'),
+              noteId,
+              text: text.trim().slice(0, 200),
+              at: new Date().toISOString(),
+              by: s.members.find((m) => m.isMe)?.id,
+            },
+          ],
+        })),
+
       generateShop: (dates) => {
         const s = get()
         const today = toDateKey(new Date())
@@ -481,8 +571,18 @@ export const useStore = create<PlantryState>()(
           if (!entry.recipeId || entry.done) continue
           const recipe = s.recipes.find((r) => r.id === entry.recipeId)
           if (!recipe) continue
+          const eaters = eatersFor(
+            s.members,
+            s.presence,
+            s.presenceWeekly,
+            entry.date,
+            entry.slot,
+            s.settings.cookingFor
+          )
+          // Nobody's home for it: nothing to buy.
+          if (eaters === 0) continue
           const scale =
-            (entry.servings ?? s.settings.cookingFor ?? recipe.servings) / recipe.servings
+            (entry.servings ?? eaters ?? s.settings.cookingFor ?? recipe.servings) / recipe.servings
           for (const ing of recipe.ingredients) {
             if (ing.optional || dismissed.has(ing.key)) continue
             const cur = needed.get(ing.key) ?? {
@@ -756,6 +856,10 @@ export const useStore = create<PlantryState>()(
           cooked: [],
           shuffleSeen: [],
           bought: {},
+          presence: {},
+          presenceWeekly: {},
+          notes: [],
+          replies: [],
           weather: undefined,
         }),
     }),
@@ -777,6 +881,10 @@ export const useStore = create<PlantryState>()(
           cooked: s.cooked,
           weather: s.weather,
           bought: s.bought,
+          presence: s.presence,
+          presenceWeekly: s.presenceWeekly,
+          notes: s.notes,
+          replies: s.replies,
         }) as unknown as PlantryState,
       // Older saves have the same shape; anything off is cleaned in merge below.
       migrate: (persisted) => persisted as PlantryState,

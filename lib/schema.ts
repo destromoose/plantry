@@ -125,6 +125,28 @@ export const handoffSchema = z.object({
   accepted: z.boolean().optional(),
 })
 
+export const noteSchema = z.object({
+  id: z.string(),
+  text: z.string().max(500),
+  by: z.string().optional(),
+  at: z.string(),
+  on: z.enum(['day', 'shop', 'board']),
+  date: z.string().optional(),
+  slot: z.enum(['breakfast', 'lunch', 'dinner']).optional(),
+  itemKey: z.string().optional(),
+  // Photos are shrunk before saving; anything far bigger is not one of ours.
+  photo: z.string().max(400_000).optional().catch(undefined),
+  pinned: z.boolean().optional(),
+})
+
+export const replySchema = z.object({
+  id: z.string(),
+  noteId: z.string(),
+  by: z.string().optional(),
+  text: z.string().max(200),
+  at: z.string(),
+})
+
 export const cookedSchema = z.object({
   recipeId: z.string(),
   date: z.string(),
@@ -199,6 +221,8 @@ const collections = {
   shopDismissed: z.string(),
   handoffs: handoffSchema,
   cooked: cookedSchema,
+  notes: noteSchema,
+  replies: replySchema,
 } as const
 
 type CollectionKey = keyof typeof collections
@@ -214,6 +238,10 @@ export interface CleanData {
   handoffs: z.infer<typeof handoffSchema>[]
   cooked: z.infer<typeof cookedSchema>[]
   energyByDate: Record<string, 'up-for-it' | 'quick' | 'cant-tonight'>
+  notes: z.infer<typeof noteSchema>[]
+  replies: z.infer<typeof replySchema>[]
+  presence: Record<string, 'home' | 'late' | 'out'>
+  presenceWeekly: Record<string, 'home' | 'late' | 'out'>
   weather?: z.infer<typeof weatherSchema>
 }
 
@@ -279,6 +307,21 @@ export function cleanData(raw: unknown): CleanResult {
     } else badCollections.push('energyByDate')
   }
 
+  for (const key of ['presence', 'presenceWeekly'] as const) {
+    if (!(key in raw)) continue
+    const e = raw[key]
+    if (!isObject(e)) {
+      badCollections.push(key)
+      continue
+    }
+    const clean: Record<string, 'home' | 'late' | 'out'> = {}
+    for (const [k, v] of Object.entries(e)) {
+      if (v === 'home' || v === 'late' || v === 'out') clean[k] = v
+      else dropped++
+    }
+    out[key] = clean
+  }
+
   if ('weather' in raw && raw.weather !== undefined) {
     const w = weatherSchema.safeParse(raw.weather)
     if (w.success) out.weather = w.data
@@ -315,6 +358,10 @@ export function checkImport(
       handoffs: data.handoffs ?? [],
       cooked: data.cooked ?? [],
       energyByDate: data.energyByDate ?? {},
+      notes: data.notes ?? [],
+      replies: data.replies ?? [],
+      presence: data.presence ?? {},
+      presenceWeekly: data.presenceWeekly ?? {},
     },
   }
 }
