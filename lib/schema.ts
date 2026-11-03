@@ -157,6 +157,7 @@ export const defaultSettings: Settings = {
   priceLevel: 'average',
   weeklyBudget: 0,
   seedVersion: SEED_VERSION,
+  meals: ['breakfast', 'lunch', 'dinner'],
 }
 
 const settingsSchema = z.object({
@@ -178,6 +179,14 @@ const settingsSchema = z.object({
   weeklyBudget: z.number().finite().min(0).max(100000).catch(0),
   // Saves from before starter recipes were versioned read as 0, so they get the new ones.
   seedVersion: z.number().int().min(0).max(1000).catch(0),
+  // Dinner is always planned; saves from before meals were chosen get all three.
+  meals: z
+    .array(z.enum(['breakfast', 'lunch', 'dinner']))
+    .transform((m) => {
+      const set = new Set([...m, 'dinner'])
+      return (['breakfast', 'lunch', 'dinner'] as const).filter((x) => set.has(x))
+    })
+    .catch(['breakfast', 'lunch', 'dinner']),
 })
 
 /** The persisted collections and the schema for one item of each. */

@@ -310,6 +310,26 @@ final class Store {
         return entry
     }
 
+    func meal(on date: String, _ slot: MealSlot) -> PlanEntryModel? {
+        fetch(PlanEntryModel.self, #Predicate { $0.date == date }).first { $0.slot == slot }
+    }
+
+    /// Sets breakfast or lunch for a day: a recipe, last night's leftovers, or a short note.
+    func setMeal(_ date: String, _ slot: MealSlot, recipeId: String? = nil, leftoversOf: String? = nil, note: String? = nil) {
+        if slot == .dinner { setDinner(date, recipeId: recipeId, leftoversOf: leftoversOf, note: note, cookId: dinner(on: date)?.cookId); return }
+        let was = meal(on: date, slot)
+        if let was { context.delete(was) }
+        context.insert(PlanEntryModel(PlanEntry(id: IDs.make("pl"), date: date, slot: slot, recipeId: recipeId, leftoversOf: leftoversOf, note: note, servings: was?.servings, cookId: was?.cookId)))
+        save()
+    }
+
+    func clearMeal(_ date: String, _ slot: MealSlot) {
+        if slot == .dinner { clearDinner(date); return }
+        guard let e = meal(on: date, slot) else { return }
+        context.delete(e)
+        save()
+    }
+
     func setServings(_ date: String, _ servings: Int) {
         if let e = dinner(on: date) { e.servings = servings; save() }
     }

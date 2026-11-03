@@ -236,6 +236,8 @@ final class SettingsModel {
     var askedNotifications: Bool = false
     /// What this phone has bought, trip by trip, for "Your usuals". Kept on this phone, not exported.
     var bought: [String: BoughtEntry] = [:]
+    /// Which meals the household plans each day. Dinner is always there. Shared with the household.
+    var meals: [MealSlot] = [MealSlot.breakfast, MealSlot.lunch, MealSlot.dinner]
 
     init(_ s: Settings = Settings()) {
         onboarded = s.onboarded; mood = s.mood; reducedMotion = s.reducedMotion; units = s.units

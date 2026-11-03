@@ -16,6 +16,7 @@ struct WeekView: View {
 
     @State private var offset = 0
     @State private var active: DaySheet?
+    @State private var mealPick: MealPick?
 
     private var today: String { ctxProvider.today }
     private var weekDates: [String] { DateKey.weekOf(DateKey.addDays(today, offset * 7)) }
@@ -46,7 +47,8 @@ struct WeekView: View {
 
             VStack(spacing: 12) {
                 ForEach(Array(dates.enumerated()), id: \.element) { i, date in
-                    DayRow(date: date, today: today, entry: entry(for: date), onPick: { active = DaySheet(date: date, kind: .pick) }, onMenu: { active = DaySheet(date: date, kind: .menu) })
+                    DayRow(date: date, today: today, entry: entry(for: date), onPick: { active = DaySheet(date: date, kind: .pick) }, onMenu: { active = DaySheet(date: date, kind: .menu) },
+                           smallSlots: Meals.small(settingsRows.first?.meals ?? MealSlot.allCases), plan: plan, onMeal: { mealPick = MealPick(date: date, slot: $0) })
                         .reveal(i)
                 }
             }
@@ -80,6 +82,9 @@ struct WeekView: View {
         .sheet(item: $active) { sheet in
             DaySheets(sheet: sheet, today: today, weekDates: dates, onCooked: cookDay) { active = $0 }
                 .presentationDetents(sheet.kind == .pick ? [.large] : [.medium, .large])
+        }
+        .sheet(item: $mealPick) { p in
+            MealSheet(pick: p, today: today).presentationDetents([.medium, .large])
         }
     }
 
@@ -142,6 +147,9 @@ struct DayRow: View {
     var entry: PlanEntryModel?
     var onPick: () -> Void
     var onMenu: () -> Void
+    var smallSlots: [MealSlot] = []
+    var plan: [PlanEntryModel] = []
+    var onMeal: (MealSlot) -> Void = { _ in }
 
     var body: some View {
         let recipe = recipes.first { $0.id == entry?.recipeId }
@@ -152,6 +160,7 @@ struct DayRow: View {
         let done = entry?.done ?? false
         let decided = entry?.isDecided ?? false
 
+        VStack(spacing: 0) {
         HStack(spacing: 12) {
             VStack(spacing: 1) {
                 Text(DateKey.shortDay(date).uppercased()).font(.system(size: 11, weight: .semibold)).kerning(1)
@@ -213,9 +222,14 @@ struct DayRow: View {
         .padding(.leading, 12)
         .padding(.trailing, 4)
         .padding(.vertical, 12)
+        .opacity(past || done ? 0.7 : 1)
+        if !smallSlots.isEmpty {
+            MealLines(date: date, today: today, slots: smallSlots, plan: plan, recipes: recipes, onTap: onMeal)
+                .opacity(past ? 0.8 : 1)
+        }
+        }
         .card()
         .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(isToday ? t.accent : .clear, lineWidth: 2))
-        .opacity(past || done ? 0.7 : 1)
         .motion(Motion.checkPop, value: done)
         .motion(Motion.settle, value: decided)
     }

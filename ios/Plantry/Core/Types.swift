@@ -139,8 +139,16 @@ struct PantryItem: Codable, Identifiable, Hashable, Sendable {
     var isStaple: Bool { staple ?? false }
 }
 
-enum MealSlot: String, Codable, Sendable {
+enum MealSlot: String, Codable, CaseIterable, Sendable {
     case breakfast, lunch, dinner
+
+    var label: String {
+        switch self {
+        case .breakfast: "Breakfast"
+        case .lunch: "Lunch"
+        case .dinner: "Dinner"
+        }
+    }
 }
 
 struct PlanEntry: Codable, Identifiable, Hashable, Sendable {

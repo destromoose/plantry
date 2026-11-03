@@ -37,6 +37,7 @@ export const sharedSettingKeys = [
   'currency',
   'priceLevel',
   'weeklyBudget',
+  'meals',
 ] as const satisfies readonly (keyof Settings)[]
 
 export type SharedSettings = Pick<Settings, (typeof sharedSettingKeys)[number]>

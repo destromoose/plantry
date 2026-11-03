@@ -1004,4 +1004,21 @@ export const es: Record<string, string> = {
   'Set up sharing': 'Configurar compartir',
   'Someone new': 'Alguien nuevo',
   'The rest is on your list': 'Lo demás ya está en tu lista',
+  'Meals we plan': 'Comidas que planeamos',
+  'Dinner is always on. Breakfast and lunch show as small rows on each day of the week.':
+    'La cena siempre está. El desayuno y la comida salen como filas pequeñas en cada día de la semana.',
+  Breakfast: 'Desayuno',
+  Lunch: 'Comida',
+  '{meal} on {day}': '{meal} el {day}',
+  'From last night': 'De anoche',
+  'Write what it is': 'Escribe qué es',
+  'Oats, toast, eggs…': 'Avena, pan tostado, huevos…',
+  'Sandwiches, soup, out…': 'Sándwiches, sopa, fuera…',
+  'Or pick one of your recipes': 'O elige una de tus recetas',
+  'No recipe by that name. Save it as a note instead.':
+    'No hay receta con ese nombre. Guárdalo como nota.',
+  '{meal} cleared': '{meal} borrado',
+  'Clear {meal}': 'Borrar {meal}',
+  '{meal} on {day}: {what}. Change it': '{meal} el {day}: {what}. Cambiarlo',
+  'Add {meal} for {day}': 'Añadir {meal} para {day}',
 }
