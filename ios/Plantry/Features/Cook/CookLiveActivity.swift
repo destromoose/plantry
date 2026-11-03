@@ -45,7 +45,7 @@ enum CookLiveActivity {
     }
 
     /// A few words from a step for a timer's name: "Simmer the sauce".
-    static func label(_ text: String) -> String {
+    nonisolated static func label(_ text: String) -> String {
         text.split(separator: " ").prefix(3).joined(separator: " ").trimmingCharacters(in: .punctuationCharacters)
     }
 
