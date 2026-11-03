@@ -69,6 +69,9 @@ struct TonightView: View {
             }
             .reveal(1)
 
+            TonightTogether(date: target, label: ctx.targetLabel)
+                .reveal(1)
+
             TonightHero(ranked: ranked, entry: entry, energy: energy, targetDate: target, today: today, reason: ctx.reason)
                 .reveal(2)
 

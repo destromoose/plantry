@@ -81,7 +81,12 @@ enum SyncDoc {
         ("shopDismissed", { $0.string ?? "" }, false),
         ("handoffs", { $0["id"]?.string ?? "" }, true),
         ("cooked", { "\($0["date"]?.string ?? "")|\($0["recipeId"]?.string ?? "")|\($0["cookId"]?.string ?? "")" }, true),
+        ("notes", { $0["id"]?.string ?? "" }, true),
+        ("replies", { $0["id"]?.string ?? "" }, false),
     ]
+
+    /// Parts of the document merged key by key.
+    static let records = ["energyByDate", "presence", "presenceWeekly"]
 
     /// The fields this app reads for each kind of item. When this phone edits an item, only
     /// these fields are replaced; anything else the server has on it is kept.
@@ -94,10 +99,13 @@ enum SyncDoc {
         "shop": ["id", "name", "key", "quantity", "unit", "aisle", "checked", "fromRecipeIds", "more"],
         "handoffs": ["id", "date", "fromId", "toId", "recipeId", "message", "createdAt", "accepted"],
         "cooked": ["recipeId", "date", "cookId", "rating", "note"],
+        "notes": ["id", "text", "by", "at", "on", "date", "slot", "itemKey", "photo", "pinned"],
+        "replies": ["id", "noteId", "by", "text", "at"],
     ]
 
     static func empty() -> [String: JSONValue] {
-        var d: [String: JSONValue] = ["v": .number(Double(version)), "settings": .object([:]), "energyByDate": .object([:])]
+        var d: [String: JSONValue] = ["v": .number(Double(version)), "settings": .object([:])]
+        for r in records { d[r] = .object([:]) }
         for l in lists { d[l.key] = .array([]) }
         return d
     }
@@ -109,7 +117,7 @@ enum SyncDoc {
         for (k, v) in o where d[k] == nil { d[k] = v }
         for l in lists { if let a = o[l.key]?.array { d[l.key] = .array(a.filter { !l.idOf($0).isEmpty }) } }
         if let s = o["settings"]?.object { d["settings"] = .object(s) }
-        if let e = o["energyByDate"]?.object { d["energyByDate"] = .object(e) }
+        for r in records { if let e = o[r]?.object { d[r] = .object(e) } }
         // Members carry no "this is me" flag: each phone remembers that itself.
         if let m = d["members"]?.array {
             d["members"] = .array(m.map { v in
@@ -178,8 +186,9 @@ enum SyncDoc {
         out["v"] = .number(Double(version))
         out["settings"] = .object(mergeRecord(base: b["settings"]?.object ?? [:], local: local["settings"]?.object ?? [:],
                                               remote: remote["settings"]?.object ?? [:]))
-        out["energyByDate"] = .object(mergeRecord(base: b["energyByDate"]?.object ?? [:], local: local["energyByDate"]?.object ?? [:],
-                                                  remote: remote["energyByDate"]?.object ?? [:]))
+        for r in records {
+            out[r] = .object(mergeRecord(base: b[r]?.object ?? [:], local: local[r]?.object ?? [:], remote: remote[r]?.object ?? [:]))
+        }
         for l in lists {
             var merged = mergeList(base: b[l.key]?.array ?? [], local: local[l.key]?.array ?? [], remote: remote[l.key]?.array ?? [],
                                    idOf: l.idOf, newFirst: l.newFirst, known: knownFields[l.key])

@@ -15,6 +15,9 @@ import type {
   CookedEntry,
   Energy,
   Handoff,
+  HouseNote,
+  NoteReply,
+  Presence,
   Member,
   PantryItem,
   PlanEntry,
@@ -54,6 +57,10 @@ export interface SyncDoc {
   handoffs: Handoff[]
   cooked: CookedEntry[]
   energyByDate: Record<string, Energy>
+  notes: HouseNote[]
+  replies: NoteReply[]
+  presence: Record<string, Presence>
+  presenceWeekly: Record<string, Presence>
 }
 
 export interface SyncSource {
@@ -67,6 +74,10 @@ export interface SyncSource {
   handoffs: Handoff[]
   cooked: CookedEntry[]
   energyByDate: Record<string, Energy>
+  notes?: HouseNote[]
+  replies?: NoteReply[]
+  presence?: Record<string, Presence>
+  presenceWeekly?: Record<string, Presence>
 }
 
 /** The shared part of this phone's data. */
@@ -89,6 +100,10 @@ export function toDoc(s: SyncSource): SyncDoc {
     handoffs: s.handoffs,
     cooked: s.cooked,
     energyByDate: s.energyByDate,
+    notes: s.notes ?? [],
+    replies: s.replies ?? [],
+    presence: s.presence ?? {},
+    presenceWeekly: s.presenceWeekly ?? {},
   }
 }
 
@@ -155,6 +170,10 @@ export function mergeDocs(base: SyncDoc | undefined, local: SyncDoc, remote: Syn
       x.date < y.date ? 1 : x.date > y.date ? -1 : 0
     ),
     energyByDate: mergeRecord(b.energyByDate, local.energyByDate, remote.energyByDate),
+    notes: mergeList(b.notes, local.notes, remote.notes, byId, true),
+    replies: mergeList(b.replies, local.replies, remote.replies, byId),
+    presence: mergeRecord(b.presence, local.presence, remote.presence),
+    presenceWeekly: mergeRecord(b.presenceWeekly, local.presenceWeekly, remote.presenceWeekly),
   }
 }
 
@@ -171,6 +190,10 @@ export function emptyDoc(): SyncDoc {
     handoffs: [],
     cooked: [],
     energyByDate: {},
+    notes: [],
+    replies: [],
+    presence: {},
+    presenceWeekly: {},
   }
 }
 

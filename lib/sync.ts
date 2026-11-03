@@ -95,6 +95,10 @@ function apply(doc: SyncDoc, meId?: string) {
       handoffs: doc.handoffs,
       cooked: doc.cooked,
       energyByDate: doc.energyByDate,
+      notes: doc.notes,
+      replies: doc.replies,
+      presence: doc.presence,
+      presenceWeekly: doc.presenceWeekly,
     } as Partial<PlantryState>)
   } finally {
     applying = false

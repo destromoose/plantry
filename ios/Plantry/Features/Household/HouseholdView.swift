@@ -45,6 +45,8 @@ struct HouseholdView: View {
                 Text(sync.isSharing ? "Everyone here is a person, not a shared password. Your household shares one plan, pantry and list." : "Everyone here is a person, not a shared password. Nothing about them leaves this phone until you share.").font(Type.body).foregroundStyle(t.ink2)
             }
 
+            FridgeBoard()
+
             VStack(alignment: .leading, spacing: 0) {
                 SectionTitle("Who eats here")
                 VStack(spacing: 0) {

@@ -238,6 +238,8 @@ final class SettingsModel {
     var bought: [String: BoughtEntry] = [:]
     /// Which meals the household plans each day. Dinner is always there. Shared with the household.
     var meals: [MealSlot] = [MealSlot.breakfast, MealSlot.lunch, MealSlot.dinner]
+    /// Who's home and the household's notes (TogetherState as JSON). Shared with the household.
+    var togetherData: Data? = nil
 
     init(_ s: Settings = Settings()) {
         onboarded = s.onboarded; mood = s.mood; reducedMotion = s.reducedMotion; units = s.units

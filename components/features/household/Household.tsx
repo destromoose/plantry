@@ -10,6 +10,7 @@ import { washerFor } from '@/lib/chores'
 import { useSync } from '@/lib/sync'
 import { SyncCard } from '@/components/features/sync/SyncCard'
 import { CalendarCard } from '@/components/features/sync/CalendarCard'
+import { FridgeBoard } from '@/components/features/together/FridgeBoard'
 import { MAX_PEOPLE } from '@/components/features/onboarding/Onboarding'
 import { withUndo } from '@/lib/undo'
 import { avoidLabel } from '@/lib/diet'
@@ -92,6 +93,8 @@ export function Household() {
             : t('Add the people you cook for, and what they avoid.')
         }
       />
+
+      {members.length > 1 && <FridgeBoard />}
 
       <section aria-labelledby="members-h">
         <SectionTitle>

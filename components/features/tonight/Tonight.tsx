@@ -18,6 +18,7 @@ import { Eyebrow, SectionTitle } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { EnergyPicker } from './EnergyPicker'
 import { TonightHero } from './TonightHero'
+import { TonightTogether } from '@/components/features/together/WhoHome'
 
 const WEATHER_KEY = 'plantry-weather-dismissed'
 
@@ -111,6 +112,12 @@ export function Tonight() {
       <motion.div variants={reveal}>
         <EnergyPicker energy={energy} label={ctx.targetLabel} onSet={(e) => setEnergy(target, e)} />
       </motion.div>
+
+      {members.length > 1 && (
+        <motion.div variants={reveal}>
+          <TonightTogether date={target} label={t(ctx.targetLabel)} />
+        </motion.div>
+      )}
 
       <motion.div variants={reveal}>
         <TonightHero

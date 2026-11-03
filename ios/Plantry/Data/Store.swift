@@ -362,7 +362,7 @@ final class Store {
         let recipe = recipe(entry.recipeId)
         var used = 0
         if usePantry, let recipe {
-            let scale = Double(entry.servings ?? settings.cookingFor) / Double(max(recipe.servings, 1))
+            let scale = Double(entry.servings ?? eaters(date, .dinner) ?? settings.cookingFor) / Double(max(recipe.servings, 1))
             for p in fetch(PantryItemModel.self) {
                 guard let ing = recipe.ingredients.first(where: { !$0.isOptional && $0.key == p.key }) else { continue }
                 // Known amount: take off what the recipe used.
@@ -413,11 +413,16 @@ final class Store {
         let dateSet = Set(dates)
         let dismissed = Set(settings.shopDismissed)
         let cookingFor = settings.cookingFor
+        let tog = together
+        let memberIds = members.map(\.id)
         var needed: [String: (item: ShopItem, amounts: [Amount])] = [:]
         var orderKeys: [String] = []
         for entry in fetch(PlanEntryModel.self).sorted(by: { $0.date < $1.date }) where dateSet.contains(entry.date) && entry.date >= today && !entry.done {
             guard let rid = entry.recipeId, let recipe = recipe(rid) else { continue }
-            let scale = Double(entry.servings ?? cookingFor) / Double(max(recipe.servings, 1))
+            // Who's actually eating: nobody home means nothing to buy for that meal.
+            let eaters = Together.eaters(tog, memberIds: memberIds, entry.date, entry.slot, cookingFor: cookingFor)
+            if eaters == 0 { continue }
+            let scale = Double(entry.servings ?? eaters ?? cookingFor) / Double(max(recipe.servings, 1))
             for ing in recipe.ingredients where !ing.isOptional && !dismissed.contains(ing.key) {
                 var cur = needed[ing.key] ?? (ShopItem(id: IDs.make("sh"), name: ing.name, key: ing.key, quantity: nil, unit: nil, aisle: ing.aisle, checked: false, fromRecipeIds: []), [])
                 if needed[ing.key] == nil { orderKeys.append(ing.key) }

@@ -139,6 +139,20 @@ describe('importData', () => {
     expect(s().importData(json).ok).toBe(true)
     expect(s().shop).toHaveLength(1)
   })
+
+  it('keeps notes and who is home through a backup', () => {
+    const n = s().addNote({ on: 'board', text: 'Bins go out Thursday' })
+    s().addReply(n.id, 'On it')
+    s().setPresence('2026-11-03', 'dinner', 'm1', 'out')
+    s().setWeeklyPresence(2, 'dinner', 'm1', 'late')
+    const json = s().exportData()
+    s().resetAll()
+    expect(s().importData(json).ok).toBe(true)
+    expect(s().notes.map((x) => x.text)).toEqual(['Bins go out Thursday'])
+    expect(s().replies).toHaveLength(1)
+    expect(s().presence).toEqual({ '2026-11-03|dinner|m1': 'out' })
+    expect(s().presenceWeekly).toEqual({ '2|dinner|m1': 'late' })
+  })
 })
 
 describe('double taps', () => {

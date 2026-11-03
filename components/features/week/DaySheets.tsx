@@ -4,7 +4,21 @@ import { locale, t } from '@/lib/i18n'
 
 import { ratingsOf } from '@/lib/history'
 import { useMemo, useState } from 'react'
-import { Check, CalendarDays, Moon, Pencil, Repeat, Shuffle, Trash2, UserRound } from 'lucide-react'
+import {
+  Check,
+  CalendarDays,
+  MessageSquare,
+  Moon,
+  Pencil,
+  Repeat,
+  Shuffle,
+  Trash2,
+  UserRound,
+  Users,
+} from 'lucide-react'
+import { WhoHomeBody } from '@/components/features/together/WhoHome'
+import { NotesThread } from '@/components/features/together/Notes'
+import { plannedMeals } from '@/lib/meals'
 import { useStore } from '@/lib/store'
 import { Stepper } from '@/components/ui/Stepper'
 import { useAvoid } from '@/lib/useAvoid'
@@ -41,7 +55,7 @@ const tasteLabels: [Taste, string][] = [
   ['kid-friendly', t('Kid-friendly')],
 ]
 
-export type SheetKind = 'pick' | 'menu' | 'claim' | 'move'
+export type SheetKind = 'pick' | 'menu' | 'claim' | 'move' | 'home' | 'notes'
 
 interface Props {
   date: string | null
@@ -77,7 +91,15 @@ export function DaySheets({
           ? t('Who is cooking?')
           : kind === 'move'
             ? t('Move or swap with which night?')
-            : `${dayLabel(date, today)}, ${fromDateKey(date).toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}`
+            : kind === 'home'
+              ? t("Who's home on {day}", {
+                  day: fromDateKey(date).toLocaleDateString(locale(), { weekday: 'long' }),
+                })
+              : kind === 'notes'
+                ? t('Notes for {day}', {
+                    day: fromDateKey(date).toLocaleDateString(locale(), { weekday: 'long' }),
+                  })
+                : `${dayLabel(date, today)}, ${fromDateKey(date).toLocaleDateString(locale(), { month: 'short', day: 'numeric' })}`
 
   return (
     <Sheet open={open} onClose={onClose} title={title} tall={kind === 'pick'}>
@@ -98,6 +120,13 @@ export function DaySheets({
       )}
       {date !== null && kind === 'move' && entry && (
         <MoveBody date={date} entry={entry} weekDates={weekDates} today={today} onClose={onClose} />
+      )}
+      {date !== null && kind === 'home' && <HomeBody date={date} />}
+      {date !== null && kind === 'notes' && (
+        <NotesThread
+          where={{ on: 'day', date }}
+          placeholder={t('Defrost the chicken, back at 8…')}
+        />
       )}
     </Sheet>
   )
@@ -333,6 +362,8 @@ function MenuBody({
   const setServings = useStore((s) => s.setServings)
   const setPlanEntry = useStore((s) => s.setPlanEntry)
   const cookingFor = useStore((s) => s.settings.cookingFor)
+  const members = useStore((s) => s.members.length)
+  const notes = useStore((s) => s.notes.filter((n) => n.on === 'day' && n.date === date).length)
   const avoid = useAvoid()
   const ctx = useAppContext()
 
@@ -399,6 +430,12 @@ function MenuBody({
         />
       )}
       <Row icon={UserRound} label={t('Choose who cooks')} onClick={() => setKind('claim')} />
+      {members > 1 && <Row icon={Users} label={t("Who's home")} onClick={() => setKind('home')} />}
+      <Row
+        icon={MessageSquare}
+        label={notes ? t('Notes ({n})', { n: notes }) : t('Leave a note')}
+        onClick={() => setKind('notes')}
+      />
       {entry?.recipeId && !entry.done && (
         <Row icon={Shuffle} label={t('Something else')} onClick={somethingElse} />
       )}
@@ -430,6 +467,11 @@ function MenuBody({
       )}
     </ul>
   )
+}
+
+function HomeBody({ date }: { date: string }) {
+  const meals = useStore((s) => s.settings.meals)
+  return <WhoHomeBody date={date} slots={plannedMeals(meals)} />
 }
 
 function ClaimBody({
