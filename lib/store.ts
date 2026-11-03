@@ -32,6 +32,9 @@ import { checkImport, cleanData, defaultSettings } from './schema'
 import { createSafeStorage, useStorageStatus } from './storage'
 import { guessCurrency } from './cost'
 import { t } from './i18n'
+import { guessAisle } from './pantryGuess'
+import type { CapturedItem } from './capture'
+import { cleanBought, recordTrip, type Bought } from './usuals'
 
 export interface PlantryState {
   settings: Settings
@@ -50,6 +53,8 @@ export interface PlantryState {
   weather?: Weather
   /** Recipe ids seen by the shuffle today, so it does not repeat. */
   shuffleSeen: string[]
+  /** What this phone has bought, trip by trip, for "Your usuals". */
+  bought: Bought
   hydrated: boolean
   setHydrated: () => void
 
@@ -125,6 +130,8 @@ export interface PlantryState {
   toggleShopItem: (id: string) => void
   removeShopItem: (id: string) => void
   clearChecked: () => void
+  /** Add a spoken or typed brain dump. Things said as "out of" also leave the pantry. */
+  addCaptured: (items: CapturedItem[]) => { added: string[]; already: string[] }
   clearShop: () => void
   updateShopItem: (id: string, patch: { name?: string; quantity?: number; unit?: string }) => void
   finishShopping: () => void
@@ -205,6 +212,7 @@ export const useStore = create<PlantryState>()(
       cooked: [],
       weather: undefined,
       shuffleSeen: [],
+      bought: {},
       hydrated: false,
       setHydrated: () => set({ hydrated: true }),
 
@@ -601,7 +609,32 @@ export const useStore = create<PlantryState>()(
           }
         }),
       restoreDismissed: () => set({ shopDismissed: [] }),
-      clearChecked: () => set((s) => ({ shop: s.shop.filter((i) => !i.checked) })),
+      clearChecked: () =>
+        set((s) => ({
+          shop: s.shop.filter((i) => !i.checked),
+          bought: recordTrip(
+            s.bought,
+            s.shop.filter((i) => i.checked),
+            toDateKey(new Date())
+          ),
+        })),
+      addCaptured: (items) => {
+        const added: string[] = []
+        const already: string[] = []
+        for (const item of items) {
+          const key = keyOf(item.name)
+          const known = get().bought[key]
+          const result = get().addShopItem(item.name, known?.aisle ?? guessAisle(item.name), {
+            quantity: item.quantity,
+            unit: item.unit,
+          })
+          ;(result === 'exists' ? already : added).push(item.name)
+        }
+        const gone = new Set(items.filter((i) => i.outOf).map((i) => keyOf(i.name)))
+        if (gone.size) set((s) => ({ pantry: s.pantry.filter((p) => !gone.has(p.key)) }))
+        return { added, already }
+      },
+
       clearShop: () => set({ shop: [] }),
       updateShopItem: (id, patch) =>
         set((s) => ({
@@ -636,7 +669,12 @@ export const useStore = create<PlantryState>()(
               })
             )
         }
-        set({ pantry, shop: s.shop.filter((i) => !i.checked), shopDismissed: [] })
+        set({
+          pantry,
+          shop: s.shop.filter((i) => !i.checked),
+          shopDismissed: [],
+          bought: recordTrip(s.bought, checked, toDateKey(new Date())),
+        })
       },
 
       createHandoff: (h) =>
@@ -717,6 +755,7 @@ export const useStore = create<PlantryState>()(
           energyByDate: {},
           cooked: [],
           shuffleSeen: [],
+          bought: {},
           weather: undefined,
         }),
     }),
@@ -737,6 +776,7 @@ export const useStore = create<PlantryState>()(
           energyByDate: s.energyByDate,
           cooked: s.cooked,
           weather: s.weather,
+          bought: s.bought,
         }) as unknown as PlantryState,
       // Older saves have the same shape; anything off is cleaned in merge below.
       migrate: (persisted) => persisted as PlantryState,
@@ -761,7 +801,8 @@ export const useStore = create<PlantryState>()(
           recipes = [...recipes, ...newSeedRecipes(settings.seedVersion, recipes)]
           settings.seedVersion = SEED_VERSION
         }
-        return { ...current, ...data, settings, recipes } as PlantryState
+        const bought = cleanBought((persisted as { bought?: unknown } | undefined)?.bought)
+        return { ...current, ...data, settings, recipes, bought } as PlantryState
       },
       onRehydrateStorage: () => () => {
         // Always leave the splash screen, even when reading failed. Deferred because the

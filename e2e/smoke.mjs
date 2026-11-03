@@ -160,6 +160,20 @@ try {
       await page.getByRole('button', { name: 'Done shopping' }).click()
       await page.waitForTimeout(500)
 
+      // Several things at once, the way people say them.
+      const before = await page.getByRole('checkbox').count()
+      await page
+        .getByLabel('Add to your list. Separate things with commas.')
+        .fill("dish soap, two birthday candles and we're out of bin bags")
+      await page.getByRole('button', { name: 'Add to list' }).click()
+      await page.waitForTimeout(600)
+      const after = await page.getByRole('checkbox').count()
+      if (after !== before + 3) throw new Error(`capture added ${after - before} items, expected 3`)
+      await page.screenshot({
+        path: `e2e/screenshots/${name}-16b-shop-capture.png`,
+        fullPage: true,
+      })
+
       await page.goto(`${BASE}/`)
       await page.getByRole('link', { name: /^Start cooking/ }).click()
       await page.waitForURL('**/cook/**')

@@ -20,6 +20,7 @@ import { Input, Label, Textarea } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { toast } from '@/components/ui/Toast'
+import { CaptureForm, Usuals } from './Capture'
 
 const aisles: { id: Aisle; label: string }[] = [
   { id: 'produce', label: t('Produce') },
@@ -109,11 +110,6 @@ export function Shop() {
     }
   }
 
-  function add(name: string) {
-    if (addShopItem(name) === 'exists')
-      toast(t('{v0} is already on your list', { v0: name.trim() }))
-  }
-
   const planButton = (
     <Button variant="secondary" onClick={fromPlan}>
       <ListChecks className="h-4 w-4" aria-hidden /> {t("Add from this week's plan")}
@@ -165,7 +161,8 @@ export function Shop() {
 
       {shop.length > 0 && <BasketProgress done={checked} total={shop.length} />}
 
-      <AddForm onAdd={add} />
+      <CaptureForm />
+      <Usuals />
 
       {shop.length === 0 ? (
         <EmptyState
@@ -281,41 +278,6 @@ function amountText(i: ShopItem) {
   ]
   // Read once per render: the list remounts when units change in Settings.
   return formatAmounts(list, { forShopping: true, system: useStore.getState().settings.units })
-}
-
-/** The add box keeps its own state, so typing doesn't redraw the whole list. */
-function AddForm({ onAdd }: { onAdd: (name: string) => void }) {
-  const [name, setName] = useState('')
-  return (
-    <form
-      className="mb-8 flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (!name.trim()) return
-        onAdd(name)
-        setName('')
-      }}
-    >
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder={t('Add something')}
-        aria-label={t('Add a shopping item')}
-        autoComplete="off"
-        maxLength={60}
-      />
-      <Button
-        type="submit"
-        size="icon"
-        variant={name.trim() ? 'primary' : 'secondary'}
-        aria-label={t('Add to list')}
-        aria-disabled={!name.trim()}
-        className="shrink-0"
-      >
-        <Plus className="h-5 w-5" />
-      </Button>
-    </form>
-  )
 }
 
 function EditSheet({ item, onClose }: { item: ShopItem | null; onClose: () => void }) {
