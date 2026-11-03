@@ -15,13 +15,20 @@ struct IdeasCard: View {
     var today: String
     @State private var text = ""
     @State private var planning: MealIdea?
+    @State private var picking = false
 
     var body: some View {
         let ideas = PlanAhead.rank(TogetherState.of(settingsRows).ideas ?? [])
         let meId = members.first { $0.isMe }?.id
         let together = members.count > 1
         VStack(alignment: .leading, spacing: 10) {
-            Label("Ideas", systemImage: "lightbulb").font(Type.cardTitle)
+            HStack {
+                Label("Ideas", systemImage: "lightbulb").font(Type.cardTitle)
+                Spacer()
+                if together {
+                    Button { picking = true } label: { Label("Pick together", systemImage: "shuffle") }.pbutton(.outline, .sm)
+                }
+            }
             Text(together ? "Fancy something? Add it here instead of texting. Tap Plan when there's a night for it."
                           : "Save meals you fancy, and plan them when there's a night for them.")
                 .font(Type.small).foregroundStyle(t.ink2)
@@ -35,7 +42,13 @@ struct IdeasCard: View {
                 let mine = meId.map { idea.votes?.contains($0) ?? false } ?? false
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(title).font(Type.label).lineLimit(1)
+                        HStack(spacing: 6) {
+                            Text(title).font(Type.label).lineLimit(1)
+                            if together && !(idea.votes ?? []).isEmpty {
+                                Text("Match").font(.system(size: 11, weight: .bold)).foregroundStyle(t.accentInk)
+                                    .padding(.horizontal, 7).padding(.vertical, 2).background(t.accent, in: Capsule())
+                            }
+                        }
                         HStack(spacing: 4) {
                             if together, let by { Text(by.id == meId ? "You ·" : "\(by.name) ·") }
                             Text(Together.ago(idea.at))
@@ -70,6 +83,7 @@ struct IdeasCard: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .card()
+        .sheet(isPresented: $picking) { PickTogetherSheet().presentationDetents([.large]) }
         .sheet(item: $planning) { idea in
             PlanIdeaSheet(idea: idea, weekDates: weekDates, today: today).presentationDetents([.medium, .large])
         }

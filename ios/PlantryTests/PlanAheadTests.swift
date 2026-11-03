@@ -63,3 +63,33 @@ final class PlanAheadTests: XCTestCase {
         XCTAssertEqual(merged["repeats"]?.array?.compactMap { $0["id"]?.string }, ["p"])
     }
 }
+
+final class ActivityTests: XCTestCase {
+    private let now = "2026-11-03T18:00:00.000Z"
+
+    func testDescribesWhatTheOthersChanged() {
+        var before = SyncDoc.empty()
+        before["members"] = .array([JSONValue.from(Member(id: "a", name: "Alex", color: .sage)), JSONValue.from(Member(id: "s", name: "Sara", color: .plum))])
+        before["notes"] = .array([JSONValue.from(HouseNote(id: "n1", text: "Defrost the chicken", by: "a", at: now, on: .day, date: "2026-11-03"))])
+        before["shopTrip"] = JSONValue.from(ShopTrip(by: "a", since: now))
+        var after = before
+        after["replies"] = .array([JSONValue.from(NoteReply(id: "p1", noteId: "n1", by: "s", text: "On it", at: now))])
+        after["shop"] = .array([JSONValue.from(ShopItem(id: "i1", name: "Milk", key: "milk", quantity: nil, unit: nil, aisle: .dairy, checked: false, fromRecipeIds: [], addedBy: "s"))])
+        after["ideas"] = .array([JSONValue.from(MealIdea(id: "d1", text: "Ramen", by: "s", at: now))])
+        after["presence"] = .object(["2026-11-05|dinner|s": .string("out")])
+        let out = ActivityLog.diff(before: before, after: after, meId: "a", now: now)
+        let texts = out.map(\.text)
+        XCTAssertTrue(texts.contains("Sara replied \"On it\""))
+        XCTAssertTrue(texts.contains("Sara added Milk to the list"))
+        XCTAssertTrue(texts.contains("Sara fancies Ramen"))
+        XCTAssertTrue(texts.contains { $0.hasPrefix("Sara is out for dinner") })
+        XCTAssertEqual(out.first { $0.text.hasPrefix("Sara replied") }?.forMe, true)
+        XCTAssertEqual(out.first { $0.text.contains("to the list") }?.forMe, true)
+    }
+
+    func testLeavesOutYourOwnChanges() {
+        var after = SyncDoc.empty()
+        after["ideas"] = .array([JSONValue.from(MealIdea(id: "d1", text: "Ramen", by: "a", at: now))])
+        XCTAssertTrue(ActivityLog.diff(before: SyncDoc.empty(), after: after, meId: "a", now: now).isEmpty)
+    }
+}

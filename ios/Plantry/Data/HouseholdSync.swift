@@ -355,6 +355,8 @@ final class HouseholdSync {
         // Changes made on this phone while the request was out are replayed on top.
         let now = localDoc()
         let next = SyncDoc.equal(now, localWas) ? merged : SyncDoc.merge(base: localWas, local: now, remote: merged)
+        // What the others changed, for "Since you last looked".
+        if !SyncDoc.equal(now, next) { ActivityLog.add(ActivityLog.diff(before: now, after: next, meId: meId)) }
         apply(next)
         meta.rev = rev
         // The base is what this phone now holds, in its own shape, so the next merge only
