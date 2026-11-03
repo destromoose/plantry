@@ -3,12 +3,14 @@ import SwiftUI
 
 // Tonight's dinner on the home screen and the lock screen, with the step a cook
 // is on, so nobody has to open the app to know what's for dinner. Reads the
-// snapshot the app writes; never touches the database.
+// snapshot the app writes; never touches the database. The bundle also carries
+// the cook-mode Live Activity (CookLiveActivityWidget.swift).
 
 @main
 struct PlantryWidgetBundle: WidgetBundle {
     var body: some Widget {
         TonightWidget()
+        CookLiveActivityWidget()
     }
 }
 

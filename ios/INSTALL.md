@@ -20,11 +20,17 @@ Every install:
 2. Press **Run** (⌘R). The first time, the phone shows "Untrusted Developer": go to Settings → General → VPN & Device Management → your Apple ID → **Trust**.
 3. Done. Plantry is on the home screen and works offline.
 
-Limits of a free team: up to 3 app IDs installed at once (Plantry uses 2: the app and its widget), 10 device registrations per week, and the 7-day expiry. If the phone says it has reached the maximum number of apps using a free developer profile, delete one of your other self-installed apps. Plantry uses nothing a free team cannot sign: timers use local notifications, the calendar export uses the phone's Calendar, and the widget reads tonight's dinner from a shared keychain item (keychain sharing works on a free team; App Groups do not).
+Limits of a free team: up to 3 app IDs installed at once (Plantry uses 2: the app and its widget), 10 device registrations per week, and the 7-day expiry. If the phone says it has reached the maximum number of apps using a free developer profile, delete one of your other self-installed apps. Plantry uses nothing a free team cannot sign: timers use local notifications, the Live Activity is updated from the phone (no push), the calendar export uses the phone's Calendar, and the widget reads tonight's dinner from a shared keychain item (keychain sharing works on a free team; App Groups do not).
 
 ## The home-screen widget
 
 After the first install, long-press the home screen, tap **+** (or **Edit → Add Widget**), search for Plantry and add **Tonight**. It shows tonight's dinner, who cooks and washes up, what's missing, and the step you're on while cooking (with the timer). Tap it to jump into cook mode. It also works on the lock screen as a rectangular or inline widget.
+
+## Cooking on the Lock Screen and in the Dynamic Island
+
+Open cook mode and Plantry starts a Live Activity. Lock the phone or go to another app and the step you're on stays on the Lock Screen, and on iPhones with a Dynamic Island it sits in the island: a pan while you cook, a draining ring and the countdown once a timer runs, red when it's done. Long-press the island (or look at the Lock Screen) for the step itself and three buttons: back, the timer (start, pause, resume, stop ringing) and next. They work without opening the app. On the last step, Finish opens Plantry so the dinner gets logged.
+
+It ends by itself when you finish, or if you open cook mode and close it again without starting. Nothing extra to sign: Live Activities updated by the app itself need no push and no paid account. To turn it off, Settings → Plantry → Live Activities.
 
 ## Paid: TestFlight and the App Store
 

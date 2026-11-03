@@ -73,6 +73,7 @@ struct CookModeView: View {
         .onChange(of: index) { persist() }
         .onChange(of: checked) { persist() }
         .onChange(of: people) { persist() }
+        .onReceive(NotificationCenter.default.publisher(for: .plantryCookRemote)) { _ in adoptRemoteChange() }
     }
 
     private func load() {
@@ -91,13 +92,28 @@ struct CookModeView: View {
             if resumed { toaster.show("Picked up where you left off.") }
         }
         timers.onChange = { persist() }
-        // Save straight away so the widget shows the step as soon as cooking starts.
+        // Save straight away so the widget and the Live Activity show the step as soon as cooking starts.
         persist()
     }
 
-    private func persist() {
+    private func persist(live: Bool = true) {
         guard let recipe else { return }
-        CookSession(recipeId: recipe.id, date: request.date, index: index, servings: people, checked: Array(checked), timers: timers.states).save()
+        CookSession(recipeId: recipe.id, date: request.date, index: index, servings: people, checked: Array(checked), timers: timers.states,
+                    title: recipe.title, steps: recipe.steps, people: count)
+            .save(live: live)
+    }
+
+    /// A button on the Lock Screen or in the Dynamic Island moved the step or
+    /// touched a timer while cook mode was open: follow it.
+    private func adoptRemoteChange() {
+        guard let saved = CookSession.load(recipeId: request.recipeId) else { return }
+        if saved.timers != timers.states {
+            timers.stop()
+            timers = Timers(states: saved.timers)
+            timers.onChange = { persist() }
+        }
+        let n = clamp(saved.index, 0, max(0, (recipe?.steps.count ?? 1) - 1))
+        if n != index { go(n) }
     }
 
     private func content(_ recipe: RecipeModel) -> some View {
@@ -336,7 +352,10 @@ struct CookModeView: View {
 
     /// Back to where you came from, keeping the session so it can be resumed.
     private func close() {
-        persist()
+        // Just looked and left: don't leave a Live Activity behind for a cook that never started.
+        let started = index > 0 || !timers.states.isEmpty
+        persist(live: started)
+        if !started { CookLiveActivity.end() }
         dismiss()
     }
 

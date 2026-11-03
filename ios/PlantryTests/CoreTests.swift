@@ -384,3 +384,95 @@ final class StoreTests: XCTestCase {
         XCTAssertTrue(store.fetch(PantryItemModel.self).isEmpty)
     }
 }
+
+// The Live Activity is drawn from the saved cook session alone, so its state and
+// the button actions are pure and can be checked here.
+final class CookLiveActivityTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func session(index: Int = 0, timers: [String: TimerState] = [:]) -> CookSession {
+        CookSession(recipeId: "r1", date: nil, index: index, servings: nil, timers: timers, title: "Skillet",
+                    steps: [Step(id: "s1", text: "Chop the onion.", timerMinutes: nil),
+                            Step(id: "s2", text: "Simmer the sauce, covered.", timerMinutes: 12),
+                            Step(id: "s3", text: "Rest it, then serve.", timerMinutes: 5)],
+                    people: 4)
+    }
+
+    func testStepWithoutTimers() throws {
+        let s = try XCTUnwrap(session(index: 1).liveState(now: now))
+        XCTAssertEqual(s.step, 2)
+        XCTAssertEqual(s.stepCount, 3)
+        XCTAssertEqual(s.stepId, "s2")
+        XCTAssertEqual(s.stepTimerMinutes, 12)
+        XCTAssertNil(s.timer)
+        XCTAssertEqual(s.servings, 4)
+    }
+
+    func testNoStepsMeansNoActivity() {
+        var s = session()
+        s.steps = nil
+        XCTAssertNil(s.liveState(now: now))
+    }
+
+    func testRunningTimerWinsAndHidesStartButton() throws {
+        let running = TimerState(durationMs: 720_000, remainingMs: 720_000, endsAt: now.addingTimeInterval(300), finished: false)
+        let s = try XCTUnwrap(session(index: 1, timers: ["s2": running]).liveState(now: now))
+        let t = try XCTUnwrap(s.timer)
+        XCTAssertTrue(t.running)
+        XCTAssertEqual(t.step, 2)
+        XCTAssertEqual(t.label, "Simmer the sauce")
+        XCTAssertEqual(t.remaining, 300, accuracy: 0.01)
+        XCTAssertNil(s.stepTimerMinutes)
+    }
+
+    func testRingingBeatsRunningAndExpiredCountsAsRinging() throws {
+        let running = TimerState(durationMs: 720_000, remainingMs: 720_000, endsAt: now.addingTimeInterval(300), finished: false)
+        let expired = TimerState(durationMs: 300_000, remainingMs: 300_000, endsAt: now.addingTimeInterval(-1), finished: false)
+        let s = try XCTUnwrap(session(index: 0, timers: ["s2": running, "s3": expired]).liveState(now: now))
+        XCTAssertEqual(s.timer?.stepId, "s3")
+        XCTAssertEqual(s.timer?.ringing, true)
+        XCTAssertEqual(s.moreTimers, 1)
+    }
+
+    func testDismissedAndResetTimersAreHidden() {
+        let dismissed = TimerState(durationMs: 300_000, remainingMs: 0, endsAt: nil, finished: true, acknowledged: true)
+        let reset = TimerState(durationMs: 720_000, remainingMs: 720_000, endsAt: nil, finished: false, acknowledged: true)
+        XCTAssertNil(session(timers: ["s2": reset, "s3": dismissed]).liveState(now: now)?.timer)
+    }
+
+    func testToggleCyclesStartPauseResume() throws {
+        var s = session(index: 1)
+        s.toggleTimer("s2", now: now)
+        XCTAssertEqual(s.timers["s2"]?.endsAt, now.addingTimeInterval(720))
+
+        s.toggleTimer("s2", now: now.addingTimeInterval(120))
+        XCTAssertNil(s.timers["s2"]?.endsAt)
+        XCTAssertEqual(s.timers["s2"]?.remainingMs, 600_000)
+        XCTAssertEqual(s.liveState(now: now.addingTimeInterval(130))?.timer?.paused, true)
+
+        s.toggleTimer("s2", now: now.addingTimeInterval(200))
+        XCTAssertEqual(s.timers["s2"]?.endsAt, now.addingTimeInterval(800))
+    }
+
+    func testToggleSilencesAFinishedTimer() {
+        var s = session(index: 2)
+        s.toggleTimer("s3", now: now)
+        s.toggleTimer("s3", now: now.addingTimeInterval(400))
+        XCTAssertEqual(s.timers["s3"]?.finished, true)
+        XCTAssertEqual(s.timers["s3"]?.acknowledged, true)
+        XCTAssertNil(s.liveState(now: now.addingTimeInterval(401))?.timer)
+    }
+
+    func testToggleIgnoresStepsWithoutATimer() {
+        var s = session()
+        s.toggleTimer("s1", now: now)
+        XCTAssertTrue(s.timers.isEmpty)
+    }
+
+    func testOldSessionsWithoutStepsStillDecode() throws {
+        let old = #"{"recipeId":"r1","index":2,"checked":[],"timers":{},"savedAt":0}"#
+        let s = try JSONDecoder().decode(CookSession.self, from: Data(old.utf8))
+        XCTAssertEqual(s.index, 2)
+        XCTAssertNil(s.steps)
+    }
+}
