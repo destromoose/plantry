@@ -23,6 +23,7 @@ import { Logo } from '@/components/ui/Logo'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Toaster } from '@/components/ui/Toast'
 import { NewHomeNote } from './NewHomeNote'
+import { EdgeSwipeBack } from './EdgeSwipeBack'
 import { useAppContext } from './Providers'
 import { setWriteErrorListener, useStorageStatus } from '@/lib/storage'
 import { toast } from '@/components/ui/Toast'
@@ -112,6 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Toaster />
       <p id="announcer" className="sr-only" aria-live="polite" />
       <NewHomeNote />
+      <EdgeSwipeBack />
     </>
   )
 
@@ -205,6 +207,12 @@ function TabBar({ pathname }: { pathname: string }) {
               key={tItem.href}
               href={tItem.href}
               aria-current={on ? 'page' : undefined}
+              onClick={(e) => {
+                // Tapping the tab you're on scrolls back to the top, as on iPhone.
+                if (pathname !== tItem.href) return
+                e.preventDefault()
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
               className={cn(
                 'relative flex h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-pill text-[0.6875rem] font-medium transition-colors',
                 on ? 'text-accent-ink' : 'text-ink-2'

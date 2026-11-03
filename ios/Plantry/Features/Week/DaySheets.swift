@@ -107,7 +107,7 @@ struct PickBody: View {
             let ideas = PlanAhead.rank(TogetherState.of(settingsRows).ideas ?? [])
             if !ideas.isEmpty && needle.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("From your ideas", systemImage: "lightbulb").font(.system(size: 12, weight: .semibold)).textCase(.uppercase).kerning(1.4).foregroundStyle(t.ink3)
+                    Label("From your ideas", systemImage: "lightbulb").font(Type.sans(12, weight: .semibold)).textCase(.uppercase).kerning(1.4).foregroundStyle(t.ink3)
                     ForEach(ideas.prefix(5)) { idea in
                         let r = recipes.first { $0.id == idea.recipeId }
                         let by = members.count > 1 ? members.first(where: { $0.id == idea.by }) : nil

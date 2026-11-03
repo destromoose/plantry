@@ -172,5 +172,13 @@ struct RecipeTile: View {
             .accessibilityLabel(recipe.isFavorite ? "Remove \(recipe.title) from favorites" : "Add \(recipe.title) to favorites")
         }
         .accessibilityElement(children: .contain)
+        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .contextMenu {
+            Button { nav.cooking = CookRequest(recipeId: recipe.id, date: nil) } label: { Label("Cook now", systemImage: "frying.pan") }
+            Button { store.toggleFavorite(recipe); Haptic.tap() } label: {
+                Label(recipe.isFavorite ? "Remove from favorites" : "Add to favorites", systemImage: recipe.isFavorite ? "heart.slash" : "heart")
+            }
+            Button { nav.push(.editRecipe(recipe.id)) } label: { Label("Edit", systemImage: "pencil") }
+        }
     }
 }

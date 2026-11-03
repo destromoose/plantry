@@ -212,7 +212,7 @@ struct HeroCard: View {
                     (Text("You have \(cov.have) of \(cov.total).").fontWeight(.medium) + Text(" \(cov.line).").foregroundColor(t.ink2))
                         .font(Type.body)
                     if !cov.missing.isEmpty {
-                        Button { addMissing(r, people: people) } label: { Label("Add \(cov.missing.count) to the list", systemImage: "plus").font(.system(size: 13, weight: .semibold)) }
+                        Button { addMissing(r, people: people) } label: { Label("Add \(cov.missing.count) to the list", systemImage: "plus").font(Type.sans(13, weight: .semibold)) }
                             .foregroundStyle(t.accent).frame(minHeight: 36)
                     }
                 }

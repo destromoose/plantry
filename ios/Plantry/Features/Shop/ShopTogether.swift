@@ -35,7 +35,7 @@ struct ShopTogetherCard: View {
                     if let shopper { Avatar(member: shopper, size: 36) }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(isMe ? "You're at the shop" : "\(shopper?.name ?? "Someone") is at the shop").font(Type.label)
-                        Text("since \(trip.start.formatted(date: .omitted, time: .shortened))").font(.system(size: 12)).foregroundStyle(t.ink3)
+                        Text("since \(trip.start.formatted(date: .omitted, time: .shortened))").font(Type.sans(12)).foregroundStyle(t.ink3)
                         Text(isMe ? "Anything the others add shows up here, marked New." : "Add anything now and it goes straight onto their list.")
                             .font(Type.small).foregroundStyle(t.ink2)
                     }

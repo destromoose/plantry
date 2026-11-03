@@ -45,6 +45,8 @@ struct RootView: View {
         .tint(theme.accent)
         .foregroundStyle(theme.ink)
         .modifier(ToastHost())
+        // Follow Text Size up to the largest standard setting; the accessibility sizes beyond it break the fixed-height controls.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .animation(.easeInOut(duration: 0.3), value: settings?.onboarded)
         .onChange(of: settings?.mood) { ctx.refresh() }
         .onChange(of: systemScheme, initial: true) { ctx.prefersDark = systemScheme == .dark }
@@ -80,6 +82,8 @@ enum Route: Hashable {
 final class Navigator {
     var tab: Tab = .tonight
     var paths: [Tab: [Route]] = [:]
+    /// Bumped when a tab is tapped again at its root, so its page scrolls to the top.
+    var scrollToTop: [Tab: Int] = [:]
     /// Cook mode is immersive: a full screen cover over everything.
     var cooking: CookRequest?
 
@@ -90,6 +94,11 @@ final class Navigator {
     func push(_ route: Route) { paths[tab, default: []].append(route) }
     func go(_ tab: Tab) { self.tab = tab }
     func popToRoot() { paths[tab] = [] }
+
+    /// Tapping the tab you're already on: back to its first screen, or up to the top if already there.
+    func reselect(_ tab: Tab) {
+        if paths[tab]?.isEmpty == false { paths[tab] = [] } else { scrollToTop[tab, default: 0] += 1 }
+    }
 }
 
 struct CookRequest: Identifiable, Hashable {
@@ -104,10 +113,13 @@ struct AppShell: View {
     @State private var nav = Navigator()
 
     var body: some View {
-        TabView(selection: $nav.tab) {
+        TabView(selection: Binding(get: { nav.tab }, set: { new in
+            if new == nav.tab { nav.reselect(new) } else { nav.tab = new }
+        })) {
             ForEach(Tab.allCases) { tab in
                 NavigationStack(path: nav.path(for: tab)) {
                     screen(for: tab)
+                        .environment(\.pageTab, tab)
                         .navigationDestination(for: Route.self) { route in destination(route) }
                 }
                 .tabItem { Label(tab.label, systemImage: tab.icon) }
@@ -162,22 +174,52 @@ struct AppShell: View {
     }
 }
 
+/// The tab a screen sits in, so its page knows when that tab is tapped again.
+private struct PageTabKey: EnvironmentKey { static let defaultValue: Tab? = nil }
+extension EnvironmentValues {
+    var pageTab: Tab? {
+        get { self[PageTabKey.self] }
+        set { self[PageTabKey.self] = newValue }
+    }
+}
+
 /// Shared page scaffolding: ambient background, 20pt gutters, scrolling content.
 struct Page<Content: View>: View {
     @Environment(\.theme) private var t
+    @Environment(Navigator.self) private var nav: Navigator?
+    @Environment(\.pageTab) private var tab
     @ViewBuilder var content: Content
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) { content }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 32)
-                .frame(maxWidth: 720)
-                .frame(maxWidth: .infinity)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) { content }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 32)
+                    .frame(maxWidth: 720)
+                    .frame(maxWidth: .infinity)
+                    .id("page-top")
+            }
+            .onChange(of: tab.map { nav?.scrollToTop[$0] ?? 0 }) {
+                withAnimation(Motion.settle) { proxy.scrollTo("page-top", anchor: .top) }
+            }
         }
         .scrollDismissesKeyboard(.interactively)
         .background(AmbientBackground())
         .toolbarBackground(.hidden, for: .navigationBar)
+    }
+}
+
+/// Pull down to check the household's latest and the weather, as on any iPhone list.
+struct PullToRefresh: ViewModifier {
+    @Environment(ContextProvider.self) private var ctx
+    @Environment(HouseholdSync.self) private var sync
+    func body(content: Content) -> some View {
+        content.refreshable {
+            await sync.refresh()
+            await ctx.refreshWeather()
+            ctx.refresh()
+        }
     }
 }
 

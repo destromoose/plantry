@@ -113,6 +113,7 @@ struct WeekView: View {
         }
         .navigationTitle("Week")
         .toolbar(.hidden, for: .navigationBar)
+        .modifier(PullToRefresh())
         .sheet(item: $active) { sheet in
             DaySheets(sheet: sheet, today: today, weekDates: dates, onCooked: cookDay) { active = $0 }
                 .presentationDetents(sheet.kind == .pick ? [.large] : [.medium, .large])
@@ -217,7 +218,7 @@ struct DayRow: View {
         VStack(spacing: 0) {
         HStack(spacing: 12) {
             VStack(spacing: 1) {
-                Text(DateKey.shortDay(date).uppercased()).font(.system(size: 11, weight: .semibold)).kerning(1)
+                Text(DateKey.shortDay(date).uppercased()).font(Type.sans(11, weight: .semibold)).kerning(1)
                 Text("\(DateKey.dayNumber(date))").font(Type.display(21))
             }
             .frame(width: 56, height: 56)
@@ -262,7 +263,7 @@ struct DayRow: View {
                         Image(systemName: "repeat").foregroundStyle(t.accent)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(what).font(Type.label).foregroundStyle(t.ink).lineLimit(1)
-                            Text("Every \(DateKey.weekdayName(date)). Tap to add").font(.system(size: 12)).foregroundStyle(t.ink3)
+                            Text("Every \(DateKey.weekdayName(date)). Tap to add").font(Type.sans(12)).foregroundStyle(t.ink3)
                         }
                         Spacer(minLength: 0)
                     }

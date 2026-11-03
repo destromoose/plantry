@@ -167,7 +167,7 @@ struct RecipeEditorView: View {
 
     private func field<C: View>(_ label: String, error: String? = nil, @ViewBuilder content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 13, weight: .medium)).foregroundStyle(t.ink2)
+            Text(label).font(Type.sans(13, weight: .medium)).foregroundStyle(t.ink2)
             content()
             if let error { Text(error).font(Type.small).foregroundStyle(Theme.danger) }
         }
