@@ -12,13 +12,19 @@ struct ShopView: View {
     @State private var name = ""
     @State private var editing: ShopItemModel?
     @State private var confirmClear = false
+    @State private var mineOnly = false
+    @Query(sort: \MemberModel.order) private var members: [MemberModel]
 
     var body: some View {
         let unchecked = shop.filter { !$0.checked }.count
         let checked = shop.count - unchecked
         let titles = Dictionary(recipes.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a })
+        let meId = members.first { $0.isMe }?.id
+        let split = shop.contains { $0.splitTo != nil }
+        let trip = ShopTogether.active(TogetherState.of(settingsRows).shopTrip)
+        let visible = mineOnly && split ? shop.filter { $0.splitTo == nil || $0.splitTo == meId } : Array(shop)
         let groups = Aisle.allCases.map { a in
-            let items = shop.filter { $0.aisle == a }
+            let items = visible.filter { $0.aisle == a }
             return (a, items.filter { !$0.checked } + items.filter { $0.checked })
         }.filter { !$0.1.isEmpty }
         let dismissed = settingsRows.first?.shopDismissed.count ?? 0
@@ -44,6 +50,8 @@ struct ShopView: View {
                     }
                 }
             }
+
+            ShopTogetherCard(shop: shop, mineOnly: $mineOnly)
 
             VStack(alignment: .leading, spacing: 8) {
                 PField(placeholder: "Milk, two onions, we're out of eggs…", text: $name) { add() }
@@ -83,7 +91,9 @@ struct ShopView: View {
                         Text(aisle.label).font(Type.heading)
                         VStack(spacing: 6) {
                             ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                                ShopRow(item: item, fromTitles: item.fromRecipeIds.compactMap { titles[$0] }, note: itemNotes[item.key]) { editing = item }
+                                ShopRow(item: item, fromTitles: item.fromRecipeIds.compactMap { titles[$0] }, note: itemNotes[item.key],
+                                        late: ShopTogether.isLateAdd(item.value, trip), members: members.count > 1 ? members : [],
+                                        meId: meId) { editing = item }
                                     .reveal(i)
                             }
                         }
@@ -191,12 +201,25 @@ struct ShopRow: View {
     var item: ShopItemModel
     var fromTitles: [String]
     var note: String? = nil
+    /// Added by someone else while this phone's person is out shopping.
+    var late = false
+    /// The household, when there's more than one person, to show who added and ticked what.
+    var members: [MemberModel] = []
+    var meId: String? = nil
     var onEdit: () -> Void
     @State private var drag: CGFloat = 0
 
     var body: some View {
         let qty = Quantity.format(item.amounts, forShopping: true)
         let from = fromTitles.isEmpty ? nil : (fromTitles.count == 1 ? "for \(fromTitles[0])" : "for \(fromTitles[0]) + \(fromTitles.count - 1) more")
+        let byId = { (id: String?) in id.flatMap { i in members.first { $0.id == i } } }
+        let adder = byId(item.addedBy)
+        let who: String? = adder.flatMap { a in
+            let name = a.id == meId ? "You" : a.name
+            if item.usedUp { return "\(name) used the last of it" }
+            return a.id == meId || from != nil ? nil : "Added by \(a.name)"
+        }
+        let badge = byId(item.checked ? item.checkedBy : item.splitTo)
         HStack(spacing: 12) {
             Button {
                 guard TapGuard.allow("shop-\(item.id)") else { return }
@@ -223,8 +246,12 @@ struct ShopRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.name).font(Type.label).foregroundStyle(item.checked ? t.ink3 : t.ink).strikethrough(item.checked, color: t.ink3)
                     HStack(spacing: 6) {
+                        if late {
+                            Text("New").font(.system(size: 11, weight: .bold)).foregroundStyle(t.accentInk)
+                                .padding(.horizontal, 6).padding(.vertical, 1).background(t.accent, in: Capsule())
+                        }
                         if !qty.isEmpty { Text(qty) }
-                        if let from, note == nil { Text(from) }
+                        if let who, note == nil { Text(who) } else if let from, note == nil { Text(from) }
                     }
                     .font(.system(size: 12)).foregroundStyle(t.ink3).lineLimit(1)
                     if let note {
@@ -235,7 +262,12 @@ struct ShopRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Change \(item.name) or leave a note\(note.map { ". Note: \($0)" } ?? "")")
+            .accessibilityLabel("Change \(item.name) or leave a note\(note.map { ". Note: \($0)" } ?? "")\(late ? ". New" : "")\(who.map { ". \($0)" } ?? "")")
+
+            if let badge {
+                Avatar(member: badge, size: 22)
+                    .accessibilityLabel(item.checked ? "In \(badge.name)'s basket" : "\(badge.name)'s part")
+            }
 
             Button { remove() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).frame(width: 44, height: 44) }
                 .foregroundStyle(t.ink3)

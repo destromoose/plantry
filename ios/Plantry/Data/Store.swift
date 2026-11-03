@@ -285,7 +285,7 @@ final class Store {
         context.delete(p)
         save()
         guard value.isStaple else { return false }
-        addShopItem(value.name, aisle: value.aisle)
+        addShopItem(value.name, aisle: value.aisle, usedUp: true)
         return true
     }
 
@@ -473,7 +473,7 @@ final class Store {
     enum ShopAdd { case added, exists }
 
     @discardableResult
-    func addShopItem(_ name: String, aisle: Aisle? = nil, quantity: Double? = nil, unit: String? = nil, recipeId: String? = nil) -> ShopAdd {
+    func addShopItem(_ name: String, aisle: Aisle? = nil, quantity: Double? = nil, unit: String? = nil, recipeId: String? = nil, usedUp: Bool = false) -> ShopAdd {
         let key = keyOf(name)
         settings.shopDismissed.removeAll { $0 == key }
         if let existing = fetch(ShopItemModel.self, #Predicate { $0.key == key }).first {
@@ -485,12 +485,16 @@ final class Store {
         }
         let staple = Seed.staplesByKey[key]
         let order = ((try? context.fetchCount(FetchDescriptor<ShopItemModel>())) ?? 0) + 1000
-        context.insert(ShopItemModel(ShopItem(id: IDs.make("sh"), name: String(name.trimmed.prefix(60)), key: key, quantity: quantity, unit: quantity == nil ? nil : (unit ?? ""), aisle: aisle ?? staple?.aisle ?? PantryGuess.aisle(for: name), checked: false, fromRecipeIds: recipeId.map { [$0] } ?? []), order: order))
+        context.insert(ShopItemModel(ShopItem(id: IDs.make("sh"), name: String(name.trimmed.prefix(60)), key: key, quantity: quantity, unit: quantity == nil ? nil : (unit ?? ""), aisle: aisle ?? staple?.aisle ?? PantryGuess.aisle(for: name), checked: false, fromRecipeIds: recipeId.map { [$0] } ?? [], addedBy: members.first { $0.isMe }?.id, addedAt: ISO.now(), usedUp: usedUp ? true : nil), order: order))
         save()
         return .added
     }
 
-    func toggleShopItem(_ item: ShopItemModel) { item.checked.toggle(); save() }
+    func toggleShopItem(_ item: ShopItemModel) {
+        item.checked.toggle()
+        item.checkedBy = item.checked ? me?.id : nil
+        save()
+    }
 
     /// Removes a row. A plan item stays off the list until the next shop or `restoreDismissed`.
     func removeShopItem(_ item: ShopItemModel) {
@@ -569,6 +573,8 @@ final class Store {
             context.delete(item)
         }
         // Rows the person removed from the list stay off until they ask them back.
+        var tog = together
+        if tog.shopTrip?.by != nil { tog.shopTrip = ShopTrip(); together = tog }
         save()
     }
 

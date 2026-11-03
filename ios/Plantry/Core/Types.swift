@@ -182,6 +182,15 @@ struct ShopItem: Codable, Identifiable, Hashable, Sendable {
     var fromRecipeIds: [String]
     /// Extra amounts in units that can't be added to the first (350 g + 2 tbsp).
     var more: [Amount]?
+    /// Who put it on the list, and when.
+    var addedBy: String?
+    var addedAt: String?
+    /// Who put it in the basket.
+    var checkedBy: String?
+    /// Added because someone used the last of it in the pantry.
+    var usedUp: Bool?
+    /// Whose part of a split list it is.
+    var splitTo: String?
 
     var amounts: [Amount] {
         (quantity.map { [Amount(quantity: $0, unit: unit ?? "")] } ?? []) + (more ?? [])

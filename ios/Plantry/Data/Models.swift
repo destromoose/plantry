@@ -130,14 +130,31 @@ final class ShopItemModel {
     var order: Int
     /// Extra amounts in units that can't be added to the first (350 g + 2 tbsp).
     var more: [Amount] = []
+    var addedBy: String? = nil
+    var addedAt: String? = nil
+    var checkedBy: String? = nil
+    var usedUp: Bool = false
+    var splitTo: String? = nil
 
     init(_ s: ShopItem, order: Int) {
         id = s.id; name = s.name; key = s.key; quantity = s.quantity; unit = s.unit
         aisle = s.aisle; checked = s.checked; fromRecipeIds = s.fromRecipeIds; self.order = order; more = s.more ?? []
+        addedBy = s.addedBy; addedAt = s.addedAt; checkedBy = s.checkedBy; usedUp = s.usedUp ?? false; splitTo = s.splitTo
     }
 
     var value: ShopItem {
-        ShopItem(id: id, name: name, key: key, quantity: quantity, unit: unit, aisle: aisle, checked: checked, fromRecipeIds: fromRecipeIds, more: more.isEmpty ? nil : more)
+        ShopItem(id: id, name: name, key: key, quantity: quantity, unit: unit, aisle: aisle, checked: checked, fromRecipeIds: fromRecipeIds,
+                 more: more.isEmpty ? nil : more, addedBy: addedBy, addedAt: addedAt, checkedBy: checkedBy,
+                 usedUp: usedUp ? true : nil, splitTo: splitTo)
+    }
+
+    /// Copy the household's version of the row onto this one.
+    func update(from item: ShopItem, order: Int) {
+        name = item.name; key = item.key; aisle = item.aisle; checked = item.checked
+        fromRecipeIds = item.fromRecipeIds; self.order = order
+        apply(amounts: item.amounts)
+        addedBy = item.addedBy; addedAt = item.addedAt; checkedBy = item.checkedBy
+        usedUp = item.usedUp ?? false; splitTo = item.splitTo
     }
 
     var amounts: [Amount] { value.amounts }

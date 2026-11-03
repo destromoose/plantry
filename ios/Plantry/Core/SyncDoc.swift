@@ -96,7 +96,8 @@ enum SyncDoc {
                     "steps", "tastes", "weather", "leftovers", "source", "sourceUrl", "isFavorite", "createdAt", "custom"],
         "pantry": ["id", "name", "key", "zone", "aisle", "quantity", "unit", "addedAt", "softLifeDays", "staple"],
         "plan": ["id", "date", "slot", "recipeId", "leftoversOf", "note", "servings", "cookId", "done"],
-        "shop": ["id", "name", "key", "quantity", "unit", "aisle", "checked", "fromRecipeIds", "more"],
+        "shop": ["id", "name", "key", "quantity", "unit", "aisle", "checked", "fromRecipeIds", "more",
+                 "addedBy", "addedAt", "checkedBy", "usedUp", "splitTo"],
         "handoffs": ["id", "date", "fromId", "toId", "recipeId", "message", "createdAt", "accepted"],
         "cooked": ["recipeId", "date", "cookId", "rating", "note"],
         "notes": ["id", "text", "by", "at", "on", "date", "slot", "itemKey", "photo", "pinned"],
@@ -107,6 +108,7 @@ enum SyncDoc {
         var d: [String: JSONValue] = ["v": .number(Double(version)), "settings": .object([:])]
         for r in records { d[r] = .object([:]) }
         for l in lists { d[l.key] = .array([]) }
+        d["shopTrip"] = .object([:])
         return d
     }
 
@@ -117,6 +119,7 @@ enum SyncDoc {
         for (k, v) in o where d[k] == nil { d[k] = v }
         for l in lists { if let a = o[l.key]?.array { d[l.key] = .array(a.filter { !l.idOf($0).isEmpty }) } }
         if let s = o["settings"]?.object { d["settings"] = .object(s) }
+        if let t = o["shopTrip"]?.object { d["shopTrip"] = .object(t) }
         for r in records { if let e = o[r]?.object { d[r] = .object(e) } }
         // Members carry no "this is me" flag: each phone remembers that itself.
         if let m = d["members"]?.array {
@@ -197,6 +200,9 @@ enum SyncDoc {
             }
             out[l.key] = .array(merged)
         }
+        // Who's out shopping is one value: whichever phone changed it last wins.
+        let trip = { (d: [String: JSONValue]) in d["shopTrip"] ?? .object([:]) }
+        out["shopTrip"] = trip(b) == trip(local) ? trip(remote) : trip(local)
         return out
     }
 

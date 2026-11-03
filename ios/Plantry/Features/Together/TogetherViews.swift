@@ -116,6 +116,7 @@ struct TonightTogether: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Who's eating \(label.lowercased())").font(Type.cardTitle)
                 WhoHome(date: date, slot: .dinner)
+                ShopperLink()
                 Divider().overlay(t.line)
                 Button { notesOpen = true } label: {
                     HStack(spacing: 8) {

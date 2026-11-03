@@ -60,6 +60,61 @@ struct TogetherState: Codable, Hashable, Sendable {
     var presence: [String: Presence] = [:]
     /// `weekday|slot|memberId` (0 is Sunday) to a usual answer.
     var presenceWeekly: [String: Presence] = [:]
+    /// Who is out at the shop right now. Optional so data saved before it still reads.
+    var shopTrip: ShopTrip?
+}
+
+/// Someone is at the shop: who, and since when. Empty when nobody is.
+struct ShopTrip: Codable, Hashable, Sendable {
+    var by: String?
+    var since: String?
+}
+
+// Shopping together, a port of lib/shopTogether.ts: who's out shopping, what got added while
+// they're there, and splitting one list between people.
+enum ShopTogether {
+    /// A trip counts for three hours, so a forgotten "Done" doesn't leave it on forever.
+    static let tripHours: Double = 3
+
+    struct Trip: Equatable { var by: String; var since: String; var start: Date }
+
+    static func active(_ trip: ShopTrip?, now: Date = Date()) -> Trip? {
+        guard let by = trip?.by, !by.isEmpty, let since = trip?.since, let start = ISO.date(since) else { return nil }
+        guard now.timeIntervalSince(start) <= tripHours * 3600 else { return nil }
+        return Trip(by: by, since: since, start: start)
+    }
+
+    /// Put on the list by someone else after the shopper set off: worth a highlight.
+    static func isLateAdd(_ item: ShopItem, _ trip: Trip?) -> Bool {
+        guard let trip, let at = item.addedAt.flatMap(ISO.date) else { return false }
+        return at > trip.start && item.addedBy != trip.by
+    }
+
+    /// Split the list by aisle so each person walks their own part of the shop. Bigger aisles
+    /// go first to whoever has least so far. Returns who gets each item.
+    static func splitByAisle(_ items: [ShopItem], people: [String]) -> [String: String] {
+        guard people.count > 1 else { return [:] }
+        var byAisle: [Aisle: [ShopItem]] = [:]
+        var order: [Aisle] = []
+        for i in items where !i.checked {
+            if byAisle[i.aisle] == nil { order.append(i.aisle) }
+            byAisle[i.aisle, default: []].append(i)
+        }
+        var load = people.map { ($0, 0) }
+        var out: [String: String] = [:]
+        // Stable sort so the same list always splits the same way, like the web app.
+        let aisles = order.enumerated().sorted { a, b in
+            let x = byAisle[a.element]!.count, y = byAisle[b.element]!.count
+            return x != y ? x > y : a.offset < b.offset
+        }.map(\.element)
+        for a in aisles {
+            let list = byAisle[a]!
+            let i = load.indices.min { load[$0].1 < load[$1].1 || (load[$0].1 == load[$1].1 && $0 < $1) }!
+            for item in list { out[item.id] = load[i].0 }
+            load[i].1 += list.count
+        }
+        return out
+    }
 }
 
 enum Together {
