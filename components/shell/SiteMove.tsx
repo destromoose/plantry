@@ -5,7 +5,7 @@ import { t } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import { ExternalLink, Share, SquarePlus } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
-import { fingerprint, isLegacyOrigin, isPlantryKey, SITE_ORIGIN } from '@/lib/site'
+import { fingerprint, hasKitchen, isLegacyOrigin, isPlantryKey, SITE_ORIGIN } from '@/lib/site'
 
 // On Plantry's old address: once the new address is live, hand this phone's saved data over
 // and continue there. Browsers keep saved data per address, so without this people would
@@ -55,8 +55,10 @@ async function handover(from: 'web' | 'app'): Promise<string | null> {
   const params = new URLSearchParams({ next: here.pathname + here.search, from })
   const items = collect()
   const base = `${SITE_ORIGIN}/move.html?${params}`
-  // Nothing saved yet: just continue at the new address.
-  if (!items['plantry-v1']) return base
+  // No kitchen set up here yet: just continue at the new address. Opening the old address
+  // saves an empty, not-set-up kitchen, and carrying that over would wipe the one at the
+  // new address and send people back to the start of setup.
+  if (!hasKitchen(items['plantry-v1'])) return base
   const text = JSON.stringify({ items, fp: fingerprint(JSON.stringify(items)) })
   try {
     const res = await fetch('/api/move', {
