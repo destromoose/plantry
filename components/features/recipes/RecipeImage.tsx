@@ -30,12 +30,15 @@ export function RecipeImage({
   seed,
   sizes,
   priority,
+  eager,
   className,
 }: {
   url?: string
   seed: string
   sizes: string
   priority?: boolean
+  /** Start loading now instead of when the image nears the screen, for the first screens of a list. */
+  eager?: boolean
   className?: string
 }) {
   // Remember which link failed, so a new link gets a fresh try.
@@ -51,6 +54,7 @@ export function RecipeImage({
           {...imageProps(url!.trim())}
           sizes={sizes}
           priority={priority}
+          loading={priority ? undefined : eager ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : undefined}
           className="object-cover"
           onError={() => setFailed(url!)}

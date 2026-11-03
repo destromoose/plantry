@@ -4,7 +4,7 @@
 
 ## Priorities
 
-- **Fast.** Cold launch is a local SwiftData open and one render. No network on the critical path. Images load lazily behind a surface-colored placeholder with a memory and disk cache.
+- **Fast.** Cold launch is a local SwiftData open and one render. No network on the critical path. Images are downloaded once (disk cache), shrunk to the size they are shown at and decoded off the main thread (`ImagePipeline`), then kept in memory, so a cached photo draws on a card's first frame. The recipe grid prefetches photos a dozen cards ahead of the scroll, and only the first screen of cards fades in.
 - **Light.** Zero third-party dependencies. No bundled fonts (New York serif for display, San Francisco for body). The app is the Swift source, two JSON files, and one icon.
 - **Native motion.** Springs match the web presets (`settle`, `drift`, `checkPop`, `reveal`) and respect Reduce Motion, both the system setting and Plantry's own.
 - **Local-first.** Everything lives in SwiftData on the phone. Export and import use the same JSON shape as the web app, so a file moves between the two.

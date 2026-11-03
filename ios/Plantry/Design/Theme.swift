@@ -155,7 +155,11 @@ private struct MotionModifier<V: Equatable>: ViewModifier {
 struct Reveal: ViewModifier {
     @Environment(\.plantryReduceMotion) private var reduce
     var index: Int
-    @State private var shown = false
+    @State private var shown: Bool
+    init(index: Int, enabled: Bool = true) {
+        self.index = index
+        _shown = State(initialValue: !enabled)
+    }
     func body(content: Content) -> some View {
         content
             .opacity(shown || reduce ? 1 : 0)
@@ -168,5 +172,7 @@ struct Reveal: ViewModifier {
 }
 
 extension View {
-    func reveal(_ index: Int = 0) -> some View { modifier(Reveal(index: index)) }
+    /// Pass `enabled: false` to show the view at once, for rows that mount while
+    /// the person is already scrolling.
+    func reveal(_ index: Int = 0, enabled: Bool = true) -> some View { modifier(Reveal(index: index, enabled: enabled)) }
 }

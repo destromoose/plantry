@@ -11,9 +11,15 @@ struct CardModifier: ViewModifier {
     var tint: Color?
     func body(content: Content) -> some View {
         content
-            .background(tint ?? t.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            // The shadow is cast by the card shape alone, not the whole card with its
+            // text and photo, so SwiftUI draws it without an offscreen pass per card.
+            // That keeps long scrolling lists at full frame rate.
+            .background {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .fill(tint ?? t.surface)
+                    .shadow(color: .black.opacity(t.isDark ? 0.3 : 0.06), radius: 12, y: 6)
+            }
             .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(t.line.opacity(0.7), lineWidth: 1))
-            .shadow(color: .black.opacity(t.isDark ? 0.3 : 0.06), radius: 12, y: 6)
     }
 }
 
@@ -510,11 +516,27 @@ struct SheetChrome<Content: View>: View {
 // MARK: - Images
 
 /// A remote image with a memory and disk cache, no third-party loader.
+///
+/// A photo already in memory is drawn on the very first frame, so a card that
+/// scrolls back into view never flashes an empty tile. A photo that is still
+/// loading shows a surface-colored placeholder, or a smaller copy while the
+/// sharp one decodes.
 struct RemoteImage: View {
     @Environment(\.theme) private var t
     var url: String?
+    var size: ImagePipeline.Size
     @State private var image: Image?
+    /// The url and size `image` is the finished picture for. Nil while it is a stand-in or empty.
+    @State private var exactFor: String?
     @State private var failed = false
+
+    init(url: String?, size: ImagePipeline.Size = .full) {
+        self.url = url
+        self.size = size
+        let hit = Self.parse(url).flatMap { ImagePipeline.shared.bestCached($0, size) }
+        _image = State(initialValue: hit?.image)
+        _exactFor = State(initialValue: hit?.exact == true ? Self.tag(url, size) : nil)
+    }
 
     var body: some View {
         Color.clear
@@ -527,47 +549,37 @@ struct RemoteImage: View {
             }
             .background(t.surface2)
             .clipped()
-        .task(id: url) { await load() }
-        .motion(.easeOut(duration: 0.25), value: image == nil)
+        .task(id: Self.tag(url, size)) { await load() }
+        .motion(.easeOut(duration: 0.2), value: image == nil)
+    }
+
+    private static func tag(_ url: String?, _ size: ImagePipeline.Size) -> String { "\(size.rawValue)|\(url ?? "")" }
+    private static func parse(_ url: String?) -> URL? {
+        guard let url, let u = URL(string: url), u.scheme?.hasPrefix("http") == true else { return nil }
+        return u
     }
 
     private func load() async {
-        // A new url must not keep showing the last one's picture or failure.
-        image = nil
+        let tag = Self.tag(url, size)
+        if exactFor == tag, image != nil { return }
         failed = false
-        guard let url, let u = URL(string: url) else { failed = true; return }
-        if let cached = ImageCache.shared.image(for: u) { image = cached; return }
-        var req = URLRequest(url: u)
-        req.cachePolicy = .returnCacheDataElseLoad
-        guard let (data, _) = try? await ImageCache.session.data(for: req), let img = ImageCache.decode(data) else { failed = true; return }
-        ImageCache.shared.store(img, for: u)
-        image = img
-    }
-}
-
-@MainActor
-final class ImageCache {
-    static let shared = ImageCache()
-    static let session: URLSession = {
-        let c = URLSessionConfiguration.default
-        c.urlCache = URLCache(memoryCapacity: 32 << 20, diskCapacity: 200 << 20)
-        c.requestCachePolicy = .returnCacheDataElseLoad
-        return URLSession(configuration: c)
-    }()
-    private let cache = NSCache<NSURL, ImageBox>()
-    final class ImageBox { let image: Image; init(_ i: Image) { image = i } }
-
-    func image(for url: URL) -> Image? { cache.object(forKey: url as NSURL)?.image }
-    func store(_ image: Image, for url: URL) { cache.setObject(ImageBox(image), forKey: url as NSURL) }
-
-    nonisolated static func decode(_ data: Data) -> Image? {
-        #if canImport(UIKit)
-        guard let ui = UIImage(data: data) else { return nil }
-        return Image(uiImage: ui)
-        #else
-        guard let ns = NSImage(data: data) else { return nil }
-        return Image(nsImage: ns)
-        #endif
+        guard let u = Self.parse(url) else { image = nil; exactFor = nil; failed = true; return }
+        if let hit = ImagePipeline.shared.bestCached(u, size) {
+            image = hit.image
+            if hit.exact { exactFor = tag; return }
+        } else {
+            // A new url must not keep showing the last one's picture.
+            image = nil
+        }
+        exactFor = nil
+        let loaded = await ImagePipeline.shared.load(u, size)
+        guard !Task.isCancelled else { return }
+        if let loaded {
+            image = loaded
+            exactFor = tag
+        } else if image == nil {
+            failed = true
+        }
     }
 }
 
@@ -576,7 +588,7 @@ struct Thumb: View {
     var size: CGFloat = 48
     var radius: CGFloat = 12
     var body: some View {
-        RemoteImage(url: url)
+        RemoteImage(url: url, size: .fitting(points: size))
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
     }

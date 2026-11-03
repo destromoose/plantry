@@ -211,6 +211,11 @@ export function RecipeLibrary() {
                         url={recipe.imageUrl}
                         seed={recipe.id}
                         sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, 46vw"
+                        // The first row is on screen at once. The rest of the first page loads
+                        // straight away too, so scrolling never meets an empty tile; later pages
+                        // load as they near the screen.
+                        priority={i < 4}
+                        eager={i < PAGE}
                       />
                     </motion.div>
                     <div className="space-y-1.5 p-3">
