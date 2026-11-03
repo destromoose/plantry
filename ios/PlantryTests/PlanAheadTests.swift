@@ -36,6 +36,13 @@ final class PlanAheadTests: XCTestCase {
         XCTAssertEqual(PlanAhead.repeatsInto([], [pizza], dates: DateKey.weekOf("2026-10-27"), today: today).count, 0)
     }
 
+    func testOneWeeklyDinnerPerNightWhenTwoPhonesSetOne() {
+        let pizza = RepeatMeal(id: "p", weekday: 5, slot: .dinner, note: "Pizza")
+        let curry = RepeatMeal(id: "c", weekday: 5, slot: .dinner, note: "Curry")
+        let out = PlanAhead.repeatsInto([], [pizza, curry], dates: DateKey.weekOf(today), today: today)
+        XCTAssertEqual(out.map(\.note), ["Pizza"])
+    }
+
     func testIdeasRankByMeTooThenNewest() {
         let ideas = [
             MealIdea(id: "a", text: "Tacos", at: "2026-11-01T10:00:00Z"),
@@ -91,5 +98,16 @@ final class ActivityTests: XCTestCase {
         var after = SyncDoc.empty()
         after["ideas"] = .array([JSONValue.from(MealIdea(id: "d1", text: "Ramen", by: "a", at: now))])
         XCTAssertTrue(ActivityLog.diff(before: SyncDoc.empty(), after: after, meId: "a", now: now).isEmpty)
+    }
+
+    func testNamesWhoANightWasHandedTo() {
+        var after = SyncDoc.empty()
+        after["members"] = .array([JSONValue.from(Member(id: "a", name: "Alex", color: .sage)), JSONValue.from(Member(id: "s", name: "Sara", color: .plum)),
+                                   JSONValue.from(Member(id: "j", name: "Jo", color: .saffron))])
+        after["handoffs"] = .array([JSONValue.from(Handoff(id: "h1", date: "2026-11-06", fromId: "s", toId: "j", createdAt: now)),
+                                    JSONValue.from(Handoff(id: "h2", date: "2026-11-07", fromId: "s", toId: "a", createdAt: now))])
+        let out = ActivityLog.diff(before: SyncDoc.empty(), after: after, meId: "a", now: now)
+        XCTAssertTrue(out.contains { $0.text.hasPrefix("Sara asked Jo to cook") && $0.forMe == nil })
+        XCTAssertTrue(out.contains { $0.text.hasPrefix("Sara asked you to cook") && $0.forMe == true })
     }
 }

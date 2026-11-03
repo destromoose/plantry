@@ -46,6 +46,12 @@ describe('weekly meals', () => {
     // Past Fridays are left alone.
     expect(repeatsInto([], [pizza], weekOf('2026-10-27'), today)).toHaveLength(0)
   })
+
+  it('puts one dinner on a night when two phones set a weekly meal for it', () => {
+    const curry: RepeatMeal = { id: 'c', weekday: 5, slot: 'dinner', note: 'Curry' }
+    const out = repeatsInto([], [pizza, curry], week, today)
+    expect(out.map((o) => o.note)).toEqual(['Pizza'])
+  })
 })
 
 describe('ideas', () => {

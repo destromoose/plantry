@@ -1154,6 +1154,8 @@ export const es: Record<string, string> = {
   '{day}: {what}': '{day}: {what}',
   '{name} is cooking {day}': '{name} cocina el {day}',
   '{name} asked you to cook {day}': '{name} te pidió que cocines el {day}',
+  '{name} asked {to} to cook {day}': '{name} le pidió a {to} que cocine el {day}',
+  someone: 'alguien',
   ' and {n} more': ' y {n} más',
   '{name} added {items}{more} to the list': '{name} añadió {items}{more} a la lista',
   'Added to the list: {items}{more}': 'Añadido a la lista: {items}{more}',

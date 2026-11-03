@@ -63,6 +63,22 @@ describe('diffActivity', () => {
     }
     expect(diffActivity(emptyDoc(), after, members, recipes, 'a', now)).toEqual([])
   })
+
+  it('names who a night was handed to', () => {
+    const three = [...members, { id: 'j', name: 'Jo' }]
+    const after = {
+      ...emptyDoc(),
+      handoffs: [
+        { id: 'h1', date: '2026-11-06', fromId: 's', toId: 'j', createdAt: now },
+        { id: 'h2', date: '2026-11-07', fromId: 's', toId: 'a', createdAt: now },
+      ],
+    }
+    const out = diffActivity(emptyDoc(), after, three, recipes, 'a', now)
+    expect(out.map((a) => [a.text, a.forMe])).toEqual([
+      ['Sara asked Jo to cook Friday', false],
+      ['Sara asked you to cook Saturday', true],
+    ])
+  })
 })
 
 describe('keepActivity', () => {

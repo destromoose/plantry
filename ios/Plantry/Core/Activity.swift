@@ -58,7 +58,9 @@ enum ActivityLog {
 
         let oldHandoffs = Set(items(before, "handoffs", Handoff.self).map(\.id))
         for h in items(after, "handoffs", Handoff.self) where !oldHandoffs.contains(h.id) && notMe(h.fromId) {
-            push("\(name(h.fromId)) asked you to cook \(weekday(h.date))", by: h.fromId, .tonight, forMe: h.toId == meId)
+            let toMe = meId != nil && h.toId == meId
+            let to = toMe ? "you" : (members.first { $0.id == h.toId }?.name ?? "someone")
+            push("\(name(h.fromId)) asked \(to) to cook \(weekday(h.date))", by: h.fromId, .tonight, forMe: toMe)
         }
 
         let oldShop = Set(items(before, "shop", ShopItem.self).map(\.id))

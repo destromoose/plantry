@@ -62,8 +62,12 @@ export function repeatsInto(
   const out: Omit<PlanEntry, 'id'>[] = []
   for (const date of dates) {
     if (date < today) continue
+    // Two phones can each set a weekly meal for the same night before syncing: the first wins,
+    // as in repeatFor.
+    const seen = new Set<string>()
     for (const r of repeats) {
-      if (r.weekday !== fromDateKey(date).getDay()) continue
+      if (r.weekday !== fromDateKey(date).getDay() || seen.has(r.slot)) continue
+      seen.add(r.slot)
       const cur = plan.find((p) => p.date === date && p.slot === r.slot)
       if (decided(cur)) continue
       out.push({ date, slot: r.slot, recipeId: r.recipeId, note: r.note, cookId: cur?.cookId })

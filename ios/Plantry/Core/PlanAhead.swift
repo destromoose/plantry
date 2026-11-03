@@ -57,7 +57,10 @@ enum PlanAhead {
     static func repeatsInto(_ plan: [PlanEntry], _ repeats: [RepeatMeal], dates: [String], today: String) -> [PlanEntry] {
         var out: [PlanEntry] = []
         for date in dates where date >= today {
-            for r in repeats where r.weekday == Together.weekday(date) {
+            // Two phones can each set a weekly meal for the same night before syncing: the
+            // first wins, as in repeatFor.
+            var seen = Set<MealSlot>()
+            for r in repeats where r.weekday == Together.weekday(date) && seen.insert(r.slot).inserted {
                 let cur = plan.first { $0.date == date && $0.slot == r.slot }
                 if decided(cur) { continue }
                 out.append(PlanEntry(id: IDs.make("pl"), date: date, slot: r.slot, recipeId: r.recipeId, note: r.note, cookId: cur?.cookId))

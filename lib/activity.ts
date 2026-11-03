@@ -96,18 +96,24 @@ export function diffActivity(
     }
   }
 
-  // Handoffs to this person
+  // Nights handed over
   const oldHandoffs = new Set(before.handoffs.map((h) => h.id))
   for (const h of after.handoffs) {
     if (oldHandoffs.has(h.id) || !notMe(h.fromId)) continue
+    const from = name(h.fromId) ?? t('Someone')
+    const day = weekday(h.date)
+    const toMe = !!meId && h.toId === meId
     push({
       by: h.fromId,
-      text: t('{name} asked you to cook {day}', {
-        name: name(h.fromId) ?? t('Someone'),
-        day: weekday(h.date),
-      }),
+      text: toMe
+        ? t('{name} asked you to cook {day}', { name: from, day })
+        : t('{name} asked {to} to cook {day}', {
+            name: from,
+            to: name(h.toId) ?? t('someone'),
+            day,
+          }),
       href: '/',
-      forMe: h.toId === meId,
+      forMe: toMe,
     })
   }
 

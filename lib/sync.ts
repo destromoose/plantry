@@ -210,7 +210,7 @@ function finish(meta: Meta, rev: number, merged: SyncDoc, localWas: SyncDoc) {
   if (!docsEqual(next, now)) {
     // What the others changed, for "Since you last looked" and alerts that concern you.
     const s = useStore.getState()
-    const fresh = diffActivity(now, next, next.members, s.recipes, meta.meId)
+    const fresh = diffActivity(now, next, next.members, [...next.recipes, ...s.recipes], meta.meId)
     apply(next, meta.meId)
     s.addActivity(fresh)
     notifyForMe(fresh)
