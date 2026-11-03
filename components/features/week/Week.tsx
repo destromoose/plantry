@@ -32,6 +32,9 @@ import { ProgressRing } from '@/components/ui/ProgressRing'
 import { toast } from '@/components/ui/Toast'
 import { Thumb } from './Thumb'
 import { DaySheets, type SheetKind } from './DaySheets'
+import { MealSheet, slotName } from './MealSheet'
+import { entryFor as mealEntry, mealLabel, smallMeals } from '@/lib/meals'
+import type { MealSlot } from '@/lib/types'
 import { WeekBudget } from '@/components/features/budget/WeekBudget'
 import { recipeCost } from '@/lib/cost'
 
@@ -47,6 +50,8 @@ export function Week() {
   const today = toDateKey(new Date(ctx.now))
   const [offset, setOffset] = useState(0)
   const [active, setActive] = useState<{ date: string; kind: SheetKind } | null>(null)
+  const [meal, setMeal] = useState<{ date: string; slot: MealSlot } | null>(null)
+  const small = smallMeals(useStore((s) => s.settings.meals))
   // The same week everywhere: the one that holds the dinner Tonight is about.
   const weekDates = useMemo(
     () => weekOf(addDays(ctx.targetDate, offset * 7)),
@@ -265,84 +270,132 @@ export function Week() {
               variants={reveal}
               custom={i}
               className={cn(
-                'card flex items-center gap-3 p-3 pr-2',
+                'card p-3 pr-2',
                 isToday && 'ring-2 ring-accent',
-                (past || done) && 'opacity-70'
+                (past || done) && 'opacity-90'
               )}
             >
-              <div
-                className={cn(
-                  'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl',
-                  isToday ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'
-                )}
-              >
-                <span className="text-[0.6875rem] font-semibold uppercase tracking-wider">
-                  {shortDay(date)}
-                </span>
-                <span className="font-display text-xl font-semibold leading-none">
-                  {fromDateKey(date).getDate()}
-                </span>
-              </div>
-
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.div
-                  key={entry ? `${entry.id}` : `empty-${date}`}
-                  variants={reveal}
-                  initial="hidden"
-                  animate="show"
-                  exit="exit"
-                  className="flex min-w-0 flex-1"
-                >
-                  {decidedRow && body ? (
-                    recipe ? (
-                      <Link
-                        href={`/recipes/${recipe.id}`}
-                        className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl"
-                      >
-                        {body}
-                      </Link>
-                    ) : (
-                      <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">
-                        {body}
-                      </div>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setActive({ date, kind: 'pick' })}
-                      aria-label={t('Pick something for {v0}', { v0: dayLabel(date, today) })}
-                      className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-ink-3/60 text-sm font-medium text-ink-2 hover:bg-surface-2"
-                    >
-                      <Plus className="h-4 w-4" aria-hidden /> {t('Pick something')}
-                    </button>
+              <div className={cn('flex items-center gap-3', (past || done) && 'opacity-80')}>
+                <div
+                  className={cn(
+                    'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl',
+                    isToday ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'
                   )}
-                </motion.div>
-              </AnimatePresence>
-
-              {done && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={checkPop}
-                  className="text-secondary"
-                  role="img"
-                  aria-label={t('Cooked')}
                 >
-                  <Check className="h-5 w-5" />
-                </motion.span>
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-wider">
+                    {shortDay(date)}
+                  </span>
+                  <span className="font-display text-xl font-semibold leading-none">
+                    {fromDateKey(date).getDate()}
+                  </span>
+                </div>
+
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.div
+                    key={entry ? `${entry.id}` : `empty-${date}`}
+                    variants={reveal}
+                    initial="hidden"
+                    animate="show"
+                    exit="exit"
+                    className="flex min-w-0 flex-1"
+                  >
+                    {decidedRow && body ? (
+                      recipe ? (
+                        <Link
+                          href={`/recipes/${recipe.id}`}
+                          className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 rounded-xl"
+                        >
+                          {body}
+                        </Link>
+                      ) : (
+                        <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3">
+                          {body}
+                        </div>
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setActive({ date, kind: 'pick' })}
+                        aria-label={t('Pick something for {v0}', { v0: dayLabel(date, today) })}
+                        className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-ink-3/60 text-sm font-medium text-ink-2 hover:bg-surface-2"
+                      >
+                        <Plus className="h-4 w-4" aria-hidden /> {t('Pick something')}
+                      </button>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+
+                {done && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={checkPop}
+                    className="text-secondary"
+                    role="img"
+                    aria-label={t('Cooked')}
+                  >
+                    <Check className="h-5 w-5" />
+                  </motion.span>
+                )}
+                {cook && <Avatar member={cook} size="sm" />}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('Options for {v0} {v1}', {
+                    v0: shortDay(date),
+                    v1: fromDateKey(date).getDate(),
+                  })}
+                  onClick={() => setActive({ date, kind: 'menu' })}
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </div>
+              {small.length > 0 && (
+                <ul className="mt-1.5 flex flex-wrap gap-x-1 border-t border-line pt-1.5">
+                  {small.map((slot) => {
+                    const e = mealEntry(plan, date, slot)
+                    const label = mealLabel(e, recipes)
+                    const lo = !!e?.leftoversOf
+                    const what = label && (lo ? t('Leftovers: {title}', { title: label }) : label)
+                    return (
+                      <li key={slot} className={cn('min-w-0', what ? 'basis-full' : 'basis-auto')}>
+                        <button
+                          type="button"
+                          onClick={() => setMeal({ date, slot })}
+                          aria-label={
+                            what
+                              ? t('{meal} on {day}: {what}. Change it', {
+                                  meal: slotName(slot),
+                                  day: dayLabel(date, today),
+                                  what,
+                                })
+                              : t('Add {meal} for {day}', {
+                                  meal: slotName(slot).toLowerCase(),
+                                  day: dayLabel(date, today),
+                                })
+                          }
+                          className="flex min-h-[40px] w-full items-center gap-2 rounded-lg px-2 text-left text-[0.9375rem] hover:bg-surface-2"
+                        >
+                          {what ? (
+                            <>
+                              <span className="w-[4.75rem] shrink-0 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-3">
+                                {slotName(slot)}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate font-medium text-ink">
+                                {what}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="flex items-center gap-1 text-sm text-ink-3">
+                              <Plus className="h-3.5 w-3.5" aria-hidden /> {slotName(slot)}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
               )}
-              {cook && <Avatar member={cook} size="sm" />}
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={t('Options for {v0} {v1}', {
-                  v0: shortDay(date),
-                  v1: fromDateKey(date).getDate(),
-                })}
-                onClick={() => setActive({ date, kind: 'menu' })}
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </Button>
             </motion.li>
           )
         })}
@@ -382,6 +435,13 @@ export function Week() {
           {t('Make the shopping list')}
         </Button>
       </section>
+
+      <MealSheet
+        date={meal?.date ?? null}
+        slot={meal?.slot ?? 'lunch'}
+        today={today}
+        onClose={() => setMeal(null)}
+      />
 
       <DaySheets
         date={active?.date ?? null}
