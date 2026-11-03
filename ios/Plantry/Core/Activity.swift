@@ -3,7 +3,7 @@ import Foundation
 // "Since you last looked", a port of lib/activity.ts: what the rest of the household changed,
 // worked out from what came in on a sync. Nothing extra is synced; each phone keeps its own list.
 
-struct Activity: Codable, Identifiable, Hashable, Sendable {
+struct HouseActivity: Codable, Identifiable, Hashable, Sendable {
     enum Place: String, Codable, Sendable { case tonight, week, shop, household }
     var id: String
     var at: String
@@ -20,7 +20,7 @@ enum ActivityLog {
     static let days = 14
     static let max = 40
 
-    static func diff(before: [String: JSONValue], after: [String: JSONValue], meId: String?, now: String = ISO.now()) -> [Activity] {
+    static func diff(before: [String: JSONValue], after: [String: JSONValue], meId: String?, now: String = ISO.now()) -> [HouseActivity] {
         func items<T: Decodable>(_ d: [String: JSONValue], _ k: String, _ t: T.Type) -> [T] { (d[k]?.array ?? []).compactMap { $0.decode(T.self) } }
         let members = items(after, "members", Member.self)
         let recipes = items(after, "recipes", Recipe.self)
@@ -28,11 +28,11 @@ enum ActivityLog {
         func title(_ id: String?) -> String? { recipes.first { $0.id == id }?.title }
         func notMe(_ by: String?) -> Bool { by == nil || by != meId }
         func weekday(_ d: String) -> String { DateKey.weekdayName(d) }
-        var out: [Activity] = []
-        func push(_ text: String, by: String? = nil, _ place: Activity.Place, forMe: Bool = false) {
-            out.append(Activity(id: "\(now)-\(out.count)", at: now, text: text, by: by, place: place, forMe: forMe ? true : nil))
+        var out: [HouseActivity] = []
+        func push(_ text: String, by: String? = nil, _ place: HouseActivity.Place, forMe: Bool = false) {
+            out.append(HouseActivity(id: "\(now)-\(out.count)", at: now, text: text, by: by, place: place, forMe: forMe ? true : nil))
         }
-        func placeOf(_ n: HouseNote?) -> Activity.Place { n?.on == .shop ? .shop : n?.on == .board ? .household : .week }
+        func placeOf(_ n: HouseNote?) -> HouseActivity.Place { n?.on == .shop ? .shop : n?.on == .board ? .household : .week }
 
         let notes = items(after, "notes", HouseNote.self)
         let oldNotes = Set(items(before, "notes", HouseNote.self).map(\.id))
@@ -96,17 +96,17 @@ enum ActivityLog {
         return out
     }
 
-    static func keep(_ list: [Activity], _ fresh: [Activity], now: Date = Date()) -> [Activity] {
+    static func keep(_ list: [HouseActivity], _ fresh: [HouseActivity], now: Date = Date()) -> [HouseActivity] {
         let cutoff = now.addingTimeInterval(-Double(days) * 86_400)
         return Array((fresh + list).filter { (ISO.date($0.at) ?? now) >= cutoff }.prefix(max))
     }
 
-    static func load() -> [Activity] {
+    static func load() -> [HouseActivity] {
         guard let d = UserDefaults.standard.data(forKey: key) else { return [] }
-        return (try? JSONDecoder().decode([Activity].self, from: d)) ?? []
+        return (try? JSONDecoder().decode([HouseActivity].self, from: d)) ?? []
     }
 
-    static func add(_ fresh: [Activity]) {
+    static func add(_ fresh: [HouseActivity]) {
         guard !fresh.isEmpty else { return }
         let next = keep(load(), fresh)
         UserDefaults.standard.set(try? JSONEncoder().encode(next), forKey: key)

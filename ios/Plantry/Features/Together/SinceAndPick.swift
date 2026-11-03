@@ -12,7 +12,7 @@ struct SinceLookedCard: View {
     @AppStorage(ActivityLog.seenKey) private var seenAt = ""
 
     var body: some View {
-        let all = (try? JSONDecoder().decode([Activity].self, from: data)) ?? []
+        let all = (try? JSONDecoder().decode([HouseActivity].self, from: data)) ?? []
         let fresh = all.filter { seenAt.isEmpty || $0.at > seenAt }
         if members.count > 1 && !fresh.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
@@ -40,7 +40,7 @@ struct SinceLookedCard: View {
         }
     }
 
-    private func go(_ place: Activity.Place?) {
+    private func go(_ place: HouseActivity.Place?) {
         switch place {
         case .shop: nav.go(.shop)
         case .week: nav.go(.week)
