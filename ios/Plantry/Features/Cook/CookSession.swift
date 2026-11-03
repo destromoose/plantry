@@ -31,6 +31,12 @@ struct CookSession: Codable, Equatable {
     var checked: [String] = []
     var timers: [String: TimerState] = [:]
     var savedAt: Date = Date()
+    /// What the Live Activity needs to draw and drive the cook without opening
+    /// the store: the dish, its steps and how many it's for. Missing in sessions
+    /// saved before the Live Activity existed.
+    var title: String? = nil
+    var steps: [Step]? = nil
+    var people: Int? = nil
 
     static let key = "plantry-cook"
     static let maxAge: TimeInterval = 12 * 60 * 60
@@ -42,17 +48,83 @@ struct CookSession: Codable, Equatable {
         return s
     }
 
-    func save() {
+    /// Saves and brings the Live Activity up to date. `live` is true when cook
+    /// mode itself is saving: only then may a Live Activity start, or a finished
+    /// timer light up the Dynamic Island.
+    func save(live: Bool = false, syncActivity: Bool = true) {
         var s = self
         s.savedAt = Date()
         if let data = try? JSONEncoder().encode(s) { UserDefaults.standard.set(data, forKey: Self.key) }
         NotificationCenter.default.post(name: .plantryDataChanged, object: nil)
+        if syncActivity { Task { @MainActor in CookLiveActivity.sync(s, live: live) } }
     }
 
     static func clear() {
         UserDefaults.standard.removeObject(forKey: key)
         Notifications.cancelAll()
         NotificationCenter.default.post(name: .plantryDataChanged, object: nil)
+        Task { @MainActor in CookLiveActivity.end() }
+    }
+
+    /// Start, pause, resume or silence one step's timer, the same way the
+    /// buttons in cook mode do. Used by the Live Activity, which works on the
+    /// saved session because cook mode may not be open.
+    mutating func toggleTimer(_ id: String, now: Date = Date()) {
+        guard let step = steps?.first(where: { $0.id == id }), let minutes = step.timerMinutes else { return }
+        let full = minutes * 60_000
+        var t = timers[id] ?? TimerState(durationMs: full, remainingMs: full, endsAt: nil, finished: false)
+        if let end = t.endsAt, end <= now {
+            t = TimerState(durationMs: t.durationMs, remainingMs: 0, endsAt: nil, finished: true, acknowledged: false)
+        }
+        if t.finished && !t.acknowledged {
+            t.acknowledged = true
+            Notifications.cancel(id: id)
+        } else if let end = t.endsAt {
+            t.remainingMs = max(0, Int(end.timeIntervalSince(now) * 1000))
+            t.endsAt = nil
+            Notifications.cancel(id: id)
+        } else {
+            let rem = t.finished || t.remainingMs <= 0 ? t.durationMs : t.remainingMs
+            let end = now.addingTimeInterval(Double(rem) / 1000)
+            t.remainingMs = rem
+            t.endsAt = end
+            t.finished = false
+            t.acknowledged = false
+            Notifications.schedule(id: id, at: end, body: CookLiveActivity.label(step.text))
+        }
+        timers[id] = t
+    }
+
+    /// What the Live Activity shows for this session, or nil when there is nothing to cook.
+    func liveState(now: Date = Date()) -> CookActivityAttributes.ContentState? {
+        guard let steps, !steps.isEmpty else { return nil }
+        let i = min(max(index, 0), steps.count - 1)
+        let step = steps[i]
+        var live: [LiveTimer] = []
+        for (n, s) in steps.enumerated() {
+            guard let t = timers[s.id] else { continue }
+            let expired = t.endsAt.map { $0 <= now } ?? false
+            let ringing = (t.finished || expired) && !t.acknowledged
+            let running = t.endsAt != nil && !expired
+            let paused = t.endsAt == nil && !t.finished && t.remainingMs > 0 && t.remainingMs < t.durationMs
+            guard ringing || running || paused else { continue }
+            live.append(LiveTimer(stepId: s.id, step: n + 1, label: CookLiveActivity.label(s.text),
+                                  duration: Double(t.durationMs) / 1000, endsAt: ringing ? nil : t.endsAt,
+                                  remaining: ringing ? 0 : Double(t.remaining(now: now)) / 1000, ringing: ringing))
+        }
+        func rank(_ t: LiveTimer) -> Int { t.ringing ? 0 : t.running ? 1 : 2 }
+        live.sort { a, b in
+            if rank(a) != rank(b) { return rank(a) < rank(b) }
+            if let x = a.endsAt, let y = b.endsAt { return x < y }
+            return a.step < b.step
+        }
+        let top = live.first
+        let othersRunning = live.dropFirst().filter { $0.running || $0.ringing }.count
+        let hasOwn = live.contains { $0.stepId == step.id }
+        let text = step.text.count > 280 ? String(step.text.prefix(279)) + "…" : step.text
+        return CookActivityAttributes.ContentState(step: i + 1, stepCount: steps.count, stepText: Safety.withFahrenheit(text), stepId: step.id,
+                                                   stepTimerMinutes: hasOwn ? nil : step.timerMinutes, timer: top,
+                                                   moreTimers: othersRunning, servings: people ?? servings ?? 2)
     }
 }
 

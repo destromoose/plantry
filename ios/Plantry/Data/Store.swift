@@ -716,7 +716,7 @@ final class Store {
     }
 
     func importJSON(_ data: Data) throws {
-        applyImport(try checkImport(data))
+        _ = applyImport(try checkImport(data))
     }
 
     private func wipe(keepSettings: Bool) {

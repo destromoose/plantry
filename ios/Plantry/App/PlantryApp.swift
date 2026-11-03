@@ -32,9 +32,17 @@ struct PlantryApp: App {
                 .environment(toaster)
                 .environment(sync)
                 .modelContainer(container)
-                .onAppear { contextProvider.attach(store); sync.becameActive() }
+                .onAppear {
+                    contextProvider.attach(store)
+                    sync.becameActive()
+                    CookLiveActivity.reconcile()
+                }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { contextProvider.becameActive(); sync.becameActive() }
+                    if phase == .active {
+                        contextProvider.becameActive()
+                        sync.becameActive()
+                        CookLiveActivity.reconcile()
+                    }
                     if phase == .background { sync.wentToBackground() }
                 }
         }
