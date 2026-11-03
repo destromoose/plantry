@@ -1147,4 +1147,39 @@ export const es: Record<string, string> = {
   'Repeat last week': 'Repetir la semana pasada',
   'Add {what} for {day}, as every week': 'Añadir {what} para {day}, como cada semana',
   'Every {weekday}. Tap to add': 'Cada {weekday}. Toca para añadir',
+  // What the others changed, and picking together
+  '{name} left a note: {text}': '{name} dejó una nota: {text}',
+  '{name} replied "{text}"': '{name} respondió «{text}»',
+  leftovers: 'sobras',
+  '{day}: {what}': '{day}: {what}',
+  '{name} is cooking {day}': '{name} cocina el {day}',
+  '{name} asked you to cook {day}': '{name} te pidió que cocines el {day}',
+  ' and {n} more': ' y {n} más',
+  '{name} added {items}{more} to the list': '{name} añadió {items}{more} a la lista',
+  'Added to the list: {items}{more}': 'Añadido a la lista: {items}{more}',
+  '{name} fancies {what}': 'A {name} le apetece {what}',
+  '{name} also fancies {what}': 'A {name} también le apetece {what}',
+  '{name} is out for dinner {day}': '{name} cena fuera el {day}',
+  '{name} is home late {day}': '{name} llega tarde el {day}',
+  'Since you last looked': 'Desde la última vez',
+  'and {n} more': 'y {n} más',
+  'Alerts that concern you': 'Avisos que te tocan',
+  'Only a reply to your note, a night handed to you, or something added while you shop. Never the rest.':
+    'Solo una respuesta a tu nota, una noche que te pasan o algo añadido mientras compras. Nada más.',
+  On: 'Sí',
+  Off: 'No',
+  'Pick together': 'Elegir juntos',
+  Match: 'Coincidencia',
+  'It’s a match: {title}. {name} fancies it too.':
+    '¡Coincidís! {title}. A {name} también le apetece.',
+  'Say yes or no to a few dinners. The others do the same on their phones, and what you both like is a match in Ideas.':
+    'Di sí o no a unas cuantas cenas. Los demás hacen lo mismo en sus teléfonos, y lo que os guste a los dos aparece como coincidencia en Ideas.',
+  'Someone said yes': 'Alguien dijo que sí',
+  'Not this': 'Esta no',
+  'Yes please': 'Sí, por favor',
+  '{n} left. Swipe right for yes, left for no.':
+    'Quedan {n}. Desliza a la derecha para sí, a la izquierda para no.',
+  'That’s all for now': 'Eso es todo por ahora',
+  'Your yeses are in Ideas. Matches show at the top.':
+    'Tus síes están en Ideas. Las coincidencias salen arriba.',
 }

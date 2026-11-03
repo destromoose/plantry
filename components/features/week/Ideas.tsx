@@ -2,7 +2,8 @@
 
 import { locale, t } from '@/lib/i18n'
 import { useState } from 'react'
-import { CalendarPlus, Heart, Lightbulb, X } from 'lucide-react'
+import { CalendarPlus, Heart, Lightbulb, Shuffle, X } from 'lucide-react'
+import { PickTogether } from './PickTogether'
 import { useStore } from '@/lib/store'
 import { rankIdeas } from '@/lib/planTogether'
 import type { MealIdea, Recipe } from '@/lib/types'
@@ -30,6 +31,7 @@ export function IdeasPool({ weekDates, today }: { weekDates: string[]; today: st
   const toggleIdeaVote = useStore((s) => s.toggleIdeaVote)
   const [text, setText] = useState('')
   const [planning, setPlanning] = useState<MealIdea | null>(null)
+  const [picking, setPicking] = useState(false)
   const meId = members.find((m) => m.isMe)?.id
   const together = members.length > 1
   const list = rankIdeas(ideas)
@@ -51,6 +53,11 @@ export function IdeasPool({ weekDates, today }: { weekDates: string[]; today: st
         <h2 id="ideas-title" className="font-display text-lg font-semibold">
           {t('Ideas')}
         </h2>
+        {together && (
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => setPicking(true)}>
+            <Shuffle className="h-4 w-4" aria-hidden /> {t('Pick together')}
+          </Button>
+        )}
       </div>
       <p className="mb-3 text-sm text-ink-2">
         {together
@@ -95,7 +102,14 @@ export function IdeasPool({ weekDates, today }: { weekDates: string[]; today: st
             return (
               <li key={idea.id} className="flex items-center gap-2 py-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{title}</p>
+                  <p className="flex items-center gap-2 font-medium">
+                    <span className="truncate">{title}</span>
+                    {together && (idea.votes?.length ?? 0) > 0 && (
+                      <span className="shrink-0 rounded-pill bg-accent px-2 py-0.5 text-[0.6875rem] font-semibold text-accent-ink">
+                        {t('Match')}
+                      </span>
+                    )}
+                  </p>
                   <p className="flex items-center gap-1 text-xs text-ink-3">
                     {together && by && (by.id === meId ? t('You') : by.name)}
                     {together && by && ' · '}
@@ -163,6 +177,7 @@ export function IdeasPool({ weekDates, today }: { weekDates: string[]; today: st
         </ul>
       )}
 
+      <PickTogether open={picking} onClose={() => setPicking(false)} />
       <PlanIdeaSheet
         idea={planning}
         weekDates={weekDates}

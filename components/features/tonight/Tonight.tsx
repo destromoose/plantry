@@ -19,6 +19,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { EnergyPicker } from './EnergyPicker'
 import { TonightHero } from './TonightHero'
 import { TonightTogether } from '@/components/features/together/WhoHome'
+import { SinceLooked, useFreshActivity } from '@/components/features/together/SinceLooked'
 
 const WEATHER_KEY = 'plantry-weather-dismissed'
 
@@ -28,6 +29,7 @@ export function Tonight() {
   const pantry = useStore((s) => s.pantry)
   const plan = useStore((s) => s.plan)
   const members = useStore((s) => s.members)
+  const freshActivity = useFreshActivity().length
   const settings = useStore((s) => s.settings)
   const cooked = useStore((s) => s.cooked)
   const energyByDate = useStore((s) => s.energyByDate)
@@ -112,6 +114,12 @@ export function Tonight() {
       <motion.div variants={reveal}>
         <EnergyPicker energy={energy} label={ctx.targetLabel} onSet={(e) => setEnergy(target, e)} />
       </motion.div>
+
+      {members.length > 1 && freshActivity > 0 && (
+        <motion.div variants={reveal}>
+          <SinceLooked />
+        </motion.div>
+      )}
 
       {members.length > 1 && (
         <motion.div variants={reveal}>

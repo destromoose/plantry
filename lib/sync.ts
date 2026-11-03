@@ -14,6 +14,8 @@ import { cleanData } from './schema'
 import { docsEqual, emptyDoc, mergeDocs, toDoc, type SyncDoc } from './syncDoc'
 import { normalizeCode } from './syncCode'
 import { activeTrip } from './shopTogether'
+import { diffActivity } from './activity'
+import { notifyForMe } from './notify'
 
 const META_KEY = 'plantry-sync'
 const PULL_EVERY_MS = 20_000
@@ -205,7 +207,14 @@ function finish(meta: Meta, rev: number, merged: SyncDoc, localWas: SyncDoc) {
   // aren't lost and go up on the next round.
   const now = localDoc()
   const next = docsEqual(now, localWas) ? merged : mergeDocs(localWas, now, merged)
-  if (!docsEqual(next, now)) apply(next, meta.meId)
+  if (!docsEqual(next, now)) {
+    // What the others changed, for "Since you last looked" and alerts that concern you.
+    const s = useStore.getState()
+    const fresh = diffActivity(now, next, next.members, s.recipes, meta.meId)
+    apply(next, meta.meId)
+    s.addActivity(fresh)
+    notifyForMe(fresh)
+  }
   const lastSyncedAt = new Date().toISOString()
   writeMeta({ ...meta, rev, base: merged, lastSyncedAt })
   useSync.setState({ status: 'idle', code: meta.code, lastSyncedAt, error: undefined })

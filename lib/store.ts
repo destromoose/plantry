@@ -45,6 +45,7 @@ import { cleanBought, recordTrip, type Bought } from './usuals'
 import { eatersFor, presenceKey, pruneNotes, weeklyKey } from './together'
 import { splitByAisle } from './shopTogether'
 import { copyWeek, repeatsInto } from './planTogether'
+import { keepActivity, type Activity } from './activity'
 
 export interface PlantryState {
   settings: Settings
@@ -78,6 +79,10 @@ export interface PlantryState {
   ideas: MealIdea[]
   /** Meals the household has every week. */
   repeats: RepeatMeal[]
+  /** What the others changed, as this phone saw it come in. Not synced. */
+  activity: Activity[]
+  /** When this person last read it. */
+  activitySeenAt?: string
   hydrated: boolean
   setHydrated: () => void
 
@@ -165,6 +170,8 @@ export interface PlantryState {
   stopRepeat: (id: string) => void
   /** Last week's meals and the weekly ones onto this week's empty slots. Returns how many. */
   copyLastWeek: (dates: string[], today: string) => number
+  addActivity: (fresh: Activity[]) => void
+  markActivitySeen: () => void
 
   // shop
   /** Build the list from planned dinners on these dates. `kept` means nothing was planned, so the list was left alone. */
@@ -275,6 +282,7 @@ export const useStore = create<PlantryState>()(
       shopTrip: {},
       ideas: [],
       repeats: [],
+      activity: [],
       hydrated: false,
       setHydrated: () => set({ hydrated: true }),
 
@@ -635,6 +643,10 @@ export const useStore = create<PlantryState>()(
         })
         return add.length
       },
+      addActivity: (fresh) => {
+        if (fresh.length) set((s) => ({ activity: keepActivity(s.activity, fresh) }))
+      },
+      markActivitySeen: () => set({ activitySeenAt: new Date().toISOString() }),
       addNote: (input) => {
         const note: HouseNote = {
           ...input,
@@ -1037,6 +1049,8 @@ export const useStore = create<PlantryState>()(
           shopTrip: {},
           ideas: [],
           repeats: [],
+          activity: [],
+          activitySeenAt: undefined,
           weather: undefined,
         }),
     }),
@@ -1065,6 +1079,8 @@ export const useStore = create<PlantryState>()(
           replies: s.replies,
           ideas: s.ideas,
           repeats: s.repeats,
+          activity: s.activity,
+          activitySeenAt: s.activitySeenAt,
         }) as unknown as PlantryState,
       // Older saves have the same shape; anything off is cleaned in merge below.
       migrate: (persisted) => persisted as PlantryState,
@@ -1090,7 +1106,26 @@ export const useStore = create<PlantryState>()(
           settings.seedVersion = SEED_VERSION
         }
         const bought = cleanBought((persisted as { bought?: unknown } | undefined)?.bought)
-        return { ...current, ...data, settings, recipes, bought } as PlantryState
+        const p = (persisted ?? {}) as { activity?: unknown; activitySeenAt?: unknown }
+        const activity = Array.isArray(p.activity)
+          ? p.activity.filter(
+              (a): a is Activity =>
+                !!a &&
+                typeof a.id === 'string' &&
+                typeof a.text === 'string' &&
+                typeof a.at === 'string'
+            )
+          : []
+        const activitySeenAt = typeof p.activitySeenAt === 'string' ? p.activitySeenAt : undefined
+        return {
+          ...current,
+          ...data,
+          settings,
+          recipes,
+          bought,
+          activity,
+          activitySeenAt,
+        } as PlantryState
       },
       onRehydrateStorage: () => () => {
         // Always leave the splash screen, even when reading failed. Deferred because the

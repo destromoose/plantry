@@ -5,6 +5,7 @@ import { t } from '@/lib/i18n'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Copy, RefreshCw, Share2, Users } from 'lucide-react'
+import { NotifyToggle } from '@/components/features/together/SinceLooked'
 import { leaveHousehold, startSharing, syncNow, useSync } from '@/lib/sync'
 import { formatCode } from '@/lib/syncCode'
 import { Card, SectionTitle } from '@/components/ui/Card'
@@ -126,6 +127,7 @@ export function SyncCard() {
           <p className="mt-3 text-sm text-ink-3" role="status">
             {status}
           </p>
+          <NotifyToggle />
           <div className="mt-4 border-t border-line pt-3">
             <Button
               variant="ghost"
