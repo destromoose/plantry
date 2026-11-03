@@ -57,6 +57,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Paint in the last mood before the app loads, so night mode doesn't flash cream. */}
         <script dangerouslySetInnerHTML={{ __html: prePaint }} />
+        {/* Recipe photos come from Unsplash. Open the connection before the first photo is asked for. */}
+        <link rel="preconnect" href="https://images.unsplash.com" />
       </head>
       <body className="grain font-sans">
         <div className="ambient" aria-hidden>

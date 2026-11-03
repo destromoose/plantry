@@ -51,6 +51,7 @@ export function RecipeImage({
           {...imageProps(url!.trim())}
           sizes={sizes}
           priority={priority}
+          fetchPriority={priority ? 'high' : undefined}
           className="object-cover"
           onError={() => setFailed(url!)}
         />
