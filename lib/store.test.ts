@@ -343,3 +343,29 @@ describe('starter photos', () => {
     expect(s.recipes[0].imageUrl).toBe(seedRecipes[0].imageUrl)
   })
 })
+
+describe('saying a few things into the list', () => {
+  it('adds each thing once, in its aisle, and clears what ran out from the pantry', async () => {
+    const { parseCapture } = await import('./capture')
+    s().addPantryItem({ name: 'Eggs' })
+    s().addShopItem('Milk')
+    const res = s().addCaptured(parseCapture("milk, 2 onions, and we're out of eggs"))
+    expect(res).toEqual({ added: ['Onions', 'Eggs'], already: ['Milk'] })
+    expect(s().shop.find((i) => i.key === 'onion')).toMatchObject({ quantity: 2, aisle: 'produce' })
+    expect(s().pantry.some((p) => p.key === 'egg')).toBe(false)
+  })
+})
+
+describe('usuals', () => {
+  it('learns from finished shops and clearing the basket', async () => {
+    const { usuals } = await import('./usuals')
+    s().addShopItem('Coffee')
+    s().toggleShopItem(s().shop[0].id)
+    s().finishShopping()
+    vi.setSystemTime(new Date(2026, 10, 9, 12))
+    s().addShopItem('Coffee')
+    s().toggleShopItem(s().shop[0].id)
+    s().clearChecked()
+    expect(usuals(s().bought, new Set(), '2026-11-10').map((u) => u.name)).toEqual(['Coffee'])
+  })
+})

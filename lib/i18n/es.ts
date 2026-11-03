@@ -92,6 +92,28 @@ export const es: Record<string, string> = {
   'Add the people you cook for, and what they avoid.':
     'Añade a las personas para las que cocinas y lo que no comen.',
   'Add to list': 'Añadir a la lista',
+  // Saying or pasting a few things into the list, and the usuals row.
+  'All of that is already on your list': 'Todo eso ya está en tu lista',
+  'Added {names}': 'Añadido: {names}',
+  '{added}, and took {gone} out of the pantry': '{added}, y quitado de la despensa: {gone}',
+  'Took {gone} out of the pantry': 'Quitado de la despensa: {gone}',
+  'Plantry needs the microphone for this. You can still type.':
+    'Plantry necesita el micrófono para esto. También puedes escribir.',
+  "Couldn't hear that. Try again, or type it.": 'No se oyó bien. Prueba otra vez o escríbelo.',
+  'Listening. Say what you need, then tap stop.': 'Escuchando. Di lo que necesitas y toca parar.',
+  'Listening…': 'Escuchando…',
+  'Milk, 2 onions, rice…': 'Leche, 2 cebollas, arroz…',
+  'Add to your list. Separate things with commas.': 'Añade a tu lista. Separa las cosas con comas.',
+  'Stop listening': 'Dejar de escuchar',
+  'Say what you need': 'Di lo que necesitas',
+  'Try "milk, two onions, and we\'re out of eggs".':
+    'Prueba «leche, dos cebollas, y se acabaron los huevos».',
+  'Add a few at once, or tap the mic and say them.':
+    'Añade varias cosas a la vez, o toca el micrófono y dilas.',
+  'Add a few at once, with commas.': 'Añade varias cosas a la vez, con comas.',
+  'Your usuals': 'Lo de siempre',
+  'Add all': 'Añadir todo',
+  'Add {v0}': 'Añadir {v0}',
   'Add to pantry': 'Añadir a la despensa',
   'Add your first recipe to get going.': 'Añade tu primera receta para empezar.',
   'Add your name to continue.': 'Escribe tu nombre para seguir.',

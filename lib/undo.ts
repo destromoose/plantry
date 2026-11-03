@@ -17,6 +17,7 @@ const keys = [
   'energyByDate',
   'cooked',
   'shuffleSeen',
+  'bought',
 ] as const
 type Snapshot = Pick<PlantryState, (typeof keys)[number]>
 
