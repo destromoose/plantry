@@ -20,7 +20,11 @@ Every install:
 2. Press **Run** (⌘R). The first time, the phone shows "Untrusted Developer": go to Settings → General → VPN & Device Management → your Apple ID → **Trust**.
 3. Done. Plantry is on the home screen and works offline.
 
-Limits of a free team: up to 3 apps installed at once, 10 device registrations per week, and the 7-day expiry. Plantry uses nothing a free team cannot sign (no push notifications, iCloud or App Groups; timers use local notifications, which are allowed).
+Limits of a free team: up to 3 apps installed at once, 10 device registrations per week, and the 7-day expiry. Plantry uses nothing a free team cannot sign: timers use local notifications, the calendar export uses the phone's Calendar, and the widget shares data with the app through an App Group, which Personal Teams can sign. If Xcode complains about the App Group when you pick your team, open **Signing & Capabilities** for both the **Plantry** and **PlantryWidgetExtension** targets and let it register `group.com.destromoose.plantry` (or rename it the same way in both, matching `WidgetSnapshot.appGroup`).
+
+## The home-screen widget
+
+After the first install, long-press the home screen, tap **+** (or **Edit → Add Widget**), search for Plantry and add **Tonight**. It shows tonight's dinner, who cooks and washes up, what's missing, and the step you're on while cooking (with the timer). Tap it to jump into cook mode. It also works on the lock screen as a rectangular or inline widget.
 
 ## Paid: TestFlight and the App Store
 

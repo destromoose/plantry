@@ -119,7 +119,7 @@ final class SuggestTests: XCTestCase {
     }
 
     func testSeedLoads() {
-        XCTAssertEqual(Seed.recipes.count, 24)
+        XCTAssertEqual(Seed.recipes.count, 40)
         XCTAssertEqual(Seed.staples.count, 36)
         XCTAssertEqual(Seed.quickPicks.count, 30)
     }
@@ -189,7 +189,7 @@ final class StoreTests: XCTestCase {
 
     func testOnboardingSeedsHouseholdAndPantry() throws {
         let store = try makeStore()
-        XCTAssertEqual(store.fetch(RecipeModel.self).count, 24)
+        XCTAssertEqual(store.fetch(RecipeModel.self).count, 40)
         store.completeOnboarding(names: ["Alex", "Sam"], tastes: [.fast], avoid: [], pantryNames: ["Garlic", "Rice"])
         XCTAssertTrue(store.settings.onboarded)
         XCTAssertEqual(store.members.map(\.name), ["Alex", "Sam"])
@@ -233,7 +233,7 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(other.members.map(\.name), ["Alex"])
         XCTAssertEqual(other.settings.tastes, [.cozy])
         XCTAssertEqual(other.dinner(on: "2026-11-03")?.note, "Takeout")
-        XCTAssertEqual(other.fetch(RecipeModel.self).count, 24)
+        XCTAssertEqual(other.fetch(RecipeModel.self).count, 40)
         XCTAssertThrowsError(try other.importJSON(Data("{\"nope\":1}".utf8)))
     }
 
@@ -294,7 +294,7 @@ final class StoreTests: XCTestCase {
         let p = try store.checkImport(Data(json.utf8))
         XCTAssertEqual(p.members.map(\.name), ["Sam"])
         XCTAssertEqual(p.dropped, 1)
-        XCTAssertEqual(p.recipes.count, 24, "an empty recipe list falls back to the starters")
+        XCTAssertEqual(p.recipes.count, 40, "an empty recipe list falls back to the starters")
         XCTAssertThrowsError(try store.checkImport(Data("not json".utf8)))
         XCTAssertThrowsError(try store.checkImport(Data("{\"nope\":1}".utf8)))
     }
@@ -329,5 +329,58 @@ final class StoreTests: XCTestCase {
         for q in [0.125, 0.375, 0.625, 0.875, 1.5, 2.25] {
             XCTAssertEqual(Quantity.parse(Quantity.niceNumber(q)) ?? -1, q, accuracy: 0.001)
         }
+    }
+
+    func testCaptureReadsABrainDump() {
+        let items = Capture.parse("we're out of eggs and milk, and get two onions. Also some rice please, that's it")
+        XCTAssertEqual(items.map(\.name), ["Eggs", "Milk", "Onions", "Rice"])
+        XCTAssertEqual(items.map(\.outOf), [true, true, false, false])
+        XCTAssertEqual(items[2].quantity, 2)
+        XCTAssertEqual(Capture.parse("mac and cheese, salt and pepper").map(\.name), ["Mac and cheese", "Salt and pepper"])
+        XCTAssertEqual(Capture.parse("necesitamos dos limones y no queda leche").map(\.outOf), [false, true])
+        let curly = Capture.parse("milk, two onions, we’re out of eggs")
+        XCTAssertEqual(curly.map(\.name), ["Milk", "Onions", "Eggs"])
+        XCTAssertEqual(curly.last?.outOf, true)
+    }
+
+    func testUsualsNeedTwoTripsAndStayOffWhileListed() {
+        var bought: [String: BoughtEntry] = [:]
+        let milk = ShopItem(id: "a", name: "Milk", key: "milk", quantity: nil, unit: nil, aisle: .dairy, checked: true, fromRecipeIds: [])
+        bought = Usuals.recordTrip(bought, items: [milk], day: "2026-10-01")
+        XCTAssertTrue(Usuals.usuals(bought, onList: [], today: "2026-10-20").isEmpty)
+        bought = Usuals.recordTrip(bought, items: [milk], day: "2026-10-10")
+        bought = Usuals.recordTrip(bought, items: [milk], day: "2026-10-10")
+        XCTAssertEqual(bought["milk"]?.trips, ["2026-10-10", "2026-10-01"])
+        XCTAssertEqual(Usuals.usuals(bought, onList: [], today: "2026-10-20").map(\.key), ["milk"])
+        XCTAssertTrue(Usuals.usuals(bought, onList: ["milk"], today: "2026-10-20").isEmpty)
+        XCTAssertTrue(Usuals.usuals(bought, onList: [], today: "2027-01-01").isEmpty, "forgotten after six weeks")
+    }
+
+    func testWasherIsNeverTheCookAndRotatesFairly() {
+        let members = ["a", "b", "c"]
+        var counts: [String: Int] = [:]
+        for d in 0..<14 {
+            let date = DateKey.addDays("2026-11-02", d)
+            let w = Chores.washer(on: date, cookId: "a", members: members, id: { $0 })
+            XCTAssertNotEqual(w, "a")
+            counts[w ?? "none", default: 0] += 1
+        }
+        XCTAssertEqual(counts["b"], 7)
+        XCTAssertEqual(counts["c"], 7)
+        XCTAssertNil(Chores.washer(on: "2026-11-02", cookId: "a", members: ["a"], id: { $0 }))
+        XCTAssertNil(Chores.washer(on: "2026-11-02", cookId: nil, members: members, id: { $0 }))
+    }
+
+    func testFinishShoppingRecordsATrip() throws {
+        let store = try makeStore()
+        store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: [])
+        store.addShopItem("Milk")
+        for item in store.fetch(ShopItemModel.self) { store.toggleShopItem(item) }
+        store.finishShopping()
+        XCTAssertEqual(store.settings.bought["milk"]?.trips.count, 1)
+        let r = store.capture("we're out of milk, get bread")
+        XCTAssertEqual(r.added, 2)
+        XCTAssertEqual(r.outOf, 1)
+        XCTAssertTrue(store.fetch(PantryItemModel.self).isEmpty)
     }
 }

@@ -29,7 +29,9 @@ Plantry/Core         Pure Swift, no SwiftUI or SwiftData: Types, Utils, ContextE
 Plantry/Data         SwiftData models, Store (every mutation), ContextProvider (clock, foreground, weather)
 Plantry/Design       Theme (four moods), Motion, Components (Card, buttons, Chip, Ring, Sheet, Toast, RemoteImage)
 Plantry/Features     One folder per screen: Onboarding, Tonight, Week, Recipes, Cook, Pantry, Shop, Household, Settings
-Plantry/Resources    seed-recipes.json and seed-staples.json (generated from the web app's lib/seed), Assets
+Plantry/Resources    seed-recipes.json and seed-staples.json (generated from the web app's lib/seed), Assets, privacy manifest
+Shared               WidgetSnapshot, the one file the app writes and the widget reads (member of both targets)
+PlantryWidget        The Tonight widget (home screen small and medium, lock screen rectangular and inline)
 PlantryTests         XCTest ports of the web app's vitest suites, plus store round trips on an in-memory container
 ```
 

@@ -46,11 +46,13 @@ struct CookSession: Codable, Equatable {
         var s = self
         s.savedAt = Date()
         if let data = try? JSONEncoder().encode(s) { UserDefaults.standard.set(data, forKey: Self.key) }
+        NotificationCenter.default.post(name: .plantryDataChanged, object: nil)
     }
 
     static func clear() {
         UserDefaults.standard.removeObject(forKey: key)
         Notifications.cancelAll()
+        NotificationCenter.default.post(name: .plantryDataChanged, object: nil)
     }
 }
 

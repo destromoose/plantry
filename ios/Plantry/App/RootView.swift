@@ -119,6 +119,25 @@ struct AppShell: View {
             CookModeView(request: req)
                 .environment(nav)
         }
+        .onOpenURL { url in open(url) }
+    }
+
+    @Environment(Store.self) private var store
+    @Environment(ContextProvider.self) private var ctx
+
+    /// plantry://tonight and plantry://cook, from the widget and calendar events.
+    private func open(_ url: URL) {
+        guard url.scheme == "plantry" else { return }
+        nav.cooking = nil
+        nav.go(.tonight)
+        nav.popToRoot()
+        guard url.host == "cook" else { return }
+        let date = ctx.context.targetDate
+        if let session = CookSession.load() {
+            nav.cooking = CookRequest(recipeId: session.recipeId, date: session.date, servings: session.servings)
+        } else if let entry = store.dinner(on: date), let rid = entry.recipeId, !entry.done {
+            nav.cooking = CookRequest(recipeId: rid, date: date)
+        }
     }
 
     @ViewBuilder

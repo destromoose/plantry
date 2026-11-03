@@ -55,6 +55,8 @@ struct SettingsView: View {
                 Button("Edit people") { nav.push(.household) }.pbutton(.ghost, .sm).padding(.top, 6)
             }
 
+            CalendarCard()
+
             section("Mood") {
                 choice(MoodSetting.allCases, selected: s?.mood ?? .auto) { v in store.update { $0.mood = v }; ctxProvider.refresh() }
                 HStack(spacing: 6) {
