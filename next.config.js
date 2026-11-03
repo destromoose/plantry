@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    // Images come straight from the browser. No optimizer round trip, no server egress.
-    unoptimized: true,
+    // Images come straight from the browser, never through the optimizer. RecipeImage and
+    // Thumb ask Unsplash for the width each screen needs and load other links as they are.
     remotePatterns: [{ protocol: 'https', hostname: 'images.unsplash.com' }],
   },
   async headers() {

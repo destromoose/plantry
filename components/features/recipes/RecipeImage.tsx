@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { imageProps } from '@/lib/imageLoader'
 
 const tints = ['bg-terracotta/25', 'bg-saffron/30', 'bg-sage/30', 'bg-plum/20']
 
@@ -47,7 +48,7 @@ export function RecipeImage({
           src={url!.trim()}
           alt=""
           fill
-          unoptimized
+          {...imageProps(url!.trim())}
           sizes={sizes}
           priority={priority}
           className="object-cover"
