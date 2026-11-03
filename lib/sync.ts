@@ -209,8 +209,9 @@ function finish(meta: Meta, rev: number, merged: SyncDoc, localWas: SyncDoc) {
   const next = docsEqual(now, localWas) ? merged : mergeDocs(localWas, now, merged)
   if (!docsEqual(next, now)) {
     // What the others changed, for "Since you last looked" and alerts that concern you.
+    // Local recipes first, since their titles are translated; new ones from the sync after.
     const s = useStore.getState()
-    const fresh = diffActivity(now, next, next.members, [...next.recipes, ...s.recipes], meta.meId)
+    const fresh = diffActivity(now, next, next.members, [...s.recipes, ...next.recipes], meta.meId)
     apply(next, meta.meId)
     s.addActivity(fresh)
     notifyForMe(fresh)
