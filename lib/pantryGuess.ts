@@ -92,7 +92,7 @@ export function defaultLife(zone: PantryZone): number {
 }
 
 const aisleWords: [Aisle, string[]][] = [
-  ['pantry', ['peanut butter', 'coconut milk', 'tomato paste', 'stock cube']],
+  ['pantry', ['peanut butter', 'coconut milk', 'tomato paste', 'stock', 'broth', 'bouillon']],
   ['frozen', ['frozen', 'ice cream']],
   [
     'meat-fish',

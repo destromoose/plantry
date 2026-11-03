@@ -24,7 +24,10 @@ describe('similarRecipes', () => {
 
   it('keeps to the same kind of cooking', () => {
     const tacos = similarRecipes(byId('r-chicken-fajitas'), seedRecipes).slice(0, 3)
-    expect(tacos.some((r) => /taco|quesadilla|burrito/i.test(r.title))).toBe(true)
+    expect(
+      tacos.filter((r) => /taco|quesadilla|burrito/i.test(r.title)).length
+    ).toBeGreaterThanOrEqual(2)
+    expect(tacos.some((r) => /tacos/i.test(r.title))).toBe(true)
     const curry = similarRecipes(byId('r-cauliflower-chickpea-curry'), seedRecipes)[0]
     expect(curry.title).toMatch(/curry|dal/i)
     const pancakes = similarRecipes(byId('r-banana-oat-pancakes'), seedRecipes)

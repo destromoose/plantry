@@ -142,6 +142,10 @@ export function CookMode({
   const [dir, setDir] = useState(1)
   const [ingOpen, setIngOpen] = useState(false)
   const [finishOpen, setFinishOpen] = useState(false)
+  // Cooking without a plan logs as tonight's dinner, unless tonight is already logged.
+  const tonightLogged = useStore((s) =>
+    s.plan.some((p) => p.date === toDateKey(new Date()) && p.slot === 'dinner' && p.done)
+  )
   const finishing = useRef(false)
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [usePantry, setUsePantry] = useState(true)
@@ -674,7 +678,9 @@ export function CookMode({
             />
             {!(date && entry) && (
               <p className="px-1 text-sm text-ink-3">
-                {t("This will be logged as tonight's dinner.")}
+                {tonightLogged
+                  ? t("Tonight's dinner is already logged, so this one won't be saved.")
+                  : t("This will be logged as tonight's dinner.")}
               </p>
             )}
           </div>

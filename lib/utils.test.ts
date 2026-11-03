@@ -52,6 +52,8 @@ describe('parseAmount and guessAisle', () => {
   it('guesses aisles', async () => {
     const { guessAisle } = await import('./pantryGuess')
     expect(guessAisle('Chicken thighs')).toBe('meat-fish')
+    expect(guessAisle('Low-sodium chicken stock')).toBe('pantry')
+    expect(guessAisle('Vegetable broth')).toBe('pantry')
     expect(guessAisle('Feta')).toBe('dairy')
     expect(guessAisle('Red onion')).toBe('produce')
     expect(guessAisle('Basmati rice')).toBe('pantry')
