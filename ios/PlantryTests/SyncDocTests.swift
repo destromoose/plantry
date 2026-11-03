@@ -63,6 +63,14 @@ final class SyncDocTests: XCTestCase {
         XCTAssertEqual(plan.first?["note"], .string("Soup"))
     }
 
+    func testPartsThisAppDoesNotKnowPassThrough() {
+        var remote = doc([])
+        remote["notes"] = .array([.object(["id": .string("n1"), "text": .string("Get the Barilla one")])])
+        let merged = SyncDoc.merge(base: doc([]), local: doc([item("a", "milk")]), remote: SyncDoc.clean(.object(remote)))
+        XCTAssertEqual(merged["notes"]?.array?.count, 1)
+        XCTAssertEqual(names(merged), ["milk"])
+    }
+
     func testJSONRoundTripKeepsWholeNumbers() throws {
         let v: JSONValue = .object(["n": .number(2), "f": .number(0.5), "b": .bool(true), "s": .string("x"), "z": .null])
         let data = try JSONEncoder().encode(v)

@@ -106,6 +106,7 @@ enum SyncDoc {
     static func clean(_ raw: JSONValue?) -> [String: JSONValue] {
         var d = empty()
         guard let o = raw?.object else { return d }
+        for (k, v) in o where d[k] == nil { d[k] = v }
         for l in lists { if let a = o[l.key]?.array { d[l.key] = .array(a.filter { !l.idOf($0).isEmpty }) } }
         if let s = o["settings"]?.object { d["settings"] = .object(s) }
         if let e = o["energyByDate"]?.object { d["energyByDate"] = .object(e) }
@@ -172,7 +173,9 @@ enum SyncDoc {
     /// Replay this phone's changes since `base` onto the server's `remote`.
     static func merge(base: [String: JSONValue]?, local: [String: JSONValue], remote: [String: JSONValue]) -> [String: JSONValue] {
         let b = base ?? empty()
-        var out: [String: JSONValue] = ["v": .number(Double(version))]
+        // Parts of the document this app doesn't know yet (newer web features) come from the server untouched.
+        var out = remote
+        out["v"] = .number(Double(version))
         out["settings"] = .object(mergeRecord(base: b["settings"]?.object ?? [:], local: local["settings"]?.object ?? [:],
                                               remote: remote["settings"]?.object ?? [:]))
         out["energyByDate"] = .object(mergeRecord(base: b["energyByDate"]?.object ?? [:], local: local["energyByDate"]?.object ?? [:],
