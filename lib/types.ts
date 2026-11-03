@@ -146,6 +146,8 @@ export interface Settings {
   weeklyBudget: number
   /** Which starter recipes this kitchen has been given (see SEED_VERSION). */
   seedVersion: number
+  /** Which meals the household plans each day. Dinner is always planned. */
+  meals: MealSlot[]
 }
 
 export interface Weather {

@@ -36,7 +36,7 @@ All bodies are JSON. Codes in the URL are case-insensitive and may contain dashe
 See `lib/syncDoc.ts`. It is the export format's collections (`members`, `recipes`, `pantry`,
 `plan`, `shop`, `shopDismissed`, `handoffs`, `cooked`, `energyByDate`) plus a `settings` object
 holding only the household-wide settings (`cookingFor`, `avoid`, `tastes`, `householdWord`,
-`cookingWithKids`, `units`, `currency`, `priceLevel`, `weeklyBudget`), and `v: 1`. Members have
+`cookingWithKids`, `units`, `currency`, `priceLevel`, `weeklyBudget`, `meals`), and `v: 1`. Members have
 no `isMe`: each phone remembers which member it is. Per-phone settings (mood, text size,
 contrast, motion, weather, language, nutrition switch) never leave the phone. The export
 format itself is unchanged.

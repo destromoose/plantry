@@ -18,7 +18,9 @@ import { useAppContext } from '@/components/shell/Providers'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Card, SectionTitle } from '@/components/ui/Card'
-import { Tag } from '@/components/ui/Chip'
+import { Chip, Tag } from '@/components/ui/Chip'
+import { slotName } from '@/components/features/week/MealSheet'
+import { plannedMeals } from '@/lib/meals'
 import { Input } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -49,6 +51,8 @@ export function Household() {
   const [avoidFor, setAvoidFor] = useState<string | null>(null)
   const setMemberAvoid = useStore((s) => s.setMemberAvoid)
   const setMemberCooks = useStore((s) => s.setMemberCooks)
+  const updateSettings = useStore((s) => s.updateSettings)
+  const meals = plannedMeals(settings.meals)
   const cooks = members.filter((m) => m.cooks !== false)
   const avoidMember = members.find((m) => m.id === avoidFor)
 
@@ -317,6 +321,42 @@ export function Household() {
               })}
           </ul>
         )}
+      </section>
+
+      <section aria-labelledby="meals-h">
+        <Card>
+          <SectionTitle>
+            <span id="meals-h">{t('Meals we plan')}</span>
+          </SectionTitle>
+          <p className="mb-3 text-[0.9375rem] text-ink-2">
+            {t(
+              'Dinner is always on. Breakfast and lunch show as small rows on each day of the week.'
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t('Meals we plan')}>
+            {(['breakfast', 'lunch'] as const).map((m) => {
+              const on = meals.includes(m)
+              return (
+                <Chip
+                  key={m}
+                  selected={on}
+                  onClick={() =>
+                    updateSettings({
+                      meals: plannedMeals(on ? meals.filter((x) => x !== m) : [...meals, m]),
+                    })
+                  }
+                >
+                  {on && <Check className="h-4 w-4" aria-hidden />}
+                  {slotName(m)}
+                </Chip>
+              )
+            })}
+            <Chip selected disabled aria-disabled>
+              <Check className="h-4 w-4" aria-hidden />
+              {slotName('dinner')}
+            </Chip>
+          </div>
+        </Card>
       </section>
 
       <section aria-labelledby="recap-h">
