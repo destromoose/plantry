@@ -129,39 +129,48 @@ jobs:
           print(f"sha256={d['sha256']}")
           print(f"size={d['size']}")
           EOF
-      - name: Release the IPA
-        id: release
-        # Tag and URL come from the IPA's own version and build. Re-running this
-        # job re-uploads the same file to the same release.
+      - name: Write the AltStore source
+        id: feed
+        # Built before anything is released, so a build older than the one
+        # already published stops here instead of becoming a release. The IPA
+        # URL is known up front: tag and file name come from the IPA's version.
         run: |
           tag="plantry-ios-v${{ steps.ipa.outputs.version }}-${{ steps.ipa.outputs.build }}"
+          url="https://github.com/${GH_REPO}/releases/download/${tag}/Plantry.ipa"
+          # Keep the published history. Only a confirmed 404 means "no source
+          # yet"; any other failure stops the job rather than start a new one.
+          code=$(curl -sSL -o previous.json -w '%{http_code}' \
+            "https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json") || code=error
+          prev=()
+          case "$code" in
+            200) prev=(--previous previous.json) ;;
+            404) echo "No published source yet; starting one." ;;
+            *) echo "Could not read the published source (HTTP $code)"; exit 1 ;;
+          esac
+          python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \
+            --download-url "$url" "${prev[@]}" \
+            --notes "Build ${{ steps.ipa.outputs.build }} from master (${GITHUB_SHA::7})." --out altstore.json
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Release the IPA
+        # Re-running this job re-uploads the same file to the same release.
+        run: |
+          tag="${{ steps.feed.outputs.tag }}"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --latest \
+            gh release create "$tag" --target "$GITHUB_SHA" --latest=false \
               --title "Plantry for iPhone ${{ steps.ipa.outputs.version }} (${{ steps.ipa.outputs.build }})" \
               --notes "Unsigned IPA for AltStore Classic, built from ${GITHUB_SHA} on master. SHA-256 ${{ steps.ipa.outputs.sha256 }}. Add the source https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json in AltStore."
           fi
           gh release upload "$tag" dist/Plantry.ipa --clobber
-          echo "url=https://github.com/${GH_REPO}/releases/download/${tag}/Plantry.ipa" >> "$GITHUB_OUTPUT"
       - name: Check the released IPA is downloadable and identical
         run: |
           for i in 1 2 3 4 5; do
-            code=$(curl -sSL -o dl.ipa -w '%{http_code}' "${{ steps.release.outputs.url }}") && [ "$code" = 200 ] && break
+            code=$(curl -sSL -o dl.ipa -w '%{http_code}' "${{ steps.feed.outputs.url }}") && [ "$code" = 200 ] && break
             echo "attempt $i: HTTP $code"; sleep 10
           done
           [ "$code" = 200 ]
           echo "${{ steps.ipa.outputs.sha256 }}  dl.ipa" | sha256sum -c -
           [ "$(stat -c %s dl.ipa)" = "${{ steps.ipa.outputs.size }}" ]
-      - name: Write the AltStore source
-        run: |
-          # Keep the published history and its build ordering. Only the very
-          # first publish has no previous source; a failed download stops here.
-          if gh release view "$SOURCE_TAG" --json assets -q '.assets[].name' 2>/dev/null | grep -qx altstore.json; then
-            gh release download "$SOURCE_TAG" -p altstore.json -O previous.json
-          fi
-          prev=(); [ -s previous.json ] && prev=(--previous previous.json)
-          python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \
-            --download-url "${{ steps.release.outputs.url }}" "${prev[@]}" \
-            --notes "Build ${{ steps.ipa.outputs.build }} from master (${GITHUB_SHA::7})." --out altstore.json
       - name: Publish the AltStore source
         run: |
           if ! gh release view "$SOURCE_TAG" >/dev/null 2>&1; then
@@ -170,15 +179,16 @@ jobs:
               --notes "Stable AltStore Classic source for Plantry: https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json. Updated by the iOS AltStore build workflow; the IPAs are in the plantry-ios-v* releases."
           fi
           gh release upload "$SOURCE_TAG" altstore.json --clobber
-          url="https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json"
           sleep 5
-          curl -sSfL "$url" -o live.json
+          curl -sSfL "https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json" -o live.json
           python3 - <<'EOF'
           import json
           live = json.load(open("live.json"))
           v = live["apps"][0]["versions"][0]
           assert v["buildVersion"] == "${{ steps.ipa.outputs.build }}", v
-          assert v["downloadURL"] == "${{ steps.release.outputs.url }}", v
+          assert v["downloadURL"] == "${{ steps.feed.outputs.url }}", v
           assert v["sha256"] == "${{ steps.ipa.outputs.sha256 }}", v
           print("live source:", v["version"], v["buildVersion"], v["downloadURL"])
           EOF
+          # Only now is this build what AltStore users get, so only now is it latest.
+          gh release edit "${{ steps.feed.outputs.tag }}" --latest
