@@ -1,6 +1,6 @@
 # Putting Plantry on your iPhone
 
-Two routes. The free one works today with any Apple ID; the paid one needs the Apple Developer Program ($99/year) and unlocks TestFlight and the App Store.
+Three routes. The two free ones work today with any Apple ID (Xcode on a Mac, or AltStore from a Windows PC); the paid one needs the Apple Developer Program ($99/year) and unlocks TestFlight and the App Store.
 
 ## Free: install straight from Xcode (no developer account)
 
@@ -20,7 +20,28 @@ Every install:
 2. Press **Run** (⌘R). The first time, the phone shows "Untrusted Developer": go to Settings → General → VPN & Device Management → your Apple ID → **Trust**.
 3. Done. Plantry is on the home screen and works offline.
 
-Limits of a free team: up to 3 app IDs installed at once (Plantry uses 2: the app and its widget), 10 device registrations per week, and the 7-day expiry. If the phone says it has reached the maximum number of apps using a free developer profile, delete one of your other self-installed apps. Plantry uses nothing a free team cannot sign: timers use local notifications, the Live Activity is updated from the phone (no push), the calendar export uses the phone's Calendar, and the widget reads tonight's dinner from a shared keychain item (keychain sharing works on a free team; App Groups do not).
+Limits of a free team: 3 self-signed apps active on the phone at once (Plantry counts as one; its widget is part of it), at most 10 App IDs registered at a time, each lasting a week (Plantry needs 2: the app and its widget), and the 7-day expiry. If the phone says it has reached the maximum number of apps using a free developer profile, delete one of your other self-installed apps. Plantry uses nothing a free team cannot sign: timers use local notifications, the Live Activity is updated from the phone (no push), the calendar export uses the phone's Calendar, and the widget reads tonight's dinner from a shared keychain item (keychain sharing works on a free team; App Groups do not).
+
+## Free, from a Windows PC: AltStore Classic
+
+No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` from master every Monday (and on every iOS change merged to master) and publishes it with an AltStore source:
+
+`https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json`
+
+One-time setup, following [AltStore's Windows guide](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows):
+
+1. Install iTunes and iCloud **from Apple's website**, not the Microsoft Store (the guide links both), then [AltServer for Windows](https://altstore.io). Run AltServer as administrator.
+2. Plug the iPhone in with a cable once, unlock it and tap **Trust**. In iTunes, sign in, open the phone → **Summary** → tick **Sync with this iPhone over Wi-Fi** → **Apply**.
+3. Click the AltServer tray icon → **Install AltStore** → your iPhone, and type your Apple ID and password into AltServer (it sends them only to Apple).
+4. On the phone: Settings → General → VPN & Device Management → your Apple ID → **Trust**, and Settings → Privacy & Security → **Developer Mode** → on (the phone restarts).
+5. In AltStore: **Browse** → **Sources** → **+**, paste the source URL above, then tap **FREE** next to Plantry.
+
+What happens after that:
+
+- **Refresh (the 7-day expiry).** AltStore re-signs installed apps in the background, but only when the phone can reach AltServer: the PC is on and awake, AltServer is running, both are on the same Wi-Fi, and Background App Refresh is on for AltStore. If any of that fails for a week the apps stop opening; open AltStore → **My Apps** → **Refresh All** with the PC reachable. Keep AltServer starting with Windows.
+- **New versions are not installed by themselves.** When a new weekly build is in the source, AltStore shows an update in **My Apps**; tap **Update** to install it (your data stays). Refreshing keeps the build you already have.
+- The widget is part of the app, so it costs no extra active-app slot, but it does use a second App ID each week.
+- Not yet checked on a phone: the IPA is unsigned, so it carries no entitlements and AltStore signs it with your free profile's defaults. The widget finds tonight's dinner through a keychain group shared with the app; if the widget stays empty after you open Plantry once, that sharing did not survive AltStore's re-signing.
 
 ## The home-screen widget
 
