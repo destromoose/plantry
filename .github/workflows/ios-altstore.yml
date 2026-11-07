@@ -153,8 +153,10 @@ jobs:
           [ "$(stat -c %s dl.ipa)" = "${{ steps.ipa.outputs.size }}" ]
       - name: Write the AltStore source
         run: |
-          if gh release view "$SOURCE_TAG" >/dev/null 2>&1; then
-            gh release download "$SOURCE_TAG" -p altstore.json -O previous.json || true
+          # Keep the published history and its build ordering. Only the very
+          # first publish has no previous source; a failed download stops here.
+          if gh release view "$SOURCE_TAG" --json assets -q '.assets[].name' 2>/dev/null | grep -qx altstore.json; then
+            gh release download "$SOURCE_TAG" -p altstore.json -O previous.json
           fi
           prev=(); [ -s previous.json ] && prev=(--previous previous.json)
           python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \

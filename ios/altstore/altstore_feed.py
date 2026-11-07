@@ -42,7 +42,7 @@ SOURCE_META = {
     "subtitle": "Dinner, decided.",
     "description": "Weekly builds of Plantry for iPhone, straight from the master branch.",
     "website": "https://github.com/destromoose/plantry",
-    "tintColor": "#3F6B4E",
+    "tintColor": "#C8552F",
 }
 APP_META = {
     "name": "Plantry",
@@ -54,7 +54,7 @@ APP_META = {
         "cook-mode Live Activity. Works offline; your data stays on the phone."
     ),
     "iconURL": "https://raw.githubusercontent.com/destromoose/plantry/master/ios/Plantry/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png",
-    "tintColor": "#3F6B4E",
+    "tintColor": "#C8552F",
     "category": "lifestyle",
 }
 
