@@ -2,10 +2,13 @@ name: iOS
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, change/weekly-unsigned-ipa]
     paths: ['ios/**', '.github/workflows/ios.yml']
   pull_request:
     paths: ['ios/**', '.github/workflows/ios.yml']
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:

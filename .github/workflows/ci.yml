@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, change/weekly-unsigned-ipa]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
