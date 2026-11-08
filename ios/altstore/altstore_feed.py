@@ -199,9 +199,15 @@ def make_feed(ipa, download_url, previous=None, date=None, notes=None):
         "minOSVersion": ipa["minOSVersion"],
     }
     older = []
-    if previous:
-        apps = [a for a in previous.get("apps", []) if a.get("bundleIdentifier") == ipa["bundleIdentifier"]]
-        older = apps[0].get("versions", []) if apps else []
+    if previous is not None:
+        try:
+            apps = [a for a in previous["apps"] if a["bundleIdentifier"] == ipa["bundleIdentifier"]]
+            if len(apps) != 1 or not isinstance(apps[0]["versions"], list) or not apps[0]["versions"]:
+                raise ValueError("expected one Plantry app with published versions")
+            check_feed({"apps": apps})
+            older = apps[0]["versions"]
+        except (KeyError, IndexError, TypeError, ValueError, AttributeError, FeedError) as e:
+            raise FeedError(f"invalid previous source: {e}") from e
     older = [v for v in older if v.get("buildVersion") != ipa["buildVersion"]]
     if older:
         newest = max(older, key=lambda v: build_key(v["buildVersion"]))

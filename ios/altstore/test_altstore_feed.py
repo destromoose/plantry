@@ -190,6 +190,13 @@ class FeedTests(unittest.TestCase):
         with self.assertRaisesRegex(af.FeedError, "older than published"):
             af.make_feed(self.ipa("41.3"), self.url("41.3"), previous=new)
 
+    def test_invalid_previous_source_cannot_reset_history(self):
+        for previous in ({}, {"apps": []}, {"apps": [{"bundleIdentifier": "com.other.app", "versions": []}]},
+                         {"apps": [{"bundleIdentifier": af.APP_BUNDLE_ID, "versions": []}]},
+                         {"apps": [{"bundleIdentifier": af.APP_BUNDLE_ID, "versions": [{"buildVersion": "bad"}]}]}):
+            with self.subTest(previous=previous), self.assertRaisesRegex(af.FeedError, "previous source"):
+                af.make_feed(self.ipa("41.1"), self.url("41.1"), previous=previous)
+
     def test_history_is_capped(self):
         feed = None
         for n in range(1, 15):
