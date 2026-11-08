@@ -24,11 +24,24 @@ jobs:
         id: sim
         run: |
           id=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k in sorted(d, reverse=True) if "iOS" in k for x in d[k] if x["name"].startswith("iPhone")))')
+          xcrun simctl bootstatus "$id" -b
           echo "id=$id" >> "$GITHUB_OUTPUT"
       - name: Build and test (app, widget, Live Activity)
         working-directory: ios
         run: |
           xcodebuild -project Plantry.xcodeproj -scheme Plantry \
             -destination "id=${{ steps.sim.outputs.id }}" \
-            CODE_SIGNING_ALLOWED=NO test | tail -n 200
+            -parallel-testing-enabled NO \
+            -resultBundlePath "$RUNNER_TEMP/PlantryTests.xcresult" \
+            CODE_SIGNING_ALLOWED=NO test | tee "$RUNNER_TEMP/PlantryTests.log" | tail -n 200
           exit ${PIPESTATUS[0]}
+      - name: Upload simulator test evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Plantry-simulator-tests
+          path: |
+            ${{ runner.temp }}/PlantryTests.log
+            ${{ runner.temp }}/PlantryTests.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
