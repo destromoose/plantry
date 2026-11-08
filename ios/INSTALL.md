@@ -24,11 +24,11 @@ Limits of a free team: 3 self-signed apps active on the phone at once (Plantry c
 
 ## Free, from a Windows PC: AltStore Classic
 
-No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` from master every Monday (and on every iOS change merged to master) and publishes it with an AltStore source:
+No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` on every iOS change merged to `master` after an approved merge and publishes it with an AltStore source:
 
 `https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json`
 
-**Availability:** the source is not live until the workflow is merged into `master` and the first publishing build succeeds. Branch and manual builds upload CI artifacts only.
+**Availability:** the source is not live until the workflow is merged into `master` and the first publishing build succeeds. Pull requests and manual builds upload CI artifacts only. The repository default branch is currently `main`, which contains only the initial README. GitHub schedules run from the default branch, so the Monday schedule will not run on `master` until an owner separately approves changing the default branch to `master`. This change does not change the default branch. Approved iOS pushes to `master` can publish after merge; manual runs remain artifact-only.
 
 One-time setup, following [AltStore's Windows guide](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows):
 
@@ -41,7 +41,7 @@ One-time setup, following [AltStore's Windows guide](https://faq.altstore.io/alt
 What happens after that:
 
 - **Refresh (the 7-day expiry).** AltStore re-signs installed apps in the background, but only when the phone can reach AltServer: the PC is on and awake, AltServer is running, both are on the same Wi-Fi, and Background App Refresh is on for AltStore. If any of that fails for a week the apps stop opening; open AltStore → **My Apps** → **Refresh All** with the PC reachable. Keep AltServer starting with Windows.
-- **New versions are not installed by themselves.** When a new weekly build is in the source, AltStore shows an update in **My Apps**; tap **Update** to install it (your data stays). Refreshing keeps the build you already have.
+- **New versions are not installed by themselves.** When a new build is in the source, AltStore shows an update in **My Apps**; tap **Update** to install it (your data stays). Refreshing keeps the build you already have.
 - AltStore itself uses one of the 3 active-app slots and its own App IDs. Check **My Apps → View App IDs** for the actual registered count.
 - The widget is part of the app, so it costs no extra active-app slot, but it does use a second App ID each week.
 - Not yet checked on a phone: the IPA is unsigned, so it carries no entitlements and AltStore signs it with your free profile's defaults. The widget finds tonight's dinner through a keychain group shared with the app; if the widget stays empty after you open Plantry once, that sharing did not survive AltStore's re-signing.
@@ -66,4 +66,3 @@ Once you enrol in the Apple Developer Program:
 4. In App Store Connect → TestFlight, add yourself and family as internal testers. Builds there last 90 days and need no weekly re-install.
 5. For the public listing you need: the 1024 px icon (included), screenshots from the Simulator (6.9" and 6.5" iPhone), a privacy policy URL (the app collects nothing, so one paragraph), and the Age Rating questionnaire. The privacy manifest (`PrivacyInfo.xcprivacy`) is already in the app and declares coarse location (weather, optional) and the APIs used.
 
-The repository default branch is currently `main`, which contains only the initial README. GitHub schedules run from the default branch, so the Monday schedule will not run on `master` until an owner separately approves changing the default branch to `master`. This change does not change the default branch. Approved iOS pushes to `master` can publish after merge; manual runs remain artifact-only.

@@ -3,7 +3,7 @@ name: iOS AltStore build
 # Builds an unsigned Plantry.ipa (app + widget) for AltStore Classic. AltStore
 # re-signs it on the phone with the user's own free Apple ID.
 #
-# Pull requests, the review branch and manual runs: artifacts only. Read-only.
+# Pull requests and manual runs: artifacts only. Read-only.
 # Future master pushes and the weekly schedule publish a GitHub
 # release with the IPA, then update the stable AltStore source:
 #   https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json
@@ -15,7 +15,7 @@ on:
   pull_request:
     paths: ['ios/**', '.github/workflows/ios-altstore.yml']
   push:
-    branches: [master, change/weekly-unsigned-ipa]
+    branches: [master]
     paths: ['ios/**', '.github/workflows/ios-altstore.yml']
   schedule:
     - cron: '17 5 * * 1' # Mondays 05:17 UTC
