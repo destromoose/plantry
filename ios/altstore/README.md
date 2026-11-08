@@ -1,6 +1,6 @@
 # Weekly AltStore build
 
-`.github/workflows/ios-altstore.yml` archives an unsigned app and widget, validates the IPA, and uploads the IPA, inspection metadata, and candidate source as CI artifacts. Pull requests, the review branch, and manual dispatches are artifact-only. No Apple credentials or signing certificates are required in CI.
+`.github/workflows/ios-altstore.yml` archives an unsigned app and widget, validates the IPA, and uploads the IPA, inspection metadata, and candidate source as CI artifacts. Pull requests, the review branch, and manual dispatches are artifact-only. No Apple credentials or signing certificates are required in CI. The review branch also runs the existing CI and iOS simulator test workflows with read-only tokens.
 
 After an approved merge, pushes to `main` affecting iOS and the Monday 05:17 UTC schedule can publish releases. Only the canonical repository's `main` ref can enter the write-permission publish job. Publishing is serialized separately from artifact-only runs. Build numbers are `run_number.run_attempt`; lower builds cannot replace a newer published build. A failed old retry may build an artifact but cannot downgrade the feed.
 

@@ -1,6 +1,6 @@
 # Putting Plantry on your iPhone
 
-Three routes. The two free ones work today with any Apple ID (Xcode on a Mac, or AltStore from a Windows PC); the paid one needs the Apple Developer Program ($99/year) and unlocks TestFlight and the App Store.
+Two free signing routes use your own Apple ID: Xcode on a Mac, or AltStore Classic from a Windows PC. The paid route needs the Apple Developer Program and unlocks TestFlight and the App Store. The availability of the weekly IPA source is stated below.
 
 ## Free: install straight from Xcode (no developer account)
 

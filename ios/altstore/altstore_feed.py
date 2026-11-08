@@ -51,7 +51,7 @@ APP_META = {
     "localizedDescription": (
         "Plantry picks tonight's dinner from your recipes, your pantry and the week ahead, "
         "and walks you through cooking it. Includes the Tonight home-screen widget and the "
-        "cook-mode Live Activity. Works offline; your data stays on the phone."
+        "cook-mode Live Activity. Works offline, with optional household sync."
     ),
     "iconURL": "https://raw.githubusercontent.com/destromoose/plantry/main/ios/Plantry/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png",
     "tintColor": "#C8552F",
