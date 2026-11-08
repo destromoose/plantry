@@ -214,7 +214,7 @@ final class StoreTests: XCTestCase {
         store.completeOnboarding(names: ["Alex"], tastes: [], avoid: [], pantryNames: ["Olive oil"])
         let recipe = store.fetch(RecipeModel.self).first!
         store.setDinner("2026-11-05", recipeId: recipe.id)
-        store.generateShop(dates: ["2026-11-05"])
+        store.generateShop(dates: ["2026-11-05"], today: "2026-11-03")
         let needed = recipe.requiredIngredients.filter { $0.key != "olive oil" }.count
         XCTAssertEqual(store.fetch(ShopItemModel.self).count, needed)
         for item in store.fetch(ShopItemModel.self) { store.toggleShopItem(item) }

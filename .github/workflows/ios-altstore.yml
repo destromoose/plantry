@@ -1,0 +1,222 @@
+name: iOS AltStore build
+
+# Builds an unsigned Plantry.ipa (app + widget) for AltStore Classic. AltStore
+# re-signs it on the phone with the user's own free Apple ID.
+#
+# Pull requests and manual runs: artifacts only. Read-only.
+# After approval, master pushes publish a GitHub release with the IPA.
+# The weekly schedule can do so once master is the default branch.
+# Publishing then updates the stable AltStore source:
+#   https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json
+#
+# GitHub runs `schedule` and lists `workflow_dispatch` only from the default
+# branch, so both need this file on the repository's default branch.
+
+on:
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios-altstore.yml']
+  push:
+    branches: [master]
+    paths: ['ios/**', '.github/workflows/ios-altstore.yml']
+  schedule:
+    - cron: '17 5 * * 1' # Mondays 05:17 UTC
+  workflow_dispatch: # Artifact-only, including dispatches on master.
+
+permissions:
+  contents: read
+
+concurrency:
+  # Artifact-only events must never replace a pending publishing run.
+  group: ios-altstore-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  feed-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 ios/altstore/test_altstore_feed.py -v
+
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    outputs:
+      build: ${{ steps.version.outputs.build }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use the runner's default Xcode
+        # Do not select a beta merely because its filename sorts last.
+        run: xcodebuild -version
+      - name: Build number
+        id: version
+        # run_number only goes up for this workflow; run_attempt goes up on a
+        # re-run, so a retry is a newer build rather than a clash.
+        run: echo "build=${{ github.run_number }}.${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+      - name: Archive for generic iOS device, unsigned
+        working-directory: ios
+        run: |
+          xcodebuild -project Plantry.xcodeproj -scheme Plantry -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Plantry.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= \
+            CURRENT_PROJECT_VERSION=${{ steps.version.outputs.build }} \
+            archive | tail -n 200
+          exit ${PIPESTATUS[0]}
+      - name: Package Plantry.ipa
+        run: |
+          mkdir -p "$RUNNER_TEMP/ipa/Payload" dist
+          cp -R "$RUNNER_TEMP/Plantry.xcarchive/Products/Applications/Plantry.app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/dist/Plantry.ipa" Payload)
+      - name: Validate the IPA
+        run: |
+          python3 ios/altstore/altstore_feed.py inspect dist/Plantry.ipa > dist/inspect.json
+          cat dist/inspect.json
+          python3 - <<'EOF'
+          import json
+          d = json.load(open("dist/inspect.json"))
+          assert d["buildVersion"] == "${{ steps.version.outputs.build }}", d["buildVersion"]
+          # Both APIs are used by the app. Some Xcode versions omit unknown
+          # generated-plist keys, so require these in the actual archive.
+          for key in ("NSCalendarsFullAccessUsageDescription", "NSLocationWhenInUseUsageDescription"):
+              assert d["privacy"].get(key, "").strip(), f"Archive missing {key}"
+          EOF
+          tmp=$(mktemp -d) && unzip -q dist/Plantry.ipa -d "$tmp"
+          for bundle in "$tmp/Payload/Plantry.app" "$tmp"/Payload/Plantry.app/PlugIns/PlantryWidget*.appex; do
+            echo "== $(basename "$bundle")"
+            plutil -extract CFBundleIdentifier raw "$bundle/Info.plist"
+            plutil -extract CFBundleShortVersionString raw "$bundle/Info.plist"
+            plutil -extract CFBundleVersion raw "$bundle/Info.plist"
+            codesign -d --entitlements - --xml "$bundle" 2>&1 || true
+          done
+          # Generate and validate a candidate feed from the actual IPA on PRs too.
+          python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \
+            --download-url "https://github.com/${{ github.repository }}/releases/download/plantry-ios-v$(python3 -c 'import json; print(json.load(open("dist/inspect.json"))["version"])')-${{ steps.version.outputs.build }}/Plantry.ipa" \
+            --out dist/altstore.json
+          shasum -a 256 dist/Plantry.ipa
+          ls -l dist/Plantry.ipa
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Plantry-ipa-${{ steps.version.outputs.build }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: [feed-tests, build]
+    if: >-
+      github.repository == 'destromoose/plantry' &&
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: ios-altstore-publish
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_TAG: altstore-source
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Plantry-ipa-${{ needs.build.outputs.build }}
+          path: dist
+      - name: Re-check the IPA and read its version
+        id: ipa
+        run: |
+          python3 ios/altstore/altstore_feed.py inspect dist/Plantry.ipa > dist/check.json
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          d = json.load(open("dist/check.json"))
+          print(f"version={d['version']}")
+          print(f"build={d['buildVersion']}")
+          print(f"sha256={d['sha256']}")
+          print(f"size={d['size']}")
+          EOF
+      - name: Write the AltStore source
+        id: feed
+        # Built before anything is released, so a build older than the one
+        # already published stops here instead of becoming a release. The IPA
+        # URL is known up front: tag and file name come from the IPA's version.
+        run: |
+          tag="plantry-ios-v${{ steps.ipa.outputs.version }}-${{ steps.ipa.outputs.build }}"
+          url="https://github.com/${GH_REPO}/releases/download/${tag}/Plantry.ipa"
+          # Keep the published history. Only a confirmed 404 means "no source
+          # yet"; any other failure stops the job rather than start a new one.
+          code=$(curl -sSL -o previous.json -w '%{http_code}' \
+            "https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json") || code=error
+          prev=()
+          case "$code" in
+            200) prev=(--previous previous.json) ;;
+            404)
+              # A missing asset on an existing source release can be a failed
+              # replacement. Never mistake that for first-time initialization.
+              release_code=$(curl -sSL -o source-release.json -w '%{http_code}' \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H 'Accept: application/vnd.github+json' \
+                "https://api.github.com/repos/${GH_REPO}/releases/tags/${SOURCE_TAG}") || release_code=error
+              if [ "$release_code" != 404 ]; then
+                echo "Source asset missing but source release is not confirmed absent (HTTP $release_code). Restore the source from a versioned release's altstore.json before retrying."
+                exit 1
+              fi
+              echo "No source release or asset yet; starting one."
+              ;;
+            *) echo "Could not read the published source (HTTP $code)"; exit 1 ;;
+          esac
+          python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \
+            --download-url "$url" "${prev[@]}" \
+            --notes "Build ${{ steps.ipa.outputs.build }} from master (${GITHUB_SHA::7})." --out altstore.json
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Release the IPA
+        # Re-running this job re-uploads the same file to the same release.
+        run: |
+          tag="${{ steps.feed.outputs.tag }}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --latest=false \
+              --title "Plantry for iPhone ${{ steps.ipa.outputs.version }} (${{ steps.ipa.outputs.build }})" \
+              --notes "Unsigned IPA for AltStore Classic, built from ${GITHUB_SHA} on master. SHA-256 ${{ steps.ipa.outputs.sha256 }}. Add the source https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json in AltStore."
+          fi
+          gh release upload "$tag" dist/Plantry.ipa --clobber
+      - name: Check the released IPA is downloadable and identical
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -sSL -o dl.ipa -w '%{http_code}' "${{ steps.feed.outputs.url }}") && [ "$code" = 200 ] && break
+            echo "attempt $i: HTTP $code"; sleep 10
+          done
+          [ "$code" = 200 ]
+          echo "${{ steps.ipa.outputs.sha256 }}  dl.ipa" | sha256sum -c -
+          [ "$(stat -c %s dl.ipa)" = "${{ steps.ipa.outputs.size }}" ]
+      - name: Publish the AltStore source
+        run: |
+          # Preserve a recoverable candidate, including prior history, before
+          # replacing the stable asset (GitHub's --clobber is delete then upload).
+          gh release upload "${{ steps.feed.outputs.tag }}" altstore.json --clobber
+          if ! gh release view "$SOURCE_TAG" >/dev/null 2>&1; then
+            gh release create "$SOURCE_TAG" --target "$GITHUB_SHA" --latest=false \
+              --title "AltStore source" \
+              --notes "Stable AltStore Classic source for Plantry: https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json. Updated by the iOS AltStore build workflow; the IPAs are in the plantry-ios-v* releases."
+          fi
+          gh release upload "$SOURCE_TAG" altstore.json --clobber
+          sleep 5
+          curl -sSfL "https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json" -o live.json
+          python3 - <<'EOF'
+          import json
+          live = json.load(open("live.json"))
+          v = live["apps"][0]["versions"][0]
+          assert v["buildVersion"] == "${{ steps.ipa.outputs.build }}", v
+          assert v["downloadURL"] == "${{ steps.feed.outputs.url }}", v
+          assert v["sha256"] == "${{ steps.ipa.outputs.sha256 }}", v
+          print("live source:", v["version"], v["buildVersion"], v["downloadURL"])
+          EOF
+          # Only now is this build what AltStore users get, so only now is it latest.
+          gh release edit "${{ steps.feed.outputs.tag }}" --latest
