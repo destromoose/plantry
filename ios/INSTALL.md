@@ -1,6 +1,6 @@
 # Putting Plantry on your iPhone
 
-Two free signing routes use your own Apple ID: Xcode on a Mac, or AltStore Classic from a Windows PC. The paid route needs the Apple Developer Program and unlocks TestFlight and the App Store. The availability of the weekly IPA source is stated below.
+Two free signing routes use your own Apple ID: Xcode on a Mac, or SideStore set up with a Windows PC. The paid route needs the Apple Developer Program and unlocks TestFlight and the App Store. The availability of the weekly IPA source is stated below.
 
 ## Free: install straight from Xcode (no developer account)
 
@@ -22,29 +22,38 @@ Every install:
 
 Limits of a free team: 3 self-signed apps active on the phone at once (Plantry counts as one; its widget is part of it), at most 10 App IDs registered at a time, each lasting a week (Plantry needs 2: the app and its widget), and the 7-day expiry. If the phone says it has reached the maximum number of apps using a free developer profile, delete one of your other self-installed apps. Plantry uses nothing a free team cannot sign: timers use local notifications, the Live Activity is updated from the phone (no push), the calendar export uses the phone's Calendar, and the widget reads tonight's dinner from a shared keychain item (keychain sharing works on a free team; App Groups do not).
 
-## Free, from a Windows PC: AltStore Classic
+## Free, with a Windows PC once: SideStore
 
-No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` after each approved iOS change is merged to `master` and publishes it with an AltStore source:
+SideStore signs apps with your free Apple Account. After setup, refresh runs on the phone over Wi-Fi with LocalDevVPN connected; the PC need not stay awake or share that network. Signing still expires after **7 days** unless refreshed. A computer can be needed again for recovery or an expired pairing file.
+
+The current route is [SideStore's prerequisites](https://docs.sidestore.io/docs/installation/prerequisites) and [installation guide](https://docs.sidestore.io/docs/installation/install), checked 8 November 2026. This replaces the earlier AltServer/legacy iCloud route. SideStore's older “alternative” installation page is labelled outdated. Do not replace Microsoft Store iCloud to satisfy those old instructions. PC cleanup and tool staging belong to the operator; retain working iTunes and Apple device support. On Ri's PC, iTunes remains installed, but the operator could not find Apple Mobile Device Support before or after cleanup: device connectivity must be checked or repaired before setup. The official iloader 2.4.1 MSI is hash-verified and staged, unsigned, and not installed or run; installer approval remains with the operator. The current iloader route does not require legacy iCloud or AltServer.
+
+**What is prepared:** draft [PR31](https://github.com/destromoose/plantry/pull/31) builds an unsigned app/widget IPA and an AltStore-format source, which SideStore can read. CI packaging and source checks do not prove a phone installation or widget sharing works. See [source compatibility and build details](altstore/README.md).
+
+**Plantry is not published yet.** The intended source is:
 
 `https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json`
 
-**Availability:** the source is not live until the workflow is merged into `master` and the first publishing build succeeds. Pull requests and manual builds upload CI artifacts only. The repository default branch is currently `main`, which contains only the initial README. GitHub schedules run from the default branch, so the Monday schedule will not run on `master` until an owner separately approves changing the default branch to `master`. This change leaves the default branch as it is.
+It returned HTTP 404 on 8 November 2026. An owner must approve merging PR31 into `master` and the first publishing build; the source and its IPA download must then be checked before adding it. PRs and manual builds upload artifacts only. The Monday 05:17 UTC schedule also requires a separately approved default-branch change from `main` to `master`. These instructions authorize none of those actions.
 
-One-time setup, following [AltStore's Windows guide](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows):
+### One-time setup, done by the phone owner
 
-1. Install iTunes and iCloud **from Apple's website**, not the Microsoft Store (the guide links both), then [AltServer for Windows](https://altstore.io). Run AltServer as administrator.
-2. Plug the iPhone in with a cable once, unlock it and tap **Trust**. In iTunes, sign in, open the phone → **Summary** → tick **Sync with this iPhone over Wi-Fi** → **Apply**.
-3. Click the AltServer tray icon → **Install AltStore** → your iPhone, and type your Apple ID and password into AltServer (it sends them only to Apple).
-4. On the phone: Settings → General → VPN & Device Management → your Apple ID → **Trust**, and Settings → Privacy & Security → **Developer Mode** → on (the phone restarts).
-5. In AltStore: **Browse** → **Sources** → **+**, paste the source URL above, then tap **FREE** next to Plantry.
+Allow **15–25 minutes** after the operator has prepared the PC, plus extra time for downloads, restarts or troubleshooting. This is an estimate, not a measured install time. SideStore supports iOS 15+ with a passcode; **Plantry needs iOS 17+**.
 
-What happens after that:
+1. Use the operator-prepared Windows PC with iTunes and [iloader](https://iloader.app). The official SideStore guide links [nab138/iloader's Windows x64 MSI](https://github.com/nab138/iloader/releases/latest/download/iloader-windows-x64.msi). iTunes from Apple is recommended; the guide also permits Microsoft Store iTunes and suggests Apple Devices if neither works. Avoid similarly named third-party installer sites. Operator checks provenance and any installer approval before running it.
+2. On the phone, join Wi-Fi and install **LocalDevVPN** using the App Store link in [SideStore's prerequisites](https://docs.sidestore.io/docs/installation/prerequisites). Allow its VPN configuration and connect. This connects to services on your own device; it is not an internet privacy VPN. It must be connected when installing, updating or refreshing through SideStore. Cellular alone is insufficient. App Store availability for Ri's region has not been tested.
+3. Connect the phone by USB, unlock it and accept **Trust This Computer** yourself. Open iloader, sign in to your own Apple Account, select the phone, then **Install SideStore (Stable)**. On the checked date this button selects the upstream latest release tagged `0.7.0-alpha` (`prerelease=false`); the button label is not a stability guarantee. See the pinned release details in the source compatibility notes. Only the owner enters the password or any verification code into the official app. Never send credentials or the device pairing file to an agent, a chat or the repository.
+4. On the phone, Settings → General → **VPN & Device Management** → your Apple Account → trust the developer. iOS 18+ uses **Allow & Restart**; follow the prompts yourself. On iOS 16+, also enable Settings → Privacy & Security → **Developer Mode**, complete its restart and confirm it after unlocking.
+5. Reconnect LocalDevVPN and Wi-Fi. Open SideStore and sign in with the **same Apple Account used in iloader**. In **My Apps**, tap SideStore's expiry counter (initially **7 DAYS**) to refresh SideStore itself. Complete any certificate prompt described in the official guide. Wait for it to reopen successfully. **Do this before installing Plantry or any other app.**
+6. Enable Background App Refresh for SideStore in iOS settings and leave SideStore's own **Background Refresh** setting enabled. Once the live-source check above has passed, open SideStore's **Sources**, use **+** to add the exact source URL, then install Plantry. Review any permissions prompt. Open Plantry once before adding its widget.
 
-- **Refresh (the 7-day expiry).** AltStore re-signs installed apps in the background, but only when the phone can reach AltServer: the PC is on and awake, AltServer is running, both are on the same Wi-Fi, and Background App Refresh is on for AltStore. If any of that fails for a week the apps stop opening; open AltStore → **My Apps** → **Refresh All** with the PC reachable. Keep AltServer starting with Windows.
-- **New versions are not installed by themselves.** When a new build is in the source, AltStore shows an update in **My Apps**; tap **Update** to install it (your data stays). Refreshing keeps the build you already have.
-- AltStore itself uses one of the 3 active-app slots and its own App IDs. Check **My Apps → View App IDs** for the actual registered count.
-- The widget is part of the app, so it costs no extra active-app slot, but it does use a second App ID each week.
-- Not yet checked on a phone: the IPA is unsigned, so it carries no entitlements and AltStore signs it with your free profile's defaults. The widget finds tonight's dinner through a keychain group shared with the app; if the widget stays empty after you open Plantry once, that sharing did not survive AltStore's re-signing.
+### Keeping it working
+
+- Keep Wi-Fi and LocalDevVPN available for refresh. SideStore attempts background refresh, but iOS does not guarantee it will run in time. Check **My Apps** regularly and use **Refresh All** while days remain; confirm the counters reset. You do not need an always-on PC or its Wi-Fi network for routine refresh.
+- Free signing is still seven days, not a permanent signature. If SideStore itself expires, return to the computer/iloader to reinstall it and follow the current recovery guide. Avoid deleting Plantry as a troubleshooting step: deleting the app can remove its data. A pairing file may also expire after an iOS update/reset or unexpectedly; use the [official pairing-file guide](https://docs.sidestore.io/docs/advanced/pairing-file) when needed, privately with the owner. Background refresh and recovery have not been tested on Ri's phone.
+- A new Plantry build is separate from refreshing its signature. When SideStore offers an update, install it with Wi-Fi and LocalDevVPN connected. Refreshing alone keeps the installed build. The publishing schedule does not refresh the phone's signatures.
+- A free account permits **3 active sideloaded apps including SideStore** and **10 App IDs per week**. SideStore and Plantry occupy two app slots. Plantry's widget shares its app slot but needs another App ID; SideStore and other extensions consume additional IDs. Check SideStore's App ID list rather than assuming two total. See the [SideStore FAQ](https://docs.sidestore.io/docs/faq).
+- Still unverified on a phone: source import, re-signing, extension preservation, shared keychain data, widget display and refresh/recovery. Keep the widget extension when installing if offered a choice; CI verifies packaging, not the phone result.
 
 ## The home-screen widget
 
