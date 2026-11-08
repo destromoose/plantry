@@ -268,6 +268,8 @@ def main(argv=None):
         if args.previous:
             with open(args.previous) as fh:
                 previous = json.load(fh)
+            if not isinstance(previous, dict):
+                raise FeedError("previous source must be a JSON object")
         feed = make_feed(ipa, args.download_url, previous, notes=args.notes)
         if args.name:
             feed["name"] = args.name

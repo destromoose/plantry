@@ -224,6 +224,15 @@ class FeedTests(unittest.TestCase):
         with self.assertRaises(af.FeedError):
             af.check_feed(feed)
 
+    def test_cli_rejects_null_previous_source(self):
+        path = self.b.make()
+        previous = os.path.join(self._tmp.name, "previous.json")
+        out = os.path.join(self._tmp.name, "feed.json")
+        with open(previous, "w") as f:
+            json.dump(None, f)
+        self.assertEqual(af.main(["feed", path, "--download-url", URL, "--previous", previous, "--out", out]), 1)
+        self.assertFalse(os.path.exists(out))
+
     def test_cli_writes_feed(self):
         path = self.b.make()
         out = os.path.join(self._tmp.name, "feed.json")
