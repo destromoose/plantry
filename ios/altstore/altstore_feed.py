@@ -40,7 +40,7 @@ KEEP_VERSIONS = 10
 SOURCE_META = {
     "name": "Plantry",
     "subtitle": "Dinner, decided.",
-    "description": "Weekly builds of Plantry for iPhone, straight from the main branch.",
+    "description": "Weekly builds of Plantry for iPhone, straight from the master branch.",
     "website": "https://github.com/destromoose/plantry",
     "tintColor": "#C8552F",
 }
@@ -53,7 +53,7 @@ APP_META = {
         "and walks you through cooking it. Includes the Tonight home-screen widget and the "
         "cook-mode Live Activity. Works offline, with optional household sync."
     ),
-    "iconURL": "https://raw.githubusercontent.com/destromoose/plantry/main/ios/Plantry/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png",
+    "iconURL": "https://raw.githubusercontent.com/destromoose/plantry/master/ios/Plantry/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png",
     "tintColor": "#C8552F",
     "category": "lifestyle",
 }
@@ -196,7 +196,7 @@ def make_feed(ipa, download_url, previous=None, date=None, notes=None):
         "version": ipa["version"],
         "buildVersion": ipa["buildVersion"],
         "date": date or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "localizedDescription": notes or f"Build {ipa['buildVersion']} from main.",
+        "localizedDescription": notes or f"Build {ipa['buildVersion']} from master.",
         "downloadURL": download_url,
         "size": ipa["size"],
         "sha256": ipa["sha256"],
