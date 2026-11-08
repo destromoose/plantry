@@ -25,9 +25,8 @@ permissions:
   contents: read
 
 concurrency:
-  # One publish at a time so the source JSON is never written by two runs at
-  # once; pull requests only cancel their own older runs.
-  group: ios-altstore-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  # Artifact-only events must never replace a pending publishing run.
+  group: ios-altstore-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -110,6 +109,9 @@ jobs:
       (github.event_name == 'push' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    concurrency:
+      group: ios-altstore-publish
+      cancel-in-progress: false
     permissions:
       contents: write
     env:
@@ -151,7 +153,19 @@ jobs:
           prev=()
           case "$code" in
             200) prev=(--previous previous.json) ;;
-            404) echo "No published source yet; starting one." ;;
+            404)
+              # A missing asset on an existing source release can be a failed
+              # replacement. Never mistake that for first-time initialization.
+              release_code=$(curl -sSL -o source-release.json -w '%{http_code}' \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H 'Accept: application/vnd.github+json' \
+                "https://api.github.com/repos/${GH_REPO}/releases/tags/${SOURCE_TAG}") || release_code=error
+              if [ "$release_code" != 404 ]; then
+                echo "Source asset missing but source release is not confirmed absent (HTTP $release_code). Restore the source from a versioned release's altstore.json before retrying."
+                exit 1
+              fi
+              echo "No source release or asset yet; starting one."
+              ;;
             *) echo "Could not read the published source (HTTP $code)"; exit 1 ;;
           esac
           python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \
@@ -180,6 +194,9 @@ jobs:
           [ "$(stat -c %s dl.ipa)" = "${{ steps.ipa.outputs.size }}" ]
       - name: Publish the AltStore source
         run: |
+          # Preserve a recoverable candidate, including prior history, before
+          # replacing the stable asset (GitHub's --clobber is delete then upload).
+          gh release upload "${{ steps.feed.outputs.tag }}" altstore.json --clobber
           if ! gh release view "$SOURCE_TAG" >/dev/null 2>&1; then
             gh release create "$SOURCE_TAG" --target "$GITHUB_SHA" --latest=false \
               --title "AltStore source" \
