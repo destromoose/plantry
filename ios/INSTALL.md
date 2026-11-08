@@ -24,9 +24,11 @@ Limits of a free team: 3 self-signed apps active on the phone at once (Plantry c
 
 ## Free, from a Windows PC: AltStore Classic
 
-No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` from master every Monday (and on every iOS change merged to master) and publishes it with an AltStore source:
+No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` from main every Monday (and on every iOS change merged to main) and publishes it with an AltStore source:
 
 `https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json`
+
+**Availability:** the source is not live until this PR is merged into `main` and the first publishing build succeeds. Branch and manual builds upload CI artifacts only.
 
 One-time setup, following [AltStore's Windows guide](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows):
 

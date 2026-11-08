@@ -3,8 +3,8 @@ name: iOS AltStore build
 # Builds an unsigned Plantry.ipa (app + widget) for AltStore Classic. AltStore
 # re-signs it on the phone with the user's own free Apple ID.
 #
-# Pull requests: build, validate and upload the IPA as a run artifact. Read-only.
-# master pushes, the weekly schedule and manual runs: also publish a GitHub
+# Pull requests, the review branch and manual runs: artifacts only. Read-only.
+# Future main pushes and the weekly schedule publish a GitHub
 # release with the IPA, then update the stable AltStore source:
 #   https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json
 #
@@ -15,11 +15,11 @@ on:
   pull_request:
     paths: ['ios/**', '.github/workflows/ios-altstore.yml']
   push:
-    branches: [master]
+    branches: [main, change/weekly-unsigned-ipa]
     paths: ['ios/**', '.github/workflows/ios-altstore.yml']
   schedule:
     - cron: '17 5 * * 1' # Mondays 05:17 UTC
-  workflow_dispatch:
+  workflow_dispatch: # Artifact-only, including dispatches on main.
 
 permissions:
   contents: read
@@ -89,6 +89,10 @@ jobs:
             plutil -extract CFBundleVersion raw "$bundle/Info.plist"
             codesign -d --entitlements - --xml "$bundle" 2>&1 || true
           done
+          # Generate and validate a candidate feed from the actual IPA on PRs too.
+          python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \
+            --download-url "https://github.com/${{ github.repository }}/releases/download/plantry-ios-v$(python3 -c 'import json; print(json.load(open("dist/inspect.json"))["version"])')-${{ steps.version.outputs.build }}/Plantry.ipa" \
+            --out dist/altstore.json
           shasum -a 256 dist/Plantry.ipa
           ls -l dist/Plantry.ipa
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -100,7 +104,10 @@ jobs:
 
   publish:
     needs: [feed-tests, build]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    if: >-
+      github.repository == 'destromoose/plantry' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -149,7 +156,7 @@ jobs:
           esac
           python3 ios/altstore/altstore_feed.py feed dist/Plantry.ipa \
             --download-url "$url" "${prev[@]}" \
-            --notes "Build ${{ steps.ipa.outputs.build }} from master (${GITHUB_SHA::7})." --out altstore.json
+            --notes "Build ${{ steps.ipa.outputs.build }} from main (${GITHUB_SHA::7})." --out altstore.json
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Release the IPA
@@ -159,7 +166,7 @@ jobs:
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --target "$GITHUB_SHA" --latest=false \
               --title "Plantry for iPhone ${{ steps.ipa.outputs.version }} (${{ steps.ipa.outputs.build }})" \
-              --notes "Unsigned IPA for AltStore Classic, built from ${GITHUB_SHA} on master. SHA-256 ${{ steps.ipa.outputs.sha256 }}. Add the source https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json in AltStore."
+              --notes "Unsigned IPA for AltStore Classic, built from ${GITHUB_SHA} on main. SHA-256 ${{ steps.ipa.outputs.sha256 }}. Add the source https://github.com/${GH_REPO}/releases/download/${SOURCE_TAG}/altstore.json in AltStore."
           fi
           gh release upload "$tag" dist/Plantry.ipa --clobber
       - name: Check the released IPA is downloadable and identical
