@@ -78,6 +78,10 @@ jobs:
           import json
           d = json.load(open("dist/inspect.json"))
           assert d["buildVersion"] == "${{ steps.version.outputs.build }}", d["buildVersion"]
+          # Both APIs are used by the app. Some Xcode versions omit unknown
+          # generated-plist keys, so require these in the actual archive.
+          for key in ("NSCalendarsFullAccessUsageDescription", "NSLocationWhenInUseUsageDescription"):
+              assert d["privacy"].get(key, "").strip(), f"Archive missing {key}"
           EOF
           tmp=$(mktemp -d) && unzip -q dist/Plantry.ipa -d "$tmp"
           for bundle in "$tmp/Payload/Plantry.app" "$tmp"/Payload/Plantry.app/PlugIns/PlantryWidget*.appex; do
