@@ -24,11 +24,11 @@ Limits of a free team: 3 self-signed apps active on the phone at once (Plantry c
 
 ## Free, from a Windows PC: AltStore Classic
 
-No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` on every iOS change merged to `master` after an approved merge and publishes it with an AltStore source:
+No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` after each approved iOS change is merged to `master` and publishes it with an AltStore source:
 
 `https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json`
 
-**Availability:** the source is not live until the workflow is merged into `master` and the first publishing build succeeds. Pull requests and manual builds upload CI artifacts only. The repository default branch is currently `main`, which contains only the initial README. GitHub schedules run from the default branch, so the Monday schedule will not run on `master` until an owner separately approves changing the default branch to `master`. This change does not change the default branch. Approved iOS pushes to `master` can publish after merge; manual runs remain artifact-only.
+**Availability:** the source is not live until the workflow is merged into `master` and the first publishing build succeeds. Pull requests and manual builds upload CI artifacts only. The repository default branch is currently `main`, which contains only the initial README. GitHub schedules run from the default branch, so the Monday schedule will not run on `master` until an owner separately approves changing the default branch to `master`. This change leaves the default branch as it is.
 
 One-time setup, following [AltStore's Windows guide](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows):
 
@@ -65,4 +65,3 @@ Once you enrol in the Apple Developer Program:
 3. Xcode → Product → **Archive**, then **Distribute App** → TestFlight & App Store. The export-compliance key is already set (no non-exempt encryption), so there is no prompt.
 4. In App Store Connect → TestFlight, add yourself and family as internal testers. Builds there last 90 days and need no weekly re-install.
 5. For the public listing you need: the 1024 px icon (included), screenshots from the Simulator (6.9" and 6.5" iPhone), a privacy policy URL (the app collects nothing, so one paragraph), and the Age Rating questionnaire. The privacy manifest (`PrivacyInfo.xcprivacy`) is already in the app and declares coarse location (weather, optional) and the APIs used.
-

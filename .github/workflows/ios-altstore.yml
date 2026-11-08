@@ -4,8 +4,9 @@ name: iOS AltStore build
 # re-signs it on the phone with the user's own free Apple ID.
 #
 # Pull requests and manual runs: artifacts only. Read-only.
-# Future master pushes and the weekly schedule publish a GitHub
-# release with the IPA, then update the stable AltStore source:
+# After approval, master pushes publish a GitHub release with the IPA.
+# The weekly schedule can do so once master is the default branch.
+# Publishing then updates the stable AltStore source:
 #   https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json
 #
 # GitHub runs `schedule` and lists `workflow_dispatch` only from the default
