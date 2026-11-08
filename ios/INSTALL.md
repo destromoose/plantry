@@ -28,7 +28,7 @@ No Mac or Xcode needed. A workflow builds an unsigned `Plantry.ipa` from main ev
 
 `https://github.com/destromoose/plantry/releases/download/altstore-source/altstore.json`
 
-**Availability:** the source is not live until this PR is merged into `main` and the first publishing build succeeds. Branch and manual builds upload CI artifacts only.
+**Availability:** the source is not live until the workflow is merged into `main` and the first publishing build succeeds. Branch and manual builds upload CI artifacts only.
 
 One-time setup, following [AltStore's Windows guide](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows):
 
@@ -42,6 +42,7 @@ What happens after that:
 
 - **Refresh (the 7-day expiry).** AltStore re-signs installed apps in the background, but only when the phone can reach AltServer: the PC is on and awake, AltServer is running, both are on the same Wi-Fi, and Background App Refresh is on for AltStore. If any of that fails for a week the apps stop opening; open AltStore → **My Apps** → **Refresh All** with the PC reachable. Keep AltServer starting with Windows.
 - **New versions are not installed by themselves.** When a new weekly build is in the source, AltStore shows an update in **My Apps**; tap **Update** to install it (your data stays). Refreshing keeps the build you already have.
+- AltStore itself uses one of the 3 active-app slots and its own App IDs. Check **My Apps → View App IDs** for the actual registered count.
 - The widget is part of the app, so it costs no extra active-app slot, but it does use a second App ID each week.
 - Not yet checked on a phone: the IPA is unsigned, so it carries no entitlements and AltStore signs it with your free profile's defaults. The widget finds tonight's dinner through a keychain group shared with the app; if the widget stays empty after you open Plantry once, that sharing did not survive AltStore's re-signing.
 

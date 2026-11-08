@@ -48,10 +48,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Pick the newest Xcode
-        run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
-          xcodebuild -version
+      - name: Use the runner's default Xcode
+        # Do not select a beta merely because its filename sorts last.
+        run: xcodebuild -version
       - name: Build number
         id: version
         # run_number only goes up for this workflow; run_attempt goes up on a
@@ -73,13 +72,13 @@ jobs:
           (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/dist/Plantry.ipa" Payload)
       - name: Validate the IPA
         run: |
-          python3 ios/altstore/altstore_feed.py inspect dist/Plantry.ipa | tee dist/inspect.json
+          python3 ios/altstore/altstore_feed.py inspect dist/Plantry.ipa > dist/inspect.json
+          cat dist/inspect.json
           python3 - <<'EOF'
           import json
           d = json.load(open("dist/inspect.json"))
           assert d["buildVersion"] == "${{ steps.version.outputs.build }}", d["buildVersion"]
           EOF
-          unzip -l dist/Plantry.ipa | grep -E 'Payload/Plantry.app/(Plantry|Info.plist|PlugIns/PlantryWidget[^/]*\.appex/(PlantryWidget|Info.plist))$'
           tmp=$(mktemp -d) && unzip -q dist/Plantry.ipa -d "$tmp"
           for bundle in "$tmp/Payload/Plantry.app" "$tmp"/Payload/Plantry.app/PlugIns/PlantryWidget*.appex; do
             echo "== $(basename "$bundle")"

@@ -75,7 +75,11 @@ def embedded_entitlements(binary):
         i = binary.find(ENTITLEMENTS_MAGIC, start)
         if i < 0:
             return found
+        if i + 8 > len(binary):
+            raise FeedError(f"truncated entitlements header at offset {i}")
         (length,) = struct.unpack(">I", binary[i + 4:i + 8])
+        if length < 8 or i + length > len(binary):
+            raise FeedError(f"invalid entitlements length at offset {i}: {length}")
         payload = binary[i + 8:i + length]
         start = i + 4
         if not payload.lstrip().startswith(b"<?xml"):

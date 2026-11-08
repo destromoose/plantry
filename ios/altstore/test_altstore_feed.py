@@ -12,7 +12,7 @@ import zipfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import altstore_feed as af  # noqa: E402
 
-URL = "https://github.com/destromoose/plantry/releases/download/plantry-ios-0.1.0-41.1/Plantry.ipa"
+URL = "https://github.com/destromoose/plantry/releases/download/plantry-ios-v0.1.0-41.1/Plantry.ipa"
 
 
 def entitlements_blob(ents):
@@ -37,7 +37,7 @@ class IPABuilder:
         self.tmp = tmp
         self.n = 0
 
-    def make(self, app_info=None, widget_info=None, widget_dir="PlantryWidget.appex", app_bin=b"\xcf\xfa\xed\xfe",
+    def make(self, app_info=None, widget_info=None, widget_dir="PlantryWidgetExtension.appex", app_bin=b"\xcf\xfa\xed\xfe",
              widget_bin=b"\xcf\xfa\xed\xfe", with_widget=True, app_dir="Plantry.app"):
         self.n += 1
         path = os.path.join(self.tmp, f"t{self.n}.ipa")
@@ -50,8 +50,8 @@ class IPABuilder:
             z.writestr(root + "Plantry", app_bin)
             if with_widget:
                 w = f"{root}PlugIns/{widget_dir}/"
-                z.writestr(w + "Info.plist", widget_info or info(af.WIDGET_BUNDLE_ID, "PlantryWidget"))
-                z.writestr(w + "PlantryWidget", widget_bin)
+                z.writestr(w + "Info.plist", widget_info or info(af.WIDGET_BUNDLE_ID, "PlantryWidgetExtension"))
+                z.writestr(w + "PlantryWidgetExtension", widget_bin)
         return path
 
 
@@ -103,23 +103,23 @@ class InspectTests(unittest.TestCase):
 
     def test_wrong_widget_bundle_id(self):
         with self.assertRaisesRegex(af.FeedError, "widget bundle ids"):
-            af.inspect_ipa(self.b.make(widget_info=info("com.destromoose.other", "PlantryWidget")))
+            af.inspect_ipa(self.b.make(widget_info=info("com.destromoose.other", "PlantryWidgetExtension")))
 
     def test_widget_version_mismatch(self):
         with self.assertRaisesRegex(af.FeedError, "must match"):
-            af.inspect_ipa(self.b.make(widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidget", build="40.1")))
+            af.inspect_ipa(self.b.make(widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidgetExtension", build="40.1")))
 
     def test_bad_versions(self):
         for v in ("1.2.3.4", "1.0-beta", "", "abc"):
             with self.subTest(v=v), self.assertRaisesRegex(af.FeedError, "CFBundleShortVersionString"):
                 af.inspect_ipa(self.b.make(
                     app_info=info(af.APP_BUNDLE_ID, "Plantry", version=v),
-                    widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidget", version=v)))
+                    widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidgetExtension", version=v)))
         for b in ("6c8a636", "1.2.3.4"):
             with self.subTest(b=b), self.assertRaisesRegex(af.FeedError, "CFBundleVersion"):
                 af.inspect_ipa(self.b.make(
                     app_info=info(af.APP_BUNDLE_ID, "Plantry", build=b),
-                    widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidget", build=b)))
+                    widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidgetExtension", build=b)))
 
     def test_embedded_entitlements_are_read_and_merged(self):
         app = entitlements_blob({"application-identifier": "T.com.destromoose.plantry",
@@ -128,9 +128,15 @@ class InspectTests(unittest.TestCase):
         ipa = af.inspect_ipa(self.b.make(app_bin=app, widget_bin=widget))
         self.assertEqual(ipa["entitlements"], ["get-task-allow", "keychain-access-groups"])
 
+    def test_truncated_entitlements_are_reported_as_feed_errors(self):
+        for binary in (af.ENTITLEMENTS_MAGIC, af.ENTITLEMENTS_MAGIC + b"\0" * 3,
+                       af.ENTITLEMENTS_MAGIC + struct.pack(">I", 100) + b"<?xml"):
+            with self.subTest(binary=binary), self.assertRaises(af.FeedError):
+                af.embedded_entitlements(binary)
+
     def test_widget_privacy_strings_included(self):
         ipa = af.inspect_ipa(self.b.make(widget_info=info(
-            af.WIDGET_BUNDLE_ID, "PlantryWidget", NSLocationWhenInUseUsageDescription="w",
+            af.WIDGET_BUNDLE_ID, "PlantryWidgetExtension", NSLocationWhenInUseUsageDescription="w",
             NSMicrophoneUsageDescription="mic")))
         self.assertEqual(ipa["privacy"]["NSLocationWhenInUseUsageDescription"], "weather")
         self.assertEqual(ipa["privacy"]["NSMicrophoneUsageDescription"], "mic")
@@ -147,10 +153,10 @@ class FeedTests(unittest.TestCase):
     def ipa(self, build):
         return af.inspect_ipa(self.b.make(
             app_info=info(af.APP_BUNDLE_ID, "Plantry", build=build, NSLocationWhenInUseUsageDescription="weather"),
-            widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidget", build=build)))
+            widget_info=info(af.WIDGET_BUNDLE_ID, "PlantryWidgetExtension", build=build)))
 
     def url(self, build):
-        return f"https://github.com/destromoose/plantry/releases/download/plantry-ios-0.1.0-{build}/Plantry.ipa"
+        return f"https://github.com/destromoose/plantry/releases/download/plantry-ios-v0.1.0-{build}/Plantry.ipa"
 
     def test_first_feed_matches_ipa(self):
         ipa = self.ipa("41.1")
