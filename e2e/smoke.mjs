@@ -5,22 +5,34 @@
 import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
-const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_PATH || 'playwright')
+const require = createRequire(import.meta.url)
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || 'playwright')
 
 const PORT = process.env.PORT || 3123
-const BASE = `http://localhost:${PORT}`
+const BASE = `http://127.0.0.1:${PORT}`
 mkdirSync('e2e/screenshots', { recursive: true })
 
-const server = spawn('npx', ['next', 'start', '-p', String(PORT)], {
-  stdio: 'pipe',
-  shell: true,
-  detached: true,
-})
+const server = spawn(
+  process.execPath,
+  [
+    require.resolve('next/dist/bin/next'),
+    'start',
+    '-H',
+    '127.0.0.1',
+    '-p',
+    String(PORT),
+  ],
+  {
+    stdio: 'pipe',
+    detached: true,
+  }
+)
 server.stdout.on('data', (d) => process.stdout.write(`[next] ${d}`))
 server.stderr.on('data', (d) => process.stderr.write(`[next] ${d}`))
 
 async function waitForServer() {
   for (let i = 0; i < 60; i++) {
+    if (server.exitCode !== null) throw new Error(`server exited with ${server.exitCode}`)
     try {
       const r = await fetch(BASE)
       if (r.ok) return
@@ -35,9 +47,10 @@ let failed = false
 try {
   await waitForServer()
   const proxy = process.env.HTTPS_PROXY || process.env.https_proxy
-  const browser = await chromium.launch(
-    proxy ? { proxy: { server: proxy, bypass: 'localhost,127.0.0.1' } } : {}
-  )
+  const browser = await chromium.launch({
+    channel: process.env.BROWSER_CHANNEL || undefined,
+    ...(proxy && { proxy: { server: proxy, bypass: 'localhost,127.0.0.1' } }),
+  })
   for (const [name, viewport, mobile] of [
     ['phone', { width: 390, height: 844 }, true],
     ['desktop', { width: 1280, height: 860 }, false],
@@ -47,6 +60,7 @@ try {
       isMobile: mobile,
       hasTouch: mobile,
       deviceScaleFactor: 2,
+      serviceWorkers: 'block',
     })
     const page = await ctx.newPage()
     page.on('console', (m) => m.type() === 'error' && errors.push(`${name}: ${m.text()}`))

@@ -29,7 +29,11 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => ![PAGES, ASSETS].includes(k)).map((k) => caches.delete(k)))
+        Promise.all(
+          keys
+            .filter((key) => /^plantry-(pages|assets)-/.test(key) && key !== PAGES && key !== ASSETS)
+            .map((key) => caches.delete(key))
+        )
       )
       .then(() => self.clients.claim())
   )

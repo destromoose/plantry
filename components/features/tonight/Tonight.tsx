@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store'
 import { useAvoid } from '@/lib/useAvoid'
 import { useAppContext, useStayTonight } from '@/components/shell/Providers'
 import { suggest } from '@/lib/suggest'
-import { addDays, cn, formatMinutes, fromDateKey, shortDay, toDateKey } from '@/lib/utils'
+import { addDays, cn, fromDateKey, shortDay, toDateKey } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { Button, buttonVariants } from '@/components/ui/Button'
 import { Eyebrow, SectionTitle } from '@/components/ui/Card'
@@ -39,7 +39,6 @@ export function Tonight() {
   const today = toDateKey(new Date(ctx.now))
   const energy = energyByDate[target]
   const entry = plan.find((p) => p.date === target && p.slot === 'dinner')
-  const me = members.find((m) => m.isMe) ?? members[0]
 
   const avoid = useAvoid()
   const stayTonight = useStayTonight()
@@ -64,14 +63,6 @@ export function Tonight() {
     [recipes, pantry, settings.tastes, energy, ctx, cooked, avoid]
   )
 
-  const greeting =
-    ctx.mood === 'dawn'
-      ? t('Morning')
-      : ctx.mood === 'day'
-        ? t('Afternoon')
-        : ctx.mood === 'dusk'
-          ? t('Evening')
-          : t('Late one')
   const dateText = fromDateKey(target).toLocaleDateString(locale(), {
     weekday: 'long',
     month: 'long',
@@ -90,9 +81,7 @@ export function Tonight() {
         <h1 className="mt-1 font-display text-fluid-xl font-semibold leading-none tracking-tight">
           {dateText}
         </h1>
-        <p className="mt-2 text-[0.9375rem] text-ink-2">
-          {me ? `${greeting}, ${me.name}.` : `${greeting}.`}
-        </p>
+        <p className="mt-2 text-[0.9375rem] text-ink-2">{ctx.reason}</p>
         {doneTonight && (
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-pill bg-secondary/15 px-3 py-1 text-sm font-medium text-ink">
             <Check className="h-4 w-4 text-secondary" aria-hidden />{' '}
@@ -112,6 +101,16 @@ export function Tonight() {
       </motion.header>
 
       <motion.div variants={reveal}>
+        <TonightHero
+          ranked={ranked}
+          entry={entry}
+          energy={energy}
+          targetDate={target}
+          today={today}
+        />
+      </motion.div>
+
+      <motion.div variants={reveal}>
         <EnergyPicker energy={energy} label={ctx.targetLabel} onSet={(e) => setEnergy(target, e)} />
       </motion.div>
 
@@ -128,41 +127,13 @@ export function Tonight() {
       )}
 
       <motion.div variants={reveal}>
-        <TonightHero
-          ranked={ranked}
-          entry={entry}
-          energy={energy}
-          targetDate={target}
-          today={today}
-          reason={ctx.reason}
-        />
-      </motion.div>
-
-      <motion.div variants={reveal}>
-        <NudgeCard nudge={ctx.nudge} targetDate={target} today={today} now={ctx.now} />
+        <NudgeCard nudge={ctx.nudge} targetDate={target} today={today} />
       </motion.div>
 
       <motion.section variants={reveal} aria-label={t('Next three days')}>
         <SectionTitle>{t('Next three days')}</SectionTitle>
         <NextDays target={target} />
       </motion.section>
-
-      {ctx.isWeekend && ctx.hour < 13 && (
-        <motion.section
-          variants={reveal}
-          className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <Eyebrow>{t('Sunday ritual')}</Eyebrow>
-            <p className="mt-1 font-display text-lg font-semibold">
-              {t('Ten minutes now saves five decisions later.')}
-            </p>
-          </div>
-          <Link href="/week" className={cn(buttonVariants({ variant: 'secondary' }), 'self-start')}>
-            {t('Plan the week')}
-          </Link>
-        </motion.section>
-      )}
 
       {/* Ask about weather once Plantry has earned it, not on the first visit. */}
       {!settings.weatherEnabled && cooked.length >= 2 && (
@@ -180,12 +151,10 @@ function NudgeCard({
   nudge,
   targetDate,
   today,
-  now,
 }: {
   nudge: string
   targetDate: string
   today: string
-  now: string
 }) {
   const recipes = useStore((s) => s.recipes)
   const plan = useStore((s) => s.plan)

@@ -30,13 +30,6 @@ export const staggerContainer: Variants = {
   show: { transition: { staggerChildren: 0.04 } },
 }
 
-/** Page crossfade used by the shell. */
-export const page: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.2, ease } },
-  exit: { opacity: 0, y: -4, transition: { duration: 0.14, ease: 'easeOut' } },
-}
-
 /** Sheet rising from the bottom on touch devices. */
 export const sheet: Variants = {
   hidden: { y: '100%', opacity: 0.6 },

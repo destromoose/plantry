@@ -18,13 +18,12 @@ import {
 } from 'lucide-react'
 import { useStore } from '@/lib/store'
 import { cn, pluralize } from '@/lib/utils'
-import { page, settle } from '@/lib/motion'
+import { settle } from '@/lib/motion'
 import { Logo } from '@/components/ui/Logo'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Toaster } from '@/components/ui/Toast'
 import { NewHomeNote } from './NewHomeNote'
 import { EdgeSwipeBack } from './EdgeSwipeBack'
-import { useAppContext } from './Providers'
 import { setWriteErrorListener, useStorageStatus } from '@/lib/storage'
 import { toast } from '@/components/ui/Toast'
 
@@ -59,7 +58,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const hydrated = useStore((s) => s.hydrated)
   const onboarded = useStore((s) => s.settings.onboarded)
-  const ctx = useAppContext()
+  const needsSetup = !onboarded && pathname !== '/onboarding' && pathname !== '/join'
+  const setupFinished = onboarded && pathname === '/onboarding'
 
   // Tell people once if some saved data could not be read.
   useEffect(() => {
@@ -81,10 +81,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
-    if (!onboarded && pathname !== '/onboarding' && pathname !== '/join')
-      router.replace('/onboarding')
-    if (onboarded && pathname === '/onboarding') router.replace('/')
-  }, [hydrated, onboarded, pathname, router])
+    if (needsSetup) router.replace('/onboarding')
+    else if (setupFinished) router.replace('/')
+  }, [hydrated, needsSetup, setupFinished, router])
 
   const isImmersive = immersive.some((p) => pathname.startsWith(p))
 
@@ -106,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(tItem)
   }, [pathname, hydrated])
 
-  if (!hydrated) return <LoadingShell />
+  if (!hydrated || needsSetup || setupFinished) return <LoadingShell />
 
   const extras = (
     <>
@@ -121,16 +120,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <>
         {extras}
-        <motion.div
-          id="main"
-          key={pathname}
-          variants={page}
-          initial="hidden"
-          animate="show"
-          className="min-h-dvh"
-        >
+        <div id="main" key={pathname} className="min-h-dvh">
           {children}
-        </motion.div>
+        </div>
       </>
     )
   }
@@ -166,24 +158,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </div>
         </header>
-        {/* The day's context line belongs to Tonight only. */}
-        {pathname === '/' && (
-          <p className="px-5 font-display text-sm italic text-ink-3 md:px-0 md:pt-6">
-            {ctx.reason}
-          </p>
-        )}
-        {/* Enter-only page fade. An exit animation with mode="wait" never finishes under the
-            App Router and leaves the new page invisible, so pages only animate in. */}
-        <motion.main
+        <main
           id="main"
           key={pathname}
-          variants={page}
-          initial="hidden"
-          animate="show"
-          className={cn('flex-1 px-5 pb-28 pt-3 md:px-0 md:pb-12', pathname !== '/' && 'md:pt-8')}
+          className="flex-1 px-5 pb-28 pt-3 md:px-0 md:pb-12 md:pt-8"
         >
           {children}
-        </motion.main>
+        </main>
         {/* The recipe page has its own action bar; one floating bar at a time. */}
         {!/^\/recipes\/(?!new$)[^/]+$/.test(pathname) && <TabBar pathname={pathname} />}
       </div>

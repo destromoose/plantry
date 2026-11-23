@@ -1,4 +1,3 @@
-import { t } from '@/lib/i18n'
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 

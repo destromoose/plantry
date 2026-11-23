@@ -93,10 +93,10 @@ export function Pantry() {
         .slice(0, 6)
     : []
 
-  function add(n = name, z = zone) {
-    const clean = n.trim()
+  function add() {
+    const clean = name.trim()
     if (!clean) return
-    const res = addPantryItem({ name: clean, zone: z === 'auto' ? guessZone(clean) : z })
+    const res = addPantryItem({ name: clean, zone: zone === 'auto' ? guessZone(clean) : zone })
     setZone('auto')
     toast(
       res === 'added'
@@ -104,14 +104,6 @@ export function Pantry() {
         : t('{clean} was already there. Marked as fresh.', { clean })
     )
     setName('')
-  }
-
-  function pickSuggestion(o: { name: string; zone?: PantryZone }) {
-    setName(o.name)
-  }
-
-  function onNameChange(v: string) {
-    setName(v)
   }
 
   function addStarter() {
@@ -142,7 +134,7 @@ export function Pantry() {
       />
 
       <form
-        className="mb-8 flex items-start gap-2"
+        className="mb-8 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:flex"
         onSubmit={(e) => {
           e.preventDefault()
           add()
@@ -151,7 +143,7 @@ export function Pantry() {
         <div className="relative min-w-0 flex-1">
           <Input
             value={name}
-            onChange={(e) => onNameChange(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             placeholder={t('Add something you have')}
             aria-label={t('Add a pantry item')}
             autoComplete="off"
@@ -162,7 +154,7 @@ export function Pantry() {
                 <li key={o.name}>
                   <button
                     type="button"
-                    onClick={() => pickSuggestion(o)}
+                    onClick={() => setName(o.name)}
                     className="h-8 rounded-pill border border-line bg-surface/70 px-3 text-[0.8125rem] text-ink-2 hover:text-ink"
                   >
                     {o.name}
@@ -176,7 +168,10 @@ export function Pantry() {
           value={zone}
           onChange={(e) => setZone(e.target.value as PantryZone | 'auto')}
           aria-label={t('Where it lives')}
-          className="w-36 shrink-0"
+          className={cn(
+            'col-span-2 row-start-2 w-auto justify-self-start sm:w-36',
+            !name.trim() && 'hidden sm:block'
+          )}
         >
           <option value="auto">
             {name.trim()
@@ -193,7 +188,7 @@ export function Pantry() {
           type="submit"
           size="icon"
           aria-label={t('Add to pantry')}
-          aria-disabled={!name.trim()}
+          disabled={!name.trim()}
           variant={name.trim() ? 'primary' : 'secondary'}
         >
           <Plus className="h-5 w-5" />

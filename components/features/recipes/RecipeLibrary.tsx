@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store'
 import { AvoidBadge } from '@/components/features/household/AvoidWarning'
 import { coverage } from '@/lib/suggest'
 import type { Taste } from '@/lib/types'
-import { formatMinutes, cn } from '@/lib/utils'
+import { formatMinutes, cn, pluralize } from '@/lib/utils'
 import { reveal, staggerContainer } from '@/lib/motion'
 import { Button } from '@/components/ui/Button'
 import { Chip, Tag } from '@/components/ui/Chip'
@@ -93,7 +93,7 @@ export function RecipeLibrary() {
       <PageHeader
         className="mb-0"
         title={t('Recipes')}
-        subtitle={`${recipes.length} saved`}
+        subtitle={pluralize(recipes.length, 'recipe')}
         actions={
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" aria-hidden /> {t('Add')}
@@ -157,7 +157,7 @@ export function RecipeLibrary() {
       </div>
 
       <p className="sr-only" aria-live="polite">
-        {filtered.length === 1 ? t('1 recipe') : `${filtered.length} recipes`}
+        {pluralize(filtered.length, 'recipe')}
       </p>
       <div className="mt-5">
         {filtered.length === 0 ? (

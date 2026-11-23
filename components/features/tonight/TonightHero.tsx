@@ -33,11 +33,10 @@ import { withUndo } from '@/lib/undo'
 import { pickNext, coverage, type Scored } from '@/lib/suggest'
 import type { Energy, PlanEntry, Recipe } from '@/lib/types'
 import { daysBetween, formatMinutes, cn } from '@/lib/utils'
-import { drift, settle } from '@/lib/motion'
+import { settle } from '@/lib/motion'
 import { Button, buttonVariants } from '@/components/ui/Button'
 import { Tag } from '@/components/ui/Chip'
 import { Eyebrow } from '@/components/ui/Card'
-import { ProgressRing } from '@/components/ui/ProgressRing'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Sheet } from '@/components/ui/Sheet'
 import { toast } from '@/components/ui/Toast'
@@ -51,7 +50,6 @@ interface HeroProps {
   energy?: Energy
   targetDate: string
   today: string
-  reason: string
 }
 
 export function TonightHero(props: HeroProps) {
@@ -302,7 +300,6 @@ function PlannedOrSuggested({
   entry,
   targetDate,
   today,
-  reason,
   onShuffle,
 }: HeroProps & { recipe: Recipe; scored?: Scored; planned?: boolean; onShuffle?: () => void }) {
   const pantry = useStore((s) => s.pantry)
@@ -357,9 +354,7 @@ function PlannedOrSuggested({
       : cov.missing.length <= 2
         ? t('Only missing {v0}', { v0: andList(cov.missing) })
         : t('Missing {length} things', { length: cov.missing.length })
-  const tags = (scored?.reasons ?? []).filter(
-    (r) => !r.startsWith('Only missing') && r !== 'You have everything'
-  )
+  const tags = (scored?.reasons ?? []).filter((reason) => reason !== coverLine)
   const cook = members.find((m) => m.id === entry?.cookId)
   const washer = washerFor(targetDate, cook?.id, members)
   const cookingFor = useStore((s) => s.settings.cookingFor)
@@ -424,22 +419,6 @@ function PlannedOrSuggested({
             </p>
             <AvoidWarning recipe={recipe} className="mt-3" />
           </div>
-          {!pantryEmpty && (
-            <ProgressRing
-              value={cov.total ? cov.have / cov.total : 0}
-              size={48}
-              stroke={5}
-              tone={cov.missing.length === 0 ? 'secondary' : 'accent'}
-              label={t('{have} of {total} ingredients at home', {
-                have: cov.have,
-                total: cov.total,
-              })}
-            >
-              <span className="font-display text-sm font-semibold" aria-hidden>
-                {cov.have}/{cov.total}
-              </span>
-            </ProgressRing>
-          )}
         </div>
 
         <p className="mt-3 text-[0.9375rem]">

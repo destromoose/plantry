@@ -4,6 +4,9 @@
 // "#word" entries are counted words for pluralize(): "singular|plural".
 
 export const es: Record<string, string> = {
+  'First names only. Start with yours. No account needed.':
+    'Solo nombres. Empieza con el tuyo. No necesitas una cuenta.',
+  'Join or restore a household': 'Unirte a un hogar o restaurarlo',
   // Counted words
   '#dinner': 'cena|cenas',
   '#item': 'cosa|cosas',
