@@ -34,6 +34,28 @@ const capture = async (label) => {
     const main = document.querySelector('#main')
     return !main || Number(getComputedStyle(main).opacity) > 0.98
   })
+  if (process.env.PRODUCTION_CAPTURE === '1') {
+    assert.equal(await page.locator('nextjs-portal').count(), 0, `${label}: dev overlay mounted`)
+    const nav = page.getByRole('navigation', { name: 'Primary' })
+    if (await nav.count()) {
+      const first = nav.getByRole('link').first()
+      assert.equal(await first.innerText(), 'Tonight')
+      const clear = await first.evaluate((link) =>
+        [...link.querySelectorAll('svg, span')]
+          .filter((part) => part.tagName.toLowerCase() === 'svg' || part.textContent === 'Tonight')
+          .every((part) => {
+            const box = part.getBoundingClientRect()
+            return [0.1, 0.5, 0.9].every((offset) =>
+              link.contains(
+                document.elementFromPoint(box.x + box.width * offset, box.y + box.height / 2)
+              )
+            )
+          })
+      )
+      assert(clear, `${label}: Tonight icon or label is covered`)
+      console.log(`${label}: Tonight icon and label unobstructed`)
+    }
+  }
   await page.screenshot({ path: join(output, `${label}.png`) })
   console.log(label, new URL(page.url()).pathname, heading)
 }
@@ -77,7 +99,10 @@ try {
   await button(/^Cook this/).waitFor()
   await capture('05-tonight')
   const action = await button(/^Cook this/).boundingBox()
-  assert(action.y + action.height < page.viewportSize().height, 'Dinner action should fit on screen')
+  assert(
+    action.y + action.height < page.viewportSize().height,
+    'Dinner action should fit on screen'
+  )
   console.log('Dinner action y:', Math.round(action.y))
   await page.locator('nav:visible').getByRole('link', { name: 'Pantry', exact: true }).click()
   await page.getByLabel('Add a pantry item').fill('Demo lentils')
