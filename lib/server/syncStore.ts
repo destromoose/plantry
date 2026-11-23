@@ -85,13 +85,6 @@ function upstashStore(url: string, token: string): SyncStore {
   }
 }
 
-export function syncConfigured() {
-  return !!(
-    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ||
-    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
-  )
-}
-
 /** The store to use, or null when sync isn't set up on this deployment. */
 export function getSyncStore(): SyncStore | null {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL

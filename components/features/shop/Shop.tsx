@@ -9,7 +9,6 @@ import {
   ListChecks,
   MessageSquare,
   Pencil,
-  Plus,
   Share2,
   ShoppingBasket,
   Trash2,
@@ -54,7 +53,6 @@ export function Shop() {
   const shop = useStore((s) => s.shop)
   const recipes = useStore((s) => s.recipes)
   const generateShop = useStore((s) => s.generateShop)
-  const addShopItem = useStore((s) => s.addShopItem)
   const finishShopping = useStore((s) => s.finishShopping)
   const clearChecked = useStore((s) => s.clearChecked)
   const dismissed = useStore((s) => s.shopDismissed)
@@ -193,9 +191,8 @@ export function Shop() {
 
       {shop.length > 0 && <BasketProgress done={checked} total={shop.length} />}
 
-      <ShopTogether mineOnly={mineOnly} setMineOnly={setMineOnly} />
-
       <CaptureForm />
+      <ShopTogether mineOnly={mineOnly} setMineOnly={setMineOnly} />
       <Usuals />
 
       {shop.length === 0 ? (

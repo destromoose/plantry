@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "node e2e/smoke.mjs",
+    "e2e:pantry": "node e2e/pantry-to-dinner.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,css}\""
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "eslint-config-next": "^15.1.0",
     "eslint-config-prettier": "^9.1.0",
     "jsdom": "^25.0.1",
+    "playwright": "1.65.1",
     "postcss": "^8.4.49",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",

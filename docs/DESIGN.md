@@ -15,7 +15,7 @@ Name the work: "You decided dinner 5 times this week." Examples of good copy:
 - Tokens only (never raw hex in components): `bg-canvas`, `bg-surface`, `bg-surface-2`, `text-ink`, `text-ink-2`, `text-ink-3`,
   `border-line`, `bg-accent text-accent-ink`, `bg-secondary text-secondary-ink`. Four moods (dawn, day, dusk, night) switch these
   via `<html data-mood>`; night is the dark theme. Member colors: `terracotta`, `saffron`, `sage`, `plum`.
-- Type: `font-display` (Fraunces serif) for headings, recipe titles, numbers that matter, and italics for the context line.
+- Type: `font-display` (Fraunces serif) for headings, recipe titles, and numbers that matter.
   `font-sans` (Inter Tight) for everything else. Hero sizes: `text-fluid-2xl`, section headings `text-fluid-xl` or `text-xl`.
 - Shape: cards `rounded-card` (20px) via the `.card` class or `<Card>`, sheets `rounded-sheet`, buttons and chips `rounded-pill`.
 - Surfaces: `.card` for content, `.glass` only for floating controls (tab bar, sticky action bars, toasts). Never glass inside lists.

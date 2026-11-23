@@ -231,15 +231,8 @@ export function Onboarding() {
             >
               {t('Who eats here?')}
             </h1>
-            <p className="mt-3 text-base text-ink">
-              {t(
-                "Plantry picks tonight's dinner from what you have, plans the week and writes the shopping list."
-              )}
-            </p>
             <p className="mt-3 text-[0.9375rem] text-ink-2">
-              {t(
-                'First names only. You first. Nobody signs in, nobody gets an email. This stays on your device.'
-              )}
+              {t('First names only. Start with yours. No account needed.')}
             </p>
             <motion.ul
               variants={staggerContainer}
@@ -313,33 +306,34 @@ export function Onboarding() {
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-sm text-ink-2">
-              {t('Moving from another phone?')}
-              <button
-                type="button"
-                className="min-h-[44px] font-medium text-accent underline-offset-2 hover:underline"
-                onClick={() => fileRef.current?.click()}
-              >
-                {t('Restore from a Plantry backup')}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="application/json,.json"
-                className="hidden"
-                aria-label={t('Plantry backup file')}
-                onChange={(e) => restore(e.target.files?.[0])}
-              />
-            </p>
-            <p className="mt-1 text-sm text-ink-2">
-              {t('Someone at home already uses Plantry?')}{' '}
-              <Link
-                href="/join"
-                className="inline-flex min-h-[44px] items-center font-medium text-accent underline-offset-2 hover:underline"
-              >
-                {t('Join with their code')}
-              </Link>
-            </p>
+            <details className="mt-2 text-sm text-ink-2">
+              <summary className="min-h-11 cursor-pointer py-3 font-medium">
+                {t('Join or restore a household')}
+              </summary>
+              <div className="flex flex-wrap items-center gap-x-4">
+                <button
+                  type="button"
+                  className="min-h-[44px] font-medium text-accent underline-offset-2 hover:underline"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {t('Restore from a Plantry backup')}
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  aria-label={t('Plantry backup file')}
+                  onChange={(e) => restore(e.target.files?.[0])}
+                />
+                <Link
+                  href="/join"
+                  className="inline-flex min-h-[44px] items-center font-medium text-accent underline-offset-2 hover:underline"
+                >
+                  {t('Join your household')}
+                </Link>
+              </div>
+            </details>
           </section>
         )}
 

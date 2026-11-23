@@ -85,6 +85,7 @@ export function ShopTogether({
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <Button
+            variant="secondary"
             onClick={() => {
               start()
               toast(t("The others can see you're at the shop"))
